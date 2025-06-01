@@ -2,7 +2,10 @@ import tweepy
 from googleapiclient.discovery import build
 from pycoingecko import CoinGeckoAPI
 import os
+import logging
 from dotenv import load_dotenv
+
+logger = logging.getLogger('CryptoBot')
 
 # Load environment variables from .env file
 load_dotenv()
@@ -79,6 +82,13 @@ def get_coinmarketcap_api_key():
         logger.error("CoinMarketCap API key not found")
         return ""
     return COINMARKETCAP_API_KEY
+
+def get_x_api_key():
+    """Return the X API key."""
+    if not X_API_KEY:
+        logger.error("X API key not found")
+        return ""
+    return X_API_KEY
 
 def get_x_api_key():
     """Return the X API key."""

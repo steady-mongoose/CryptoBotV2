@@ -1,14 +1,18 @@
-import aiohttp
 import logging
-from typing import Dict, List
-from pycoingecko import CoinGeckoAPI
-import json
-import os
-from modules.api_clients import get_coinmarketcap_api_key
 
 logger = logging.getLogger('CryptoBot')
 
-# Mapping for coin symbols and CoinMarketCap IDs
+import json
+import os
+import asyncio
+import aiohttp
+from pycoingecko import CoinGeckoAPI
+from typing import Dict, List
+
+# Cache file for top projects
+TOP_PROJECT_CACHE_FILE = "data/top_projects_cache.json"
+
+# Symbol mapping for different coin IDs to their ticker symbols
 symbol_map = {
     "ripple": "XRP",
     "hedera-hashgraph": "HBAR",
