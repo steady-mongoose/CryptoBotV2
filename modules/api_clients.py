@@ -79,3 +79,10 @@ def get_coinmarketcap_api_key():
         return ""
     return COINMARKETCAP_API_KEY
 
+def get_x_api_key():
+    """Return the X API key."""
+    if not X_API_KEY:
+        logger.error("X API key not found")
+        return ""
+    return X_API_KEY
+
