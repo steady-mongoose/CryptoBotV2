@@ -27,7 +27,7 @@ from modules.social_media import (
 )
 from modules.utils import get_date
 from modules.posting_utils import post_to_discord, post_to_x
-from modules.api_clients import get_x_api_key
+from modules.api_clients import get_x_api_key, get_x_client
 
 # Database configuration
 DB_PATH = "data/crypto_bot.db"

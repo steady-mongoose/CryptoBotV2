@@ -3,7 +3,7 @@ import tweepy
 import asyncio
 import aiohttp
 from modules.utils import get_timestamp, get_date, format_tweet, truncate_text
-from modules.api_clients import get_discord_webhook_url
+from modules.api_clients import get_discord_webhook_url, get_x_client
 import os
 from typing import List, Dict
 

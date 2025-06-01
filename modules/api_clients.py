@@ -6,6 +6,13 @@ import logging
 
 logger = logging.getLogger('CryptoBot')
 
+# Get environment variables
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+LUNARCRUSH_API_KEY = os.getenv("LUNARCRUSH_API_KEY")
+NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+COINMARKETCAP_API_KEY = os.getenv("COINMARKETCAP_API_KEY")
+
 def get_x_client() -> tweepy.Client:
     """Initialize and return the X API client using Tweepy 4.15.0 with Twitter API v2."""
     try:
@@ -79,8 +86,9 @@ def get_coinmarketcap_api_key():
 
 def get_x_api_key():
     """Return the X API key."""
-    if not X_API_KEY:
+    x_api_key = os.getenv("X_CONSUMER_KEY")
+    if not x_api_key:
         logger.error("X API key not found")
         return ""
-    return X_API_KEY
+    return x_api_key
 
