@@ -1,24 +1,20 @@
 import sqlite3
 import os
 
-# Use a relative path that works in both environments
+# Define the database path
 db_path = os.path.join("data", "crypto_bot.db")
 conn = sqlite3.connect(db_path)
 
-# List all tables
+# Define the cursor
+cursor = conn.cursor()
+
+# Query to list all tables
 cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-print("Tables:", cursor.fetchall())
+tables = cursor.fetchall()
 
-# Check projects_cache
-cursor.execute("SELECT * FROM projects_cache WHERE coin_id = 'ripple'")
-print("Projects_cache data:", cursor.fetchall())
+# Print the tables
+for table in tables:
+    print(table[0])
 
-# Check used_videos
-cursor.execute("SELECT * FROM used_videos")
-print("Used_videos data:", cursor.fetchall())
-
-# Check coins
-cursor.execute("SELECT * FROM coins")
-print("Coins data:", cursor.fetchall())
-
+# Close the connection
 conn.close()
