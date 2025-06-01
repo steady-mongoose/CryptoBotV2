@@ -2,3 +2,6 @@ discord
 pycoingecko
 ratelimit
 tweepy
+aiohttp
+aiosqlite
+numpy
