@@ -194,51 +194,16 @@ async def fetch_news(coin_ids: List[str], session: aiohttp.ClientSession) -> Lis
         except Exception as e:
             logger.error(f"News API error for {coin_id}: {e}")
             news_items.append({"title": "N/A", "url": "N/A"})
-    return news_iteimport logging
-import json
-import os
-import asyncio
-import aiohttp
-from typing import Dict, List
-from .coin_data import symbol_map
+    return news_items
 
-logger = logging.getLogger('CryptoBot')
-
-# Cache files
-SOCIAL_METRICS_CACHE_FILE = "data/social_metrics_cache.json"
-
-def get_youtube_client():
-    """Get YouTube API client."""
-    api_key = os.getenv('YOUTUBE_API_KEY')
-    if not api_key:
-        logger.error("YouTube API key not found")
-        return None
+async def fetch_youtube_video(coin_id: str, session: aiohttp.ClientSession) -> Dict[str, str]:
+    """Fetch a relevant YouTube video for the coin."""
     try:
-        from googleapiclient.discovery import build
-        return build('youtube', 'v3', developerKey=api_key)
-    except ImportError:
-        logger.error("Google API client library not installed")
-        return None
-
-def load_social_metrics_cache() -> Dict[str, Dict[str, str]]:
-    """Load cached social metrics from a file."""
-    try:
-        if os.path.exists(SOCIAL_METRICS_CACHE_FILE) and os.access(SOCIAL_METRICS_CACHE_FILE, os.R_OK):
-            with open(SOCIAL_METRICS_CACHE_FILE, 'r') as f:
-                return json.load(f)
-        return {}
-    except (IOError, json.JSONDecodeError) as e:
-        logger.error(f"Error loading social metrics cache: {e}")
-        return {}
-
-def save_social_metrics_cache(cache: Dict[str, Dict[str, str]]):
-    """Save social metrics to a cache file."""
-    try:
-        os.makedirs("data", exist_ok=True)
-        with open(SOCIAL_METRICS_CACHE_FILE, 'w') as f:
-            json.dump(cache, f)
-    except IOError as e:
-        logger.error(f"Error saving social metrics cache: {e}")
+        await asyncio.sleep(0.1)  # Simulate API call
+        return {"title": f"Video about {coin_id}", "url": f"https://youtube.com/watch?v={coin_id}"}
+    except Exception as e:
+        logger.error(f"Error fetching YouTube video for {coin_id}: {e}")
+        return {"title": "N/A", "url": "N/A"}
 
 async def fetch_social_metrics(coin_id: str, session, api_key: str = None):
     """Fetch social metrics for a coin"""
