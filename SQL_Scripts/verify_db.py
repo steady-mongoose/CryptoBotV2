@@ -1,7 +1,9 @@
 import sqlite3
+import os
 
-conn = sqlite3.connect("C:/CryptoBotV2/data/crypto_bot.db")
-cursor = conn.cursor()
+# Use a relative path that works in both environments
+db_path = os.path.join("data", "crypto_bot.db")
+conn = sqlite3.connect(db_path)
 
 # List all tables
 cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
