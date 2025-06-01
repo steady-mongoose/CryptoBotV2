@@ -196,33 +196,3 @@ async def fetch_news(coin_ids: List[str], session: aiohttp.ClientSession) -> Lis
             news_items.append({"title": "N/A", "url": "N/A"})
     return news_items
 
-async def fetch_youtube_video(coin_id: str, session: aiohttp.ClientSession) -> Dict[str, str]:
-    """Fetch a relevant YouTube video for the coin."""
-    try:
-        await asyncio.sleep(0.1)  # Simulate API call
-        return {"title": f"Video about {coin_id}", "url": f"https://youtube.com/watch?v={coin_id}"}
-    except Exception as e:
-        logger.error(f"Error fetching YouTube video for {coin_id}: {e}")
-        return {"title": "N/A", "url": "N/A"}
-
-async def fetch_social_metrics(coin_id: str, session, api_key: str = None):
-    """Fetch social metrics for a coin"""
-    try:
-        await asyncio.sleep(0.1)  # Simulate API call
-        return {"mentions": 100, "sentiment": "Positive"}
-    except Exception as e:
-        logger.error(f"Error fetching social metrics for {coin_id}: {e}")
-        return {"mentions": 0, "sentiment": "N/A"}
-
-async def fetch_news(coin_ids: list, session):
-    """Fetch news for multiple coins"""
-    try:
-        await asyncio.sleep(0.1)  # Simulate API call
-        return [{"title": f"News for {coin_id}", "url": f"https://example.com/{coin_id}"} for coin_id in coin_ids]
-    except Exception as e:
-        logger.error(f"Error fetching news: {e}")
-        return []
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())
