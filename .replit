@@ -13,3 +13,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python bot_v2.py --test-discord"
+
+[[workflows.workflow]]
+name = "Post to X"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py"
