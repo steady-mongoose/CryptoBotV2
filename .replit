@@ -1,3 +1,15 @@
 modules = ["python-3.11"]
 
 [nix]
+
+[workflows]
+runButton = "Test Discord"
+
+[[workflows.workflow]]
+name = "Test Discord"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --test-discord"

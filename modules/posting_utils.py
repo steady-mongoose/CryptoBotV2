@@ -7,14 +7,13 @@ from modules.api_clients import get_discord_webhook_url
 
 logger = logging.getLogger('CryptoBot')
 
-async def post_to_discord(formatted_coin_data, news_items):
+async def post_to_discord(message, news_items):
     """Post the crypto update to Discord using a webhook."""
     webhook_url = get_discord_webhook_url()
     async with aiohttp.ClientSession() as session:
         try:
             # Main message
-            coin_names = ", ".join([coin["name"] for coin in formatted_coin_data])
-            main_message = f"🚀 Crypto Market Update ({get_date()}) at {get_timestamp()}! 📈 Latest on top altcoins: {coin_names}. #Crypto #Altcoins"
+            main_message = message
             data = {
                 "content": main_message,
                 "username": "CryptoBot"
@@ -52,14 +51,13 @@ async def post_to_discord(formatted_coin_data, news_items):
             raise
 
 # Post to X
-async def post_to_x(x_client, formatted_coin_data, news_items):
+async def post_to_x(message, news_items):
     """
     Post the crypto update to X, including a main tweet and individual coin replies.
     """
     try:
         # Post main tweet
-        coin_names = ", ".join([coin["name"] for coin in formatted_coin_data])
-        main_tweet = f"🚀 Crypto Market Update ({get_date()}) at {get_timestamp()}! 📈 Latest on top altcoins: {coin_names}. #Crypto #Altcoins"
+        main_tweet = message
         logger.debug(f"Main tweet content: {main_tweet}")
         main_tweet_response = x_client.create_tweet(text=main_tweet)
         main_tweet_id = main_tweet_response.data['id']

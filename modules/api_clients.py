@@ -90,9 +90,30 @@ def get_x_api_key():
         return ""
     return X_API_KEY
 
-def get_x_api_key():
-    """Return the X API key."""
-    if not X_API_KEY:
-        logger.error("X API key not found")
+def get_discord_webhook_url():
+    """Return the Discord webhook URL."""
+    if not DISCORD_WEBHOOK_URL:
+        logger.error("Discord webhook URL not found")
         return ""
-    return X_API_KEY
+    return DISCORD_WEBHOOK_URL
+
+def get_youtube_client():
+    """Return the YouTube API client."""
+    if not YOUTUBE_API_KEY:
+        logger.error("YouTube API key not found")
+        return None
+    return build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+
+def get_newsapi_key():
+    """Return the News API key."""
+    if not NEWSAPI_KEY:
+        logger.error("News API key not found")
+        return ""
+    return NEWSAPI_KEY
+
+def get_coinmarketcap_api_key():
+    """Return the CoinMarketCap API key."""
+    if not COINMARKETCAP_API_KEY:
+        logger.error("CoinMarketCap API key not found")
+        return ""
+    return COINMARKETCAP_API_KEY
