@@ -194,7 +194,51 @@ async def fetch_news(coin_ids: List[str], session: aiohttp.ClientSession) -> Lis
         except Exception as e:
             logger.error(f"News API error for {coin_id}: {e}")
             news_items.append({"title": "N/A", "url": "N/A"})
-    return news_items
+    return news_iteimport logging
+import json
+import os
+import asyncio
+import aiohttp
+from typing import Dict, List
+from .coin_data import symbol_map
+
+logger = logging.getLogger('CryptoBot')
+
+# Cache files
+SOCIAL_METRICS_CACHE_FILE = "data/social_metrics_cache.json"
+
+def get_youtube_client():
+    """Get YouTube API client."""
+    api_key = os.getenv('YOUTUBE_API_KEY')
+    if not api_key:
+        logger.error("YouTube API key not found")
+        return None
+    try:
+        from googleapiclient.discovery import build
+        return build('youtube', 'v3', developerKey=api_key)
+    except ImportError:
+        logger.error("Google API client library not installed")
+        return None
+
+def load_social_metrics_cache() -> Dict[str, Dict[str, str]]:
+    """Load cached social metrics from a file."""
+    try:
+        if os.path.exists(SOCIAL_METRICS_CACHE_FILE) and os.access(SOCIAL_METRICS_CACHE_FILE, os.R_OK):
+            with open(SOCIAL_METRICS_CACHE_FILE, 'r') as f:
+                return json.load(f)
+        return {}
+    except (IOError, json.JSONDecodeError) as e:
+        logger.error(f"Error loading social metrics cache: {e}")
+        return {}
+
+def save_social_metrics_cache(cache: Dict[str, Dict[str, str]]):
+    """Save social metrics to a cache file."""
+    try:
+        os.makedirs("data", exist_ok=True)
+        with open(SOCIAL_METRICS_CACHE_FILE, 'w') as f:
+            json.dump(cache, f)
+    except IOError as e:
+        logger.error(f"Error saving social metrics cache: {e}")
 
 async def fetch_social_metrics(coin_id: str, session, api_key: str = None):
     """Fetch social metrics for a coin"""

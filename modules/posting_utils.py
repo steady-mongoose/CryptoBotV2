@@ -4,8 +4,14 @@ import asyncio
 import aiohttp
 from modules.utils import get_timestamp, get_date, format_tweet, truncate_text
 from modules.api_clients import get_discord_webhook_url
+import os
+from typing import List, Dict
 
 logger = logging.getLogger('CryptoBot')
+
+def get_discord_webhook_url():
+    """Get Discord webhook URL from environment variables."""
+    return os.getenv('DISCORD_WEBHOOK_URL')
 
 async def post_to_discord(message, news_items):
     """Post the crypto update to Discord using a webhook."""

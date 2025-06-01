@@ -63,7 +63,6 @@ class DatabaseManager:
                 CREATE TABLE IF NOT EXISTS coins (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     coin_id TEXT UNIQUE NOT NULL,
-                    symbol TEXT NOT NULL,
                     name TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -122,8 +121,8 @@ class DatabaseManager:
         try:
             async with self.get_connection() as db:
                 await db.executemany(
-                    "INSERT OR IGNORE INTO coins (coin_id, symbol, name) VALUES (?, ?, ?)",
-                    [(coin['coin_id'], coin['symbol'], coin['name']) for coin in coins_data]
+                    "INSERT OR IGNORE INTO coins (coin_id, name) VALUES (?, ?)",
+                    [(coin['coin_id'], coin['name']) for coin in coins_data]
                 )
                 await db.commit()
         except Exception as e:
@@ -329,7 +328,6 @@ async def store_data_to_database(results: List[Dict]):
 
             coins_data.append({
                 'coin_id': data['coin_id'],
-                'symbol': data['symbol'],
                 'name': data['name']
             })
 

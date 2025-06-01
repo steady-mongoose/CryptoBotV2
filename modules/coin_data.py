@@ -1,13 +1,16 @@
 import logging
-
-logger = logging.getLogger('CryptoBot')
-
 import json
 import os
 import asyncio
 import aiohttp
 from pycoingecko import CoinGeckoAPI
 from typing import Dict, List
+
+logger = logging.getLogger('CryptoBot')
+
+def get_coinmarketcap_api_key():
+    """Get CoinMarketCap API key from environment variables."""
+    return os.getenv('COINMARKETCAP_API_KEY')
 
 # Cache file for top projects
 TOP_PROJECT_CACHE_FILE = "data/top_projects_cache.json"
