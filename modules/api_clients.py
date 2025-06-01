@@ -6,27 +6,25 @@ import logging
 
 logger = logging.getLogger('CryptoBot')
 
-# API credentials from .env
-X_API_KEY = os.getenv("X_CONSUMER_KEY")
-X_API_SECRET = os.getenv("X_CONSUMER_SECRET")
-X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
-X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
-LUNARCRUSH_API_KEY = os.getenv("LUNARCRUSH_API_KEY")
-NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
-DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
-COINMARKETCAP_API_KEY = os.getenv("COINMARKETCAP_API_KEY")
-
 def get_x_client() -> tweepy.Client:
     """Initialize and return the X API client using Tweepy 4.15.0 with Twitter API v2."""
     try:
-        if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET]):
+        # Get credentials from environment variables (Replit Secrets)
+        x_api_key = os.getenv("X_CONSUMER_KEY")
+        x_api_secret = os.getenv("X_CONSUMER_SECRET") 
+        x_access_token = os.getenv("X_ACCESS_TOKEN")
+        x_access_token_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
+        
+        if not all([x_api_key, x_api_secret, x_access_token, x_access_token_secret]):
+            logger.error("Missing X API credentials in environment variables")
+            logger.info("Please check your Replit Secrets for: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
             raise ValueError("Missing X API credentials")
+            
         return tweepy.Client(
-            consumer_key=X_API_KEY,
-            consumer_secret=X_API_SECRET,
-            access_token=X_ACCESS_TOKEN,
-            access_token_secret=X_ACCESS_TOKEN_SECRET,
+            consumer_key=x_api_key,
+            consumer_secret=x_api_secret,
+            access_token=x_access_token,
+            access_token_secret=x_access_token_secret,
             wait_on_rate_limit=True
         )
     except Exception as e:

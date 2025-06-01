@@ -39,35 +39,36 @@ async def post_to_discord(message, news_items):
             logger.error(f"Unexpected error in post_to_discord: {e}")
             raise
 
-async def post_to_x(message, news_items):
-    """
-    Post the crypto update to X, including a main tweet and individual coin replies.
-    """
+async def post_to_x(message: str, news_items: List[Dict] = None):
+    """Post message to X (formerly Twitter)."""
     try:
-        from modules.api_clients import get_x_client
+        x_client = get_x_client()
 
-        # Get X client
-        try:
-            x_client = get_x_client()
-        except Exception as e:
-            logger.error(f"Failed to initialize X client: {e}")
-            return
+        # Validate message length (X has a 280 character limit)
+        if len(message) > 280:
+            message = message[:277] + "..."
+            logger.warning("Tweet message truncated to fit 280 character limit")
 
-        # Ensure message is a string
-        if not isinstance(message, str):
-            logger.error(f"Message parameter must be a string, got {type(message)}")
-            return
+        # Post the main tweet
+        response = x_client.create_tweet(text=message)
+        tweet_id = response.data['id']
+        logger.info(f"Posted main tweet to X: {tweet_id}")
 
-        # Post main tweet
-        logger.debug(f"Main tweet content: {message}")
-        main_tweet_response = x_client.create_tweet(text=message)
-        main_tweet_id = main_tweet_response.data['id']
-        logger.info(f"Posted main tweet to X with ID: {main_tweet_id}")
-
-    except tweepy.TweepyException as e:
-        logger.error(f"Error posting main tweet to X: {e}")
+    except tweepy.Unauthorized as e:
+        logger.error(f"X API Unauthorized (401): Check your API credentials in Replit Secrets")
+        logger.error(f"Ensure your X API keys have write permissions and are not expired")
+        raise
+    except tweepy.Forbidden as e:
+        logger.error(f"X API Forbidden (403): {e}")
+        logger.error("Your account may be restricted or the app may not have proper permissions")
+        raise
+    except tweepy.TooManyRequests as e:
+        logger.error(f"X API Rate Limited (429): {e}")
+        logger.error("Please wait before making more requests")
+        raise
     except Exception as e:
-        logger.error(f"Unexpected error in post_to_x: {e}")
+        logger.error(f"Error posting main tweet to X: {e}")
+        raise
 
 # Engage with influencers
 async def engage_with_influencers(coin_name, coin_data, x_client):

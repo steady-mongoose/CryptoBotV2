@@ -80,106 +80,84 @@ def save_top_project_cache(cache: Dict[str, str]):
     except IOError as e:
         logger.error(f"Error saving top project cache: {e}")
 
-def fetch_coin_prices(coin_ids: List[str], cg_client: CoinGeckoAPI) -> Dict:
-    """Fetch coin prices and 24h change using CoinGecko API."""
+def fetch_coin_prices(coin_ids: List[str], cg_client: CoinGeckoAPI) -> Dict[str, Dict[str, float]]:
+    """
+    Fetch current prices and 24h change for a list of coins using CoinGecko.
+    Falls back to CoinMarketCap if CoinGecko fails.
+    """
+    prices = {}
+    failed_coins = []
+
+    # Try CoinGecko first
     try:
-        if not coin_ids:
-            logger.error("Empty coin_ids list provided")
-            return {}
-        prices = cg_client.get_price(
+        cg_data = cg_client.get_price(
             ids=coin_ids,
-            vs_currencies='usd',
+            vs_currencies=['usd'],
             include_24hr_change=True
         )
-        return prices
+        for coin_id in coin_ids:
+            if coin_id in cg_data:
+                prices[coin_id] = cg_data[coin_id]
+            else:
+                failed_coins.append(coin_id)
+                logger.warning(f"CoinGecko: No data for {coin_id}")
     except Exception as e:
-        logger.error(f"Error fetching prices from CoinGecko: {e}")
-        raise
+        logger.error(f"CoinGecko API error: {e}")
+        failed_coins = coin_ids  # All coins failed, try CoinMarketCap
+
+    # Try CoinMarketCap for failed coins (only if API key exists)
+    coinmarketcap_api_key = os.getenv("COINMARKETCAP_API_KEY")
+    if failed_coins and coinmarketcap_api_key:
+        try:
+            cmc_data = fetch_coinmarketcap_prices(failed_coins)
+            prices.update(cmc_data)
+        except Exception as e:
+            logger.error(f"CoinMarketCap fallback failed: {e}")
+    elif failed_coins and not coinmarketcap_api_key:
+        logger.warning("CoinMarketCap API key not found, skipping fallback")
+        # Provide mock data for failed coins to prevent crashes
+        for coin_id in failed_coins:
+            prices[coin_id] = {"usd": 0.0, "usd_24h_change": 0.0}
+            logger.warning(f"Using mock data for {coin_id}")
+
+    return prices
 
 async def fetch_volume(coin_id: str, session: aiohttp.ClientSession) -> float:
-    """Fetch 24h transaction volume using CoinMarketCap API, with CoinGecko fallback."""
-    cache = load_volume_cache()
-    if coin_id in cache:
-        logger.debug(f"Using cached volume for {coin_id}: {cache[coin_id]}")
-        return cache[coin_id]
+    """Fetch 24h volume for a coin from CoinGecko API with rate limiting handling."""
+    import asyncio
 
-    coinmarketcap_id = coinmarketcap_id_map.get(coin_id)
-    if not coinmarketcap_id:
-        logger.warning(f"No CoinMarketCap ID found for {coin_id}, using fallback")
-        # Use fallback volume data
-        fallback_volumes = {
-            "ripple": 1500.0,
-            "hedera-hashgraph": 300.0,
-            "stellar": 800.0,
-            "xdce-crowd-sale": 150.0,
-            "sui": 400.0,
-            "ondo-finance": 200.0,
-            "algorand": 250.0,
-            "casper-network": 100.0
-        }
-        volume = fallback_volumes.get(coin_id, 100.0)
-        cache[coin_id] = volume
-        save_volume_cache(cache)
-        return volume
+    max_retries = 3
+    retry_delay = 2  # seconds
 
-    # Try CoinMarketCap API
-    api_key = get_coinmarketcap_api_key()
-    if not api_key:
-        logger.warning("CoinMarketCap API key not found, using fallback volumes")
-        # Use fallback volume data
-        fallback_volumes = {
-            "ripple": 1500.0,
-            "hedera-hashgraph": 300.0,
-            "stellar": 800.0,
-            "xdce-crowd-sale": 150.0,
-            "sui": 400.0,
-            "ondo-finance": 200.0,
-            "algorand": 250.0,
-            "casper-network": 100.0
-        }
-        volume = fallback_volumes.get(coin_id, 100.0)
-        cache[coin_id] = volume
-        save_volume_cache(cache)
-        return volume
+    for attempt in range(max_retries):
+        try:
+            url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    volume = data.get("market_data", {}).get("total_volume", {}).get("usd", 0)
+                    return round(volume / 1_000_000, 2)  # Convert to millions
+                elif response.status == 429:  # Rate limited
+                    if attempt < max_retries - 1:
+                        wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                        logger.warning(f"Rate limited for {coin_id}, waiting {wait_time}s before retry {attempt + 1}")
+                        await asyncio.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error(f"Rate limited for {coin_id}, max retries exceeded")
+                        return 0.0
+                else:
+                    error_text = await response.text()
+                    logger.error(f"CoinGecko API error for volume {coin_id}: {response.status}, message='{error_text}', url='{url}'")
+                    return 0.0
+        except Exception as e:
+            logger.error(f"Error fetching volume for {coin_id}: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(retry_delay)
+                continue
+            return 0.0
 
-    url = f"https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?id={coinmarketcap_id}&convert=USD&CMC_PRO_API_KEY={api_key}"
-    try:
-        async with session.get(url) as response:
-            response.raise_for_status()
-            data = await response.json()
-            logger.debug(f"CoinMarketCap API response for {coin_id} (ID: {coinmarketcap_id}): {data}")
-            if 'data' not in data or coinmarketcap_id not in data['data']:
-                logger.error(f"CoinMarketCap API error for {coin_id} (ID: {coinmarketcap_id}): No data returned")
-                raise ValueError("No data returned")
-            volume = data['data'][coinmarketcap_id]['quote']['USD'].get('volume_24h')
-            if volume is None:
-                logger.warning(f"No volume data available for {coin_id} (ID: {coinmarketcap_id}) from CoinMarketCap")
-                raise ValueError("No volume data")
-            volume = volume / 1_000_000  # Convert to millions
-            cache[coin_id] = volume
-            save_volume_cache(cache)
-            return volume
-    except (aiohttp.ClientError, ValueError) as e:
-        logger.error(f"CoinMarketCap API error for {coin_id} (ID: {coinmarketcap_id}): {e}")
-
-    # Fallback to CoinGecko API
-    try:
-        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
-        async with session.get(url) as response:
-            response.raise_for_status()
-            data = await response.json()
-            logger.debug(f"CoinGecko API response for volume {coin_id}: {data}")
-            volume = data.get('market_data', {}).get('total_volume', {}).get('usd', 0)
-            if volume == 0:
-                logger.warning(f"No volume data available for {coin_id} from CoinGecko")
-                return 0.0
-            volume = volume / 1_000_000  # Convert to millions
-            cache[coin_id] = volume
-            save_volume_cache(cache)
-            return volume
-    except aiohttp.ClientError as e:
-        logger.error(f"CoinGecko API error for volume {coin_id}: {e}")
-        return 0.0
+    return 0.0
 
 async def fetch_top_project(coin_id: str, session: aiohttp.ClientSession) -> str:
     """Fetch the top project (exchange) for a coin using CoinGecko API."""
