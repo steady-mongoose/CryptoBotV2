@@ -362,7 +362,12 @@ async def main(test_discord: bool = False):
         cg_client = CoinGeckoAPI()
         async with aiohttp.ClientSession() as session:
             print("Fetching coin data...")
-            tasks = [fetch_coin_data(coin_id, session, cg_client) for coin_id in COIN_IDS]
+            # Add staggered delays to reduce rate limiting
+            tasks = []
+            for i, coin_id in enumerate(COIN_IDS):
+                # Add a small delay between each task to reduce concurrent API calls
+                await asyncio.sleep(0.5 * i)
+                tasks.append(fetch_coin_data(coin_id, session, cg_client))
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Filter out None results and exceptions
