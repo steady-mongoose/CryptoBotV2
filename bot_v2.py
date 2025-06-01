@@ -1,21 +1,21 @@
     import argparse
-    import asyncio
-    import logging
-    import aiohttp
-    import sqlite3
-    import aiosqlite
-    from pycoingecko import CoinGeckoAPI
-    from datetime import datetime
-    import numpy as np
-    from typing import Dict, List, Optional
-    from contextlib import asynccontextmanager
+import asyncio
+import logging
+import aiohttp
+import sqlite3
+import aiosqlite
+from pycoingecko import CoinGeckoAPI
+from datetime import datetime
+import numpy as np
+from typing import Dict, List, Optional
+from contextlib import asynccontextmanager
 
-    # Set up logging FIRST, before any other imports that might use it
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    logger = logging.getLogger('CryptoBot')
+# Set up logging FIRST, before any other imports that might use it
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('CryptoBot')
 
     # Now import modules that might use the logger
     from modules.coin_data import (
