@@ -5,3 +5,5 @@ tweepy
 aiohttp
 aiosqlite
 numpy
+python-binance
+python-binance

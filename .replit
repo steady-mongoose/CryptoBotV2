@@ -1,6 +1,7 @@
 modules = ["python-3.11"]
 
 [nix]
+channel = "stable-24_05"
 
 [workflows]
 runButton = "Run Bot (Rate Limited)"

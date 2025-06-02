@@ -16,6 +16,36 @@ def get_cryptocompare_api_key():
     """Get CryptoCompare API key from environment variables."""
     return os.getenv('CRYPTOCOMPARE_API_KEY')
 
+def get_binance_us_credentials():
+    """Get Binance US API credentials from environment variables."""
+    return {
+        'api_key': os.getenv('BINANCE_US_API_KEY'),
+        'api_secret': os.getenv('BINANCE_US_API_SECRET')
+    }
+
+async def fetch_binance_us_price(symbol: str, session: aiohttp.ClientSession) -> Dict:
+    """Fetch price data from Binance US API."""
+    try:
+        # Binance US uses different symbol format (e.g., XRPUSD instead of XRP/USD)
+        binance_symbol = f"{symbol}USD"
+        
+        # Use public API endpoint (no auth required for price data)
+        url = f"https://api.binance.us/api/v3/ticker/24hr"
+        params = {'symbol': binance_symbol}
+        
+        async with session.get(url, params=params) as response:
+            if response.status == 200:
+                data = await response.json()
+                return {
+                    'price': float(data.get('lastPrice', 0)),
+                    'change_24h': float(data.get('priceChangePercent', 0)),
+                    'volume': float(data.get('volume', 0))
+                }
+            return {}
+    except Exception as e:
+        logger.error(f"Error fetching Binance US data for {symbol}: {e}")
+        return {}
+
 async def fetch_cryptocompare_price(coin_symbol: str, session: aiohttp.ClientSession) -> Dict:
     """Fetch price data from CryptoCompare API."""
     api_key = get_cryptocompare_api_key()
@@ -180,6 +210,7 @@ async def fetch_coin_prices_multi_source(coin_ids: List[str], cg_client: CoinGec
         remaining_failed = failed_coins
 
     # Try CryptoCompare for remaining failed coins
+    still_failed = []
     if remaining_failed:
         for coin_id in remaining_failed:
             symbol = symbol_map.get(coin_id, coin_id.split('-')[0].upper())
@@ -192,11 +223,29 @@ async def fetch_coin_prices_multi_source(coin_ids: List[str], cg_client: CoinGec
                     }
                     logger.info(f"CryptoCompare: Got data for {coin_id}")
                 else:
+                    still_failed.append(coin_id)
+            except Exception as e:
+                logger.error(f"CryptoCompare failed for {coin_id}: {e}")
+                still_failed.append(coin_id)
+
+    # Try Binance US for still failed coins
+    if still_failed:
+        for coin_id in still_failed:
+            symbol = symbol_map.get(coin_id, coin_id.split('-')[0].upper())
+            try:
+                binance_data = await fetch_binance_us_price(symbol, session)
+                if binance_data:
+                    prices[coin_id] = {
+                        "usd": binance_data['price'],
+                        "usd_24h_change": binance_data['change_24h']
+                    }
+                    logger.info(f"Binance US: Got data for {coin_id}")
+                else:
                     # Final fallback to mock data
                     prices[coin_id] = {"usd": 0.0, "usd_24h_change": 0.0}
                     logger.warning(f"Using mock data for {coin_id}")
             except Exception as e:
-                logger.error(f"CryptoCompare failed for {coin_id}: {e}")
+                logger.error(f"Binance US failed for {coin_id}: {e}")
                 prices[coin_id] = {"usd": 0.0, "usd_24h_change": 0.0}
 
     return prices
