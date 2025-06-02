@@ -57,14 +57,22 @@ async def post_to_x(message: str, news_items: List[Dict] = None):
     except tweepy.Unauthorized as e:
         logger.error(f"X API Unauthorized (401): Check your API credentials in Replit Secrets")
         logger.error(f"Ensure your X API keys have write permissions and are not expired")
+        logger.error(f"FREE TIER: Verify your app has proper permissions and isn't restricted")
         raise
     except tweepy.Forbidden as e:
         logger.error(f"X API Forbidden (403): {e}")
         logger.error("Your account may be restricted or the app may not have proper permissions")
+        logger.error("FREE TIER: Check if you've exceeded monthly tweet limits (1,500 tweets/month)")
         raise
     except tweepy.TooManyRequests as e:
         logger.error(f"X API Rate Limited (429): {e}")
-        logger.error("Please wait before making more requests")
+        logger.error("FREE TIER: Rate limits are stricter - consider reducing posting frequency")
+        logger.error("Wait time may be longer than expected for free tier")
+        raise
+    except tweepy.PaymentRequired as e:
+        logger.error(f"X API Payment Required (402): {e}")
+        logger.error("FREE TIER: You may have exceeded your monthly usage limits")
+        logger.error("Consider upgrading to a paid plan or reducing bot activity")
         raise
     except Exception as e:
         logger.error(f"Error posting main tweet to X: {e}")

@@ -355,9 +355,39 @@ async def store_data_to_database(results: List[Dict]):
     except Exception as e:
         logger.error(f"Error storing data to database: {e}")
 
+async def validate_x_api():
+    """Validate X API credentials before running the bot."""
+    try:
+        from modules.api_clients import get_x_client
+        client = get_x_client()
+        
+        # Test basic authentication
+        me = client.get_me()
+        logger.info(f"X API validation successful - connected as @{me.data.username}")
+        return True
+        
+    except tweepy.Unauthorized:
+        logger.error("X API validation failed - credentials are invalid")
+        return False
+    except tweepy.Forbidden:
+        logger.error("X API validation failed - account may be restricted or exceed free tier limits")
+        return False
+    except Exception as e:
+        logger.error(f"X API validation failed: {e}")
+        return False
+
 async def main(test_discord: bool = False):
     """Main function to fetch data and post updates."""
     print("Starting CryptoBotV2...")
+    
+    # Validate X API credentials if not testing Discord
+    if not test_discord:
+        print("Validating X API credentials...")
+        if not await validate_x_api():
+            print("❌ X API validation failed! Run 'python test_x_api.py' for detailed diagnostics")
+            return
+        print("✅ X API validation successful")
+    
     try:
         cg_client = CoinGeckoAPI()
         async with aiohttp.ClientSession() as session:
