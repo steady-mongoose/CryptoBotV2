@@ -18,6 +18,12 @@ def test_x_credentials():
             
         print("✅ All required environment variables are set")
         
+        # Show credential format (first/last few chars for security)
+        consumer_key = os.getenv('X_CONSUMER_KEY')
+        access_token = os.getenv('X_ACCESS_TOKEN')
+        print(f"🔍 Consumer Key format: {consumer_key[:5]}...{consumer_key[-5:]}")
+        print(f"🔍 Access Token format: {access_token[:5]}...{access_token[-5:]}")
+        
         # Test API client initialization
         client = get_x_client()
         print("✅ X API client initialized successfully")
@@ -28,9 +34,13 @@ def test_x_credentials():
             print(f"✅ Basic authentication successful! Connected as: @{me.data.username}")
         except tweepy.Unauthorized as e:
             print(f"❌ 401 Unauthorized: {e}")
-            print("   - Check that your API keys are correct")
-            print("   - Verify your app has Read+Write permissions")
-            print("   - Ensure tokens are not expired")
+            print("\n🚨 COMMON FIXES FOR 401 ERROR:")
+            print("   1. Go to developer.twitter.com")
+            print("   2. Select your app → Settings → App permissions")
+            print("   3. Change from 'Read' to 'Read and Write'")
+            print("   4. Go to Keys and tokens → Regenerate Access Token & Secret")
+            print("   5. Update the new tokens in Replit Secrets")
+            print("   6. Make sure you copied the tokens correctly (no extra spaces)")
             return False
         except Exception as e:
             print(f"❌ Authentication error: {e}")
