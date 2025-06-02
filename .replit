@@ -22,3 +22,8 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python bot_v2.py"
+
+[deployment]
+deploymentTarget = "cloudrun"
+run = ["sh", "-c", "python bot_v2.py"]
+build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
