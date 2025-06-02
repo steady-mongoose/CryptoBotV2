@@ -12,6 +12,40 @@ def get_coinmarketcap_api_key():
     """Get CoinMarketCap API key from environment variables."""
     return os.getenv('COINMARKETCAP_API_KEY')
 
+def get_cryptocompare_api_key():
+    """Get CryptoCompare API key from environment variables."""
+    return os.getenv('CRYPTOCOMPARE_API_KEY')
+
+async def fetch_cryptocompare_price(coin_symbol: str, session: aiohttp.ClientSession) -> Dict:
+    """Fetch price data from CryptoCompare API."""
+    api_key = get_cryptocompare_api_key()
+    if not api_key:
+        logger.warning("CryptoCompare API key not found")
+        return {}
+    
+    try:
+        url = f"https://min-api.cryptocompare.com/data/pricemultifull"
+        params = {
+            'fsyms': coin_symbol.upper(),
+            'tsyms': 'USD',
+            'api_key': api_key
+        }
+        
+        async with session.get(url, params=params) as response:
+            if response.status == 200:
+                data = await response.json()
+                if 'RAW' in data and coin_symbol.upper() in data['RAW']:
+                    coin_data = data['RAW'][coin_symbol.upper()]['USD']
+                    return {
+                        'price': coin_data.get('PRICE', 0),
+                        'change_24h': coin_data.get('CHANGEPCT24HOUR', 0),
+                        'volume': coin_data.get('VOLUME24HOUR', 0)
+                    }
+            return {}
+    except Exception as e:
+        logger.error(f"Error fetching CryptoCompare data for {coin_symbol}: {e}")
+        return {}
+
 # Cache file for top projects
 TOP_PROJECT_CACHE_FILE = "data/top_projects_cache.json"
 
@@ -102,6 +136,70 @@ def save_top_project_cache(cache: Dict[str, str]):
             json.dump(cache, f)
     except IOError as e:
         logger.error(f"Error saving top project cache: {e}")
+
+async def fetch_coin_prices_multi_source(coin_ids: List[str], cg_client: CoinGeckoAPI, session: aiohttp.ClientSession) -> Dict[str, Dict[str, float]]:
+    """
+    Fetch current prices and 24h change for a list of coins using multiple APIs.
+    Priority: CoinGecko -> CoinMarketCap -> CryptoCompare
+    """
+    prices = {}
+    failed_coins = []
+
+    # Try CoinGecko first
+    try:
+        cg_data = cg_client.get_price(
+            ids=coin_ids,
+            vs_currencies=['usd'],
+            include_24hr_change=True
+        )
+        for coin_id in coin_ids:
+            if coin_id in cg_data:
+                prices[coin_id] = cg_data[coin_id]
+            else:
+                failed_coins.append(coin_id)
+                logger.warning(f"CoinGecko: No data for {coin_id}")
+    except Exception as e:
+        logger.error(f"CoinGecko API error: {e}")
+        failed_coins = coin_ids  # All coins failed, try fallbacks
+
+    # Try CoinMarketCap for failed coins
+    coinmarketcap_api_key = os.getenv("COINMARKETCAP_API_KEY")
+    remaining_failed = []
+    if failed_coins and coinmarketcap_api_key:
+        try:
+            cmc_data = fetch_coinmarketcap_prices(failed_coins)
+            for coin_id in failed_coins:
+                if coin_id in cmc_data:
+                    prices[coin_id] = cmc_data[coin_id]
+                else:
+                    remaining_failed.append(coin_id)
+        except Exception as e:
+            logger.error(f"CoinMarketCap fallback failed: {e}")
+            remaining_failed = failed_coins
+    else:
+        remaining_failed = failed_coins
+
+    # Try CryptoCompare for remaining failed coins
+    if remaining_failed:
+        for coin_id in remaining_failed:
+            symbol = symbol_map.get(coin_id, coin_id.split('-')[0].upper())
+            try:
+                cc_data = await fetch_cryptocompare_price(symbol, session)
+                if cc_data:
+                    prices[coin_id] = {
+                        "usd": cc_data['price'],
+                        "usd_24h_change": cc_data['change_24h']
+                    }
+                    logger.info(f"CryptoCompare: Got data for {coin_id}")
+                else:
+                    # Final fallback to mock data
+                    prices[coin_id] = {"usd": 0.0, "usd_24h_change": 0.0}
+                    logger.warning(f"Using mock data for {coin_id}")
+            except Exception as e:
+                logger.error(f"CryptoCompare failed for {coin_id}: {e}")
+                prices[coin_id] = {"usd": 0.0, "usd_24h_change": 0.0}
+
+    return prices
 
 def fetch_coin_prices(coin_ids: List[str], cg_client: CoinGeckoAPI) -> Dict[str, Dict[str, float]]:
     """
