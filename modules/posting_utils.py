@@ -78,9 +78,9 @@ async def post_to_x(message: str, news_items: List[Dict] = None, main_tweet_id: 
         logger.error("FREE TIER: Rate limits are stricter - consider reducing posting frequency")
         logger.error("Wait time may be longer than expected for free tier")
         raise
-    except tweepy.PaymentRequired as e:
-        logger.error(f"X API Payment Required (402): {e}")
-        logger.error("FREE TIER: You may have exceeded your monthly usage limits")
+    except tweepy.BadRequest as e:
+        logger.error(f"X API Bad Request (400): {e}")
+        logger.error("FREE TIER: You may have exceeded your monthly usage limits or have invalid request")
         logger.error("Consider upgrading to a paid plan or reducing bot activity")
         raise
     except Exception as e:

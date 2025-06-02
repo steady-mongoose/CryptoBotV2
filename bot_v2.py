@@ -393,13 +393,21 @@ async def main(test_discord: bool = False):
         cg_client = CoinGeckoAPI()
         async with aiohttp.ClientSession() as session:
             print("Fetching coin data...")
-            # Add staggered delays to reduce rate limiting
-            tasks = []
+            # Process coins sequentially with delays to avoid rate limiting
+            results = []
             for i, coin_id in enumerate(COIN_IDS):
-                # Add a small delay between each task to reduce concurrent API calls
-                await asyncio.sleep(0.5 * i)
-                tasks.append(fetch_coin_data(coin_id, session, cg_client))
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+                if i > 0:
+                    # Add progressive delays between API calls
+                    delay = min(2 + (i * 0.5), 5)  # Progressive delay up to 5 seconds
+                    print(f"Waiting {delay}s before fetching {coin_id}...")
+                    await asyncio.sleep(delay)
+                
+                try:
+                    result = await fetch_coin_data(coin_id, session, cg_client)
+                    results.append(result)
+                except Exception as e:
+                    logger.error(f"Failed to fetch data for {coin_id}: {e}")
+                    results.append(None)
 
             # Filter out None results and exceptions
             valid_results = [r for r in results if r is not None and not isinstance(r, Exception)]
@@ -426,7 +434,16 @@ async def main(test_discord: bool = False):
                 await post_to_discord(main_post, news_items)
             else:
                 print("Posting main update to X...")
-                main_tweet_id = await post_to_x(main_post, news_items)
+                try:
+                    main_tweet_id = await post_to_x(main_post, news_items)
+                except tweepy.TooManyRequests as e:
+                    logger.error(f"Rate limited when posting main tweet. Skipping individual updates to avoid further limits.")
+                    print("❌ Rate limited - stopping execution to avoid further rate limit violations")
+                    return
+                except Exception as e:
+                    logger.error(f"Failed to post main tweet: {e}")
+                    print("❌ Failed to post main tweet - stopping execution")
+                    return
 
             # Format and post individual coin updates as thread replies
             print("Posting individual coin updates...")
@@ -437,9 +454,20 @@ async def main(test_discord: bool = False):
                     await post_to_discord(formatted_data, [news_items[idx % len(news_items)]] if news_items else [])
                 else:
                     print(f"Posting {data['coin_id']} to X thread...")
-                    await post_to_x(formatted_data, [news_items[idx % len(news_items)]] if news_items else [], main_tweet_id)
-                    # Add a small delay between thread replies to avoid rate limiting
-                    await asyncio.sleep(2)
+                    try:
+                        await post_to_x(formatted_data, [news_items[idx % len(news_items)]] if news_items else [], main_tweet_id)
+                        # Progressive delay between thread replies to avoid rate limiting
+                        delay = min(5 + (idx * 2), 15)  # 5-15 second delays
+                        print(f"Waiting {delay}s before next post...")
+                        await asyncio.sleep(delay)
+                    except tweepy.TooManyRequests as e:
+                        logger.error(f"Rate limited when posting {data['coin_id']}. Stopping thread updates.")
+                        print(f"❌ Rate limited at {data['coin_id']} - stopping further posts")
+                        break
+                    except Exception as e:
+                        logger.error(f"Failed to post {data['coin_id']}: {e}")
+                        print(f"⚠️ Failed to post {data['coin_id']}, continuing with next coin")
+                        continue
 
             # Clean up old data periodically
             print("Cleaning up old data...")

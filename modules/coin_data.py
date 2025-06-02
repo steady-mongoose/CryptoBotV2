@@ -53,6 +53,29 @@ def load_volume_cache() -> Dict[str, float]:
         logger.error(f"Error loading volume cache: {e}")
         return {}
 
+async def fetch_with_exponential_backoff(session, url, coin_id, retries=3):
+    """Fetch data with exponential backoff for rate limiting."""
+    for attempt in range(retries):
+        try:
+            async with session.get(url) as response:
+                if response.status == 429:
+                    wait_time = 2 ** attempt
+                    logger.warning(f"Rate limited for {coin_id}, waiting {wait_time}s before retry {attempt + 1}")
+                    await asyncio.sleep(wait_time)
+                    if attempt == retries - 1:
+                        raise aiohttp.ClientResponseError(None, None, status=429, message="Rate limited after retries")
+                    continue
+                response.raise_for_status()
+                return await response.json()
+        except aiohttp.ClientError as e:
+            if attempt == retries - 1:
+                raise
+            wait_time = 2 ** attempt
+            logger.warning(f"API error for {coin_id}, waiting {wait_time}s before retry {attempt + 1}")
+            await asyncio.sleep(wait_time)
+    
+    raise Exception(f"Failed to fetch data for {coin_id} after {retries} retries")
+
 def save_volume_cache(cache: Dict[str, float]):
     """Save transaction volumes to a cache file."""
     try:

@@ -3,7 +3,7 @@ modules = ["python-3.11"]
 [nix]
 
 [workflows]
-runButton = "Post to X"
+runButton = "Run Bot (Rate Limited)"
 
 [[workflows.workflow]]
 name = "Test Discord"
@@ -18,6 +18,19 @@ args = "python bot_v2.py --test-discord"
 name = "Post to X"
 author = 43339402
 mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py"
+
+[[workflows.workflow]]
+name = "Run Bot (Rate Limited)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Starting CryptoBot with rate limiting protection...\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
