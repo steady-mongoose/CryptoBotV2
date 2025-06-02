@@ -455,5 +455,25 @@ if __name__ == "__main__":
                         help="Test output to Discord instead of posting to X")
     args = parser.parse_args()
 
+    # For Cloud Run, start a simple HTTP server alongside the bot
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'Bot is running')
+            
+        def log_message(self, format, *args):
+            pass  # Suppress HTTP server logs
+    
+    # Start HTTP server in background thread
+    server = HTTPServer(('0.0.0.0', 8080), HealthHandler)
+    server_thread = threading.Thread(target=server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+    print("Health check server started on port 8080")
+    
     # Run the main function
     asyncio.run(main(test_discord=args.test_discord))
