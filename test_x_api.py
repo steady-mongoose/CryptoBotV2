@@ -78,6 +78,7 @@ def test_x_credentials():
             return False
 
         # Test 3: Search functionality (used for social metrics)
+        search_available = True
         try:
             search_results = client.search_recent_tweets(query="#crypto -is:retweet", max_results=10)
             if search_results.data:
@@ -85,15 +86,17 @@ def test_x_credentials():
             else:
                 print("⚠️  Search returned no results (may be normal)")
         except tweepy.Unauthorized as e:
-            print(f"❌ Search unauthorized: {e}")
-            print("   - Free tier may not have search access")
-            return False
+            print(f"⚠️  Search unauthorized (NORMAL FOR FREE TIER): {e}")
+            print("   - Free tier typically doesn't have search access")
+            print("   - Bot will use fallback social metrics")
+            search_available = False
         except tweepy.Forbidden as e:
-            print(f"❌ Search forbidden: {e}")
-            print("   - Free tier may have limited search access")
-            return False
+            print(f"⚠️  Search forbidden (NORMAL FOR FREE TIER): {e}")
+            print("   - Bot will use fallback social metrics")
+            search_available = False
         except Exception as e:
             print(f"⚠️  Search error (may be normal for free tier): {e}")
+            search_available = False
 
         # Test 4: Rate limit status
         try:
@@ -118,8 +121,11 @@ def test_x_credentials():
         print("\n⚠️  FREE TIER LIMITATIONS:")
         print("   - Limited to 1,500 tweets per month")
         print("   - Reduced rate limits")
-        print("   - Limited search capabilities")
+        print("   - Search typically disabled (bot uses fallback)")
         print("   - Your bot may need to handle rate limits gracefully")
+        
+        if not search_available:
+            print("\n📝 NOTE: Search disabled - social metrics will use fallback values")
         
         return True
         
