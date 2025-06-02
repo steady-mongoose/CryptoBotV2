@@ -24,9 +24,10 @@ task = "shell.exec"
 args = "python bot_v2.py"
 
 [deployment]
-deploymentTarget = "cloudrun"
+deploymentTarget = "gce"
 run = ["sh", "-c", "python bot_v2.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
+ignorePorts = true
 
 [[ports]]
 localPort = 8080
