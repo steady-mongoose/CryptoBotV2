@@ -3,7 +3,7 @@ modules = ["python-3.11"]
 [nix]
 
 [workflows]
-runButton = "Test Discord"
+runButton = "Post to X"
 
 [[workflows.workflow]]
 name = "Test Discord"
