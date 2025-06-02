@@ -39,8 +39,8 @@ async def post_to_discord(message, news_items):
             logger.error(f"Unexpected error in post_to_discord: {e}")
             raise
 
-async def post_to_x(message: str, news_items: List[Dict] = None):
-    """Post message to X (formerly Twitter)."""
+async def post_to_x(message: str, news_items: List[Dict] = None, main_tweet_id: str = None):
+    """Post message to X (formerly Twitter) as part of a thread."""
     try:
         x_client = get_x_client()
 
@@ -49,10 +49,19 @@ async def post_to_x(message: str, news_items: List[Dict] = None):
             message = message[:277] + "..."
             logger.warning("Tweet message truncated to fit 280 character limit")
 
-        # Post the main tweet
-        response = x_client.create_tweet(text=message)
-        tweet_id = response.data['id']
-        logger.info(f"Posted main tweet to X: {tweet_id}")
+        # Post tweet (either main tweet or reply to thread)
+        if main_tweet_id:
+            # This is a reply in the thread
+            response = x_client.create_tweet(text=message, in_reply_to_tweet_id=main_tweet_id)
+            tweet_id = response.data['id']
+            logger.info(f"Posted reply tweet to thread {main_tweet_id}: {tweet_id}")
+        else:
+            # This is the main tweet that starts the thread
+            response = x_client.create_tweet(text=message)
+            tweet_id = response.data['id']
+            logger.info(f"Posted main tweet to X: {tweet_id}")
+
+        return tweet_id
 
     except tweepy.Unauthorized as e:
         logger.error(f"X API Unauthorized (401): Check your API credentials in Replit Secrets")

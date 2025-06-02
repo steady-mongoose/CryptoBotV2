@@ -19,6 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger('CryptoBot')
 
 # Now import modules that might use the logger
+import tweepy
 from modules.coin_data import (
     symbol_map, fetch_coin_prices, fetch_volume, fetch_top_project
 )
@@ -418,14 +419,16 @@ async def main(test_discord: bool = False):
             current_time = datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
             main_post = f"🚀 Crypto Market Update ({current_time})! 📈 Latest on top altcoins: Ripple, Hedera Hashgraph, Stellar, XDC Network, Sui, Ondo, Algorand, Casper. #Crypto #Altcoins\n"
             print("Posting main update...")
+            main_tweet_id = None
+            
             if test_discord:
                 print("Posting main update to Discord...")
                 await post_to_discord(main_post, news_items)
             else:
                 print("Posting main update to X...")
-                await post_to_x(main_post, news_items)
+                main_tweet_id = await post_to_x(main_post, news_items)
 
-            # Format and post individual coin updates
+            # Format and post individual coin updates as thread replies
             print("Posting individual coin updates...")
             for idx, data in enumerate(valid_results):
                 formatted_data = format_coin_data(data)
@@ -433,8 +436,10 @@ async def main(test_discord: bool = False):
                     print(f"Posting {data['coin_id']} to Discord...")
                     await post_to_discord(formatted_data, [news_items[idx % len(news_items)]] if news_items else [])
                 else:
-                    print(f"Posting {data['coin_id']} to X...")
-                    await post_to_x(formatted_data, [news_items[idx % len(news_items)]] if news_items else [])
+                    print(f"Posting {data['coin_id']} to X thread...")
+                    await post_to_x(formatted_data, [news_items[idx % len(news_items)]] if news_items else [], main_tweet_id)
+                    # Add a small delay between thread replies to avoid rate limiting
+                    await asyncio.sleep(2)
 
             # Clean up old data periodically
             print("Cleaning up old data...")
