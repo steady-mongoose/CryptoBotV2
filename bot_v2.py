@@ -622,7 +622,7 @@ if __name__ == "__main__":
     if args.check_limits:
         print("🔍 Checking X API rate limits...")
         asyncio.run(print_x_usage_report())
-        return
+        exit(0)
 
     # For Cloud Run, start a simple HTTP server alongside the bot
     import threading
