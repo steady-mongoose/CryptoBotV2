@@ -12,6 +12,8 @@ LUNARCRUSH_API_KEY = os.getenv("LUNARCRUSH_API_KEY")
 NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 COINMARKETCAP_API_KEY = os.getenv("COINMARKETCAP_API_KEY")
+COINBASE_API_KEY = os.getenv("COINBASE_API_KEY")
+COINBASE_API_SECRET = os.getenv("COINBASE_API_SECRET")
 
 def get_x_client() -> tweepy.Client:
     """Initialize and return the X API client using Tweepy 4.15.0 with Twitter API v2."""
@@ -21,12 +23,12 @@ def get_x_client() -> tweepy.Client:
         x_api_secret = os.getenv("X_CONSUMER_SECRET") 
         x_access_token = os.getenv("X_ACCESS_TOKEN")
         x_access_token_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
-        
+
         if not all([x_api_key, x_api_secret, x_access_token, x_access_token_secret]):
             logger.error("Missing X API credentials in environment variables")
             logger.info("Please check your Replit Secrets for: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
             raise ValueError("Missing X API credentials")
-            
+
         return tweepy.Client(
             consumer_key=x_api_key,
             consumer_secret=x_api_secret,
@@ -92,3 +94,13 @@ def get_x_api_key():
         return ""
     return x_api_key
 
+def get_coinbase_api_credentials():
+    """Return Coinbase API credentials."""
+    api_key = os.getenv("COINBASE_API_KEY")
+    api_secret = os.getenv("COINBASE_API_SECRET")
+
+    if not all([api_key, api_secret]):
+        logger.error("Coinbase API credentials not found")
+        return None, None
+
+    return api_key, api_secret
