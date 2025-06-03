@@ -637,12 +637,30 @@ if __name__ == "__main__":
         def log_message(self, format, *args):
             pass  # Suppress HTTP server logs
     
-    # Start HTTP server in background thread
-    server = HTTPServer(('0.0.0.0', 8080), HealthHandler)
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.daemon = True
-    server_thread.start()
-    print("Health check server started on port 8080")
+    # Start HTTP server in background thread with port availability check
+    port = 8080
+    max_port_attempts = 5
+    
+    for attempt in range(max_port_attempts):
+        try:
+            server = HTTPServer(('0.0.0.0', port), HealthHandler)
+            server_thread = threading.Thread(target=server.serve_forever)
+            server_thread.daemon = True
+            server_thread.start()
+            print(f"Health check server started on port {port}")
+            break
+        except OSError as e:
+            if e.errno == 98:  # Address already in use
+                port += 1
+                if attempt < max_port_attempts - 1:
+                    print(f"Port {port-1} in use, trying port {port}...")
+                    continue
+                else:
+                    print(f"Could not find available port after {max_port_attempts} attempts")
+                    break
+            else:
+                print(f"Error starting HTTP server: {e}")
+                break
     
     # Run the main function
     asyncio.run(main(test_discord=args.test_discord, run_once=args.run_once))

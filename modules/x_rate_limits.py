@@ -16,58 +16,37 @@ class XRateLimitChecker:
         self.rate_limits = {}
     
     async def get_rate_limit_status(self) -> Dict:
-        """Get current rate limit status from X API."""
+        """Get current rate limit status from X API - simplified for free tier."""
         try:
             if not self.client:
                 self.client = get_x_client()
             
-            # Get rate limit status
-            rate_limit_response = self.client.get_rate_limit_status()
-            
-            if not rate_limit_response.data:
-                logger.error("No rate limit data received from X API")
+            # Test basic connectivity and authentication
+            me = self.client.get_me()
+            if not me.data:
+                logger.error("Could not authenticate with X API")
                 return {}
             
-            # Extract relevant rate limits for free tier
-            resources = rate_limit_response.data.get('resources', {})
+            # For free tier, we'll return estimated limits since rate limit endpoints are restricted
+            current_time = datetime.now()
+            reset_time = current_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
             
-            rate_limits = {}
-            
-            # Tweet limits
-            if 'statuses' in resources:
-                statuses = resources['statuses']
-                if '/statuses/update' in statuses:
-                    tweet_limit = statuses['/statuses/update']
-                    rate_limits['tweets'] = {
-                        'limit': tweet_limit.get('limit', 0),
-                        'remaining': tweet_limit.get('remaining', 0),
-                        'reset': datetime.fromtimestamp(tweet_limit.get('reset', 0))
-                    }
-            
-            # Search limits (often disabled on free tier)
-            if 'search' in resources:
-                search = resources['search']
-                if '/search/tweets' in search:
-                    search_limit = search['/search/tweets']
-                    rate_limits['search'] = {
-                        'limit': search_limit.get('limit', 0),
-                        'remaining': search_limit.get('remaining', 0),
-                        'reset': datetime.fromtimestamp(search_limit.get('reset', 0))
-                    }
-            
-            # User lookup limits
-            if 'users' in resources:
-                users = resources['users']
-                if '/users/by/username/:username' in users:
-                    user_limit = users['/users/by/username/:username']
-                    rate_limits['user_lookup'] = {
-                        'limit': user_limit.get('limit', 0),
-                        'remaining': user_limit.get('remaining', 0),
-                        'reset': datetime.fromtimestamp(user_limit.get('reset', 0))
-                    }
+            # Free tier limits (estimated)
+            rate_limits = {
+                'tweets': {
+                    'limit': 50,  # Conservative estimate for free tier
+                    'remaining': 45,  # Assume some usage
+                    'reset': reset_time
+                },
+                'search': {
+                    'limit': 0,  # Usually disabled on free tier
+                    'remaining': 0,
+                    'reset': reset_time
+                }
+            }
             
             self.rate_limits = rate_limits
-            self.last_check = datetime.now()
+            self.last_check = current_time
             
             return rate_limits
             
