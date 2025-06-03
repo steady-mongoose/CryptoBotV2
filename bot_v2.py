@@ -21,7 +21,8 @@ logger = logging.getLogger('CryptoBot')
 # Now import modules that might use the logger
 import tweepy
 from modules.coin_data import (
-    symbol_map, fetch_coin_prices, fetch_volume, fetch_top_project
+    symbol_map, fetch_coin_prices, fetch_volume, fetch_top_project,
+    fetch_coin_prices_multi_source, track_rate_limit, reset_rate_limit_tracking
 )
 from modules.social_media import (
     fetch_social_metrics, fetch_youtube_video, fetch_news
@@ -246,8 +247,8 @@ async def fetch_coin_data(coin_id: str, session: aiohttp.ClientSession, cg_clien
             logger.error("Invalid coin_id provided")
             return None
 
-        # Fetch price and 24h change
-        prices = fetch_coin_prices([coin_id], cg_client)
+        # Fetch price and 24h change using multi-source with rate limit protection
+        prices = await fetch_coin_prices_multi_source([coin_id], cg_client, session)
         if coin_id not in prices:
             logger.error(f"No price data returned for {coin_id}")
             return None
@@ -440,8 +441,9 @@ async def main(test_discord: bool = False):
                 try:
                     main_tweet_id = await post_to_x(main_post, news_items)
                 except tweepy.TooManyRequests as e:
-                    logger.error(f"Rate limited when posting main tweet. Skipping individual updates to avoid further limits.")
-                    print("❌ Rate limited - stopping execution to avoid further rate limit violations")
+                    track_rate_limit('twitter')
+                    logger.error(f"X/Twitter rate limited when posting main tweet. Skipping individual updates to avoid further limits.")
+                    print("❌ X/Twitter rate limited - stopping execution to avoid further rate limit violations")
                     return
                 except Exception as e:
                     logger.error(f"Failed to post main tweet: {e}")
@@ -464,8 +466,9 @@ async def main(test_discord: bool = False):
                         print(f"Waiting {delay}s before next post...")
                         await asyncio.sleep(delay)
                     except tweepy.TooManyRequests as e:
-                        logger.error(f"Rate limited when posting {data['coin_id']}. Stopping thread updates.")
-                        print(f"❌ Rate limited at {data['coin_id']} - stopping further posts")
+                        track_rate_limit('twitter')
+                        logger.error(f"X/Twitter rate limited when posting {data['coin_id']}. Stopping thread updates.")
+                        print(f"❌ X/Twitter rate limited at {data['coin_id']} - stopping further posts")
                         break
                     except Exception as e:
                         logger.error(f"Failed to post {data['coin_id']}: {e}")
@@ -475,6 +478,10 @@ async def main(test_discord: bool = False):
             # Clean up old data periodically
             print("Cleaning up old data...")
             await db_manager.cleanup_old_data(days_to_keep=30)
+            
+            # Reset rate limit tracking on successful run
+            reset_rate_limit_tracking()
+            print("✅ Reset API rate limit tracking")
 
     except Exception as e:
         logger.error(f"Error in main function: {e}")

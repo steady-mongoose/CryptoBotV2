@@ -8,6 +8,10 @@ from typing import Dict, List
 
 logger = logging.getLogger('CryptoBot')
 
+# Rate limit tracking
+RATE_LIMIT_WARNINGS = {}
+MAX_RATE_LIMIT_WARNINGS = 2
+
 def get_coinmarketcap_api_key():
     """Get CoinMarketCap API key from environment variables."""
     return os.getenv('COINMARKETCAP_API_KEY')
@@ -22,6 +26,69 @@ def get_binance_us_credentials():
         'api_key': os.getenv('BINANCE_US_API_KEY'),
         'api_secret': os.getenv('BINANCE_US_API_SECRET')
     }
+
+def get_coinbase_credentials():
+    """Get Coinbase API credentials from environment variables."""
+    return {
+        'api_key': os.getenv('COINBASE_API_KEY'),
+        'api_secret': os.getenv('COINBASE_API_SECRET')
+    }
+
+async def fetch_coinbase_price(symbol: str, session: aiohttp.ClientSession) -> Dict:
+    """Fetch price data from Coinbase Advanced Trade API."""
+    try:
+        # Coinbase uses product format like XRP-USD
+        product_id = f"{symbol}-USD"
+        
+        # Use public API endpoint (no auth required for price data)
+        url = f"https://api.coinbase.com/api/v3/brokerage/market/products/{product_id}"
+        
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                price = float(data.get('price', 0))
+                
+                # Get 24h stats for change calculation
+                stats_url = f"https://api.coinbase.com/api/v3/brokerage/market/products/{product_id}/ticker"
+                async with session.get(stats_url) as stats_response:
+                    if stats_response.status == 200:
+                        stats_data = await stats_response.json()
+                        change_24h = float(stats_data.get('price_percent_chg_24h', 0))
+                        volume = float(stats_data.get('volume', 0))
+                        return {
+                            'price': price,
+                            'change_24h': change_24h,
+                            'volume': volume
+                        }
+                
+                return {'price': price, 'change_24h': 0, 'volume': 0}
+            return {}
+    except Exception as e:
+        logger.error(f"Error fetching Coinbase data for {symbol}: {e}")
+        return {}
+
+def track_rate_limit(api_name: str) -> bool:
+    """Track rate limit warnings for an API and return True if should switch APIs."""
+    global RATE_LIMIT_WARNINGS
+    
+    if api_name not in RATE_LIMIT_WARNINGS:
+        RATE_LIMIT_WARNINGS[api_name] = 0
+    
+    RATE_LIMIT_WARNINGS[api_name] += 1
+    
+    logger.warning(f"Rate limit warning #{RATE_LIMIT_WARNINGS[api_name]} for {api_name}")
+    
+    if RATE_LIMIT_WARNINGS[api_name] >= MAX_RATE_LIMIT_WARNINGS:
+        logger.error(f"Switching away from {api_name} after {MAX_RATE_LIMIT_WARNINGS} rate limit warnings")
+        return True
+    
+    return False
+
+def reset_rate_limit_tracking():
+    """Reset rate limit tracking (call periodically or after successful requests)."""
+    global RATE_LIMIT_WARNINGS
+    RATE_LIMIT_WARNINGS.clear()
+    logger.info("Reset rate limit tracking for all APIs")
 
 async def fetch_binance_us_price(symbol: str, session: aiohttp.ClientSession) -> Dict:
     """Fetch price data from Binance US API."""
@@ -89,6 +156,14 @@ symbol_map = {
     "ondo-finance": "ONDO",
     "algorand": "ALGO",
     "casper-network": "CSPR"
+}
+
+# Coinbase symbol mapping (some may not be available on Coinbase)
+coinbase_symbol_map = {
+    "ripple": "XRP",
+    "stellar": "XLM",
+    "sui": "SUI",
+    "algorand": "ALGO"
 }
 
 coinmarketcap_id_map = {
@@ -170,44 +245,80 @@ def save_top_project_cache(cache: Dict[str, str]):
 async def fetch_coin_prices_multi_source(coin_ids: List[str], cg_client: CoinGeckoAPI, session: aiohttp.ClientSession) -> Dict[str, Dict[str, float]]:
     """
     Fetch current prices and 24h change for a list of coins using multiple APIs.
-    Priority: CoinGecko -> CoinMarketCap -> CryptoCompare
+    Priority: CoinGecko -> Coinbase -> CoinMarketCap -> CryptoCompare -> Binance US
+    Implements rate limit tracking and automatic API switching.
     """
     prices = {}
     failed_coins = []
+    
+    # Check if CoinGecko should be skipped due to rate limits
+    skip_coingecko = RATE_LIMIT_WARNINGS.get('coingecko', 0) >= MAX_RATE_LIMIT_WARNINGS
 
-    # Try CoinGecko first
-    try:
-        cg_data = cg_client.get_price(
-            ids=coin_ids,
-            vs_currencies=['usd'],
-            include_24hr_change=True
-        )
-        for coin_id in coin_ids:
-            if coin_id in cg_data:
-                prices[coin_id] = cg_data[coin_id]
-            else:
-                failed_coins.append(coin_id)
-                logger.warning(f"CoinGecko: No data for {coin_id}")
-    except Exception as e:
-        logger.error(f"CoinGecko API error: {e}")
-        failed_coins = coin_ids  # All coins failed, try fallbacks
+    # Try CoinGecko first (unless rate limited)
+    if not skip_coingecko:
+        try:
+            cg_data = cg_client.get_price(
+                ids=coin_ids,
+                vs_currencies=['usd'],
+                include_24hr_change=True
+            )
+            for coin_id in coin_ids:
+                if coin_id in cg_data:
+                    prices[coin_id] = cg_data[coin_id]
+                else:
+                    failed_coins.append(coin_id)
+                    logger.warning(f"CoinGecko: No data for {coin_id}")
+            
+            # Reset rate limit tracking on successful request
+            if coin_ids and prices:
+                RATE_LIMIT_WARNINGS.pop('coingecko', None)
+                
+        except Exception as e:
+            error_str = str(e).lower()
+            if "rate" in error_str and "limit" in error_str:
+                if track_rate_limit('coingecko'):
+                    logger.error("CoinGecko rate limited - switching to alternative APIs")
+            logger.error(f"CoinGecko API error: {e}")
+            failed_coins = coin_ids  # All coins failed, try fallbacks
+    else:
+        logger.info("Skipping CoinGecko due to rate limit warnings, using alternative APIs")
+        failed_coins = coin_ids
 
-    # Try CoinMarketCap for failed coins
+    # Try Coinbase for failed coins
+    coinbase_failed = []
+    if failed_coins:
+        for coin_id in failed_coins:
+            symbol = symbol_map.get(coin_id, coin_id.split('-')[0].upper())
+            try:
+                coinbase_data = await fetch_coinbase_price(symbol, session)
+                if coinbase_data and coinbase_data['price'] > 0:
+                    prices[coin_id] = {
+                        "usd": coinbase_data['price'],
+                        "usd_24h_change": coinbase_data['change_24h']
+                    }
+                    logger.info(f"Coinbase: Got data for {coin_id}")
+                else:
+                    coinbase_failed.append(coin_id)
+            except Exception as e:
+                logger.error(f"Coinbase failed for {coin_id}: {e}")
+                coinbase_failed.append(coin_id)
+
+    # Try CoinMarketCap for remaining failed coins
     coinmarketcap_api_key = os.getenv("COINMARKETCAP_API_KEY")
     remaining_failed = []
-    if failed_coins and coinmarketcap_api_key:
+    if coinbase_failed and coinmarketcap_api_key:
         try:
-            cmc_data = fetch_coinmarketcap_prices(failed_coins)
-            for coin_id in failed_coins:
+            cmc_data = fetch_coinmarketcap_prices(coinbase_failed)
+            for coin_id in coinbase_failed:
                 if coin_id in cmc_data:
                     prices[coin_id] = cmc_data[coin_id]
                 else:
                     remaining_failed.append(coin_id)
         except Exception as e:
             logger.error(f"CoinMarketCap fallback failed: {e}")
-            remaining_failed = failed_coins
+            remaining_failed = coinbase_failed
     else:
-        remaining_failed = failed_coins
+        remaining_failed = coinbase_failed
 
     # Try CryptoCompare for remaining failed coins
     still_failed = []
