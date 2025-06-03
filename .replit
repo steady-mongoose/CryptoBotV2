@@ -4,7 +4,7 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Run Bot (Rate Limited)"
+runButton = "Daily Bot Run"
 
 [[workflows.workflow]]
 name = "Test Discord"
@@ -49,6 +49,45 @@ args = "echo \"🐌 Starting CryptoBot with extended delays for free tier rate l
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python bot_v2.py"
+
+[[workflows.workflow]]
+name = "Daily Bot Run"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🗓️ Starting Daily CryptoBot - runs once every 24 hours...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py"
+
+[[workflows.workflow]]
+name = "Test Daily Run"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing daily bot run (run once and exit)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --run-once"
+
+[[workflows.workflow]]
+name = "Test Discord Daily"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing daily bot run with Discord output...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --run-once --test-discord"
 
 [deployment]
 deploymentTarget = "gce"

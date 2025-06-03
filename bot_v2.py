@@ -6,10 +6,12 @@ import aiohttp
 import sqlite3
 import aiosqlite
 from pycoingecko import CoinGeckoAPI
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 from typing import Dict, List, Optional
 from contextlib import asynccontextmanager
+import time
+import schedule
 
 # Set up logging FIRST, before any other imports that might use it
 logging.basicConfig(
@@ -94,11 +96,22 @@ class DatabaseManager:
                 )
             """)
 
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bot_runs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    success BOOLEAN DEFAULT TRUE,
+                    coins_processed INTEGER DEFAULT 0,
+                    error_message TEXT
+                )
+            """)
+
             # Create optimized indexes
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_coin_id ON coins (coin_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_price_coin_timestamp ON price_history (coin_id, timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_social_coin_timestamp ON social_metrics (coin_id, timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_price_timestamp ON price_history (timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_runs_timestamp ON bot_runs (run_timestamp)")
 
             conn.commit()
             self.logger.info("Database initialized with optimized settings")
@@ -157,6 +170,33 @@ class DatabaseManager:
         except Exception as e:
             self.logger.error(f"Error inserting social data batch: {e}")
 
+    async def log_bot_run(self, success: bool, coins_processed: int, error_message: str = None):
+        """Log bot run statistics."""
+        try:
+            async with self.get_connection() as db:
+                await db.execute(
+                    "INSERT INTO bot_runs (success, coins_processed, error_message) VALUES (?, ?, ?)",
+                    (success, coins_processed, error_message)
+                )
+                await db.commit()
+        except Exception as e:
+            self.logger.error(f"Error logging bot run: {e}")
+
+    async def get_last_run_time(self) -> Optional[datetime]:
+        """Get the timestamp of the last successful bot run."""
+        try:
+            async with self.get_connection() as db:
+                async with db.execute(
+                    "SELECT run_timestamp FROM bot_runs WHERE success = 1 ORDER BY run_timestamp DESC LIMIT 1"
+                ) as cursor:
+                    row = await cursor.fetchone()
+                    if row:
+                        return datetime.fromisoformat(row[0])
+                    return None
+        except Exception as e:
+            self.logger.error(f"Error getting last run time: {e}")
+            return None
+
     async def get_recent_prices(self, coin_id: str, limit: int = 100) -> List[Dict]:
         """Get recent price data with optimized query."""
         try:
@@ -193,6 +233,10 @@ class DatabaseManager:
                 await db.execute(
                     "DELETE FROM social_metrics WHERE timestamp < ?",
                     (cutoff_date,)
+                )
+                await db.execute(
+                    "DELETE FROM bot_runs WHERE run_timestamp < ?",
+                    (datetime.now() - timedelta(days=days_to_keep)).isoformat(),
                 )
                 await db.commit()
 
@@ -292,7 +336,7 @@ async def fetch_coin_data(coin_id: str, session: aiohttp.ClientSession, cg_clien
         return None
 
 def format_coin_data(data: Dict) -> str:
-    """Format the coin data into a string similar to Currency Gator's X posts."""
+    """Format the coin data into a string optimized for X threading."""
     try:
         if not data or not isinstance(data, dict):
             logger.error("Invalid data provided to format_coin_data")
@@ -301,15 +345,12 @@ def format_coin_data(data: Dict) -> str:
         # Determine arrow emoji based on 24h change
         arrow = "📈" if data["change_24h"] >= 0 else "📉"
 
-        # Format the output
+        # Format the output - optimized for X's 280 character limit
         output = (
-            f"{data['coin_id'].replace('-', ' ')} ({data['symbol']}): ${data['price']:.2f} ({data['change_24h']:.2f}% 24h) {arrow}\n"
-            f"Predicted: ${data['predicted_price']:.2f} (Linear regression)\n"
-            f"Tx Volume: {data['volume']:.2f}M\n"
-            f"Top Project: {data['top_project']}\n"
-            f"#{data['symbol']}\n"
-            f"Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n"
-            f"Video: {data['video']['title']}... {data['video']['url']}\n"
+            f"{data['name']} ({data['symbol']}): ${data['price']:.2f} ({data['change_24h']:.2f}% 24h) {arrow}\n"
+            f"Predicted: ${data['predicted_price']:.2f}\n"
+            f"Volume: {data['volume']:.1f}M | {data['top_project']}\n"
+            f"#{data['symbol']} #Crypto"
         )
         return output
     except Exception as e:
@@ -378,122 +419,186 @@ async def validate_x_api():
         logger.error(f"X API validation failed: {e}")
         return False
 
-async def main(test_discord: bool = False):
-    """Main function to fetch data and post updates."""
-    print("Starting CryptoBotV2...")
+async def should_run_today() -> bool:
+    """Check if the bot should run today (once every 24 hours)."""
+    last_run = await db_manager.get_last_run_time()
+    
+    if last_run is None:
+        logger.info("No previous runs found - running bot")
+        return True
+    
+    time_since_last_run = datetime.now() - last_run
+    hours_since_last_run = time_since_last_run.total_seconds() / 3600
+    
+    if hours_since_last_run >= 24:
+        logger.info(f"Last run was {hours_since_last_run:.1f} hours ago - running bot")
+        return True
+    else:
+        hours_remaining = 24 - hours_since_last_run
+        logger.info(f"Bot ran {hours_since_last_run:.1f} hours ago - next run in {hours_remaining:.1f} hours")
+        return False
+
+async def main_bot_run(test_discord: bool = False):
+    """Main function to fetch data and post updates - optimized for X free tier."""
+    print("Starting CryptoBotV2 daily run...")
+    
+    # Check if we should run today
+    if not await should_run_today():
+        print("⏰ Bot already ran today - skipping execution")
+        return
     
     # Validate X API credentials if not testing Discord
     if not test_discord:
         print("Validating X API credentials...")
         if not await validate_x_api():
-            print("❌ X API validation failed! Run 'python test_x_api.py' for detailed diagnostics")
+            print("❌ X API validation failed! Check your credentials in Secrets")
+            await db_manager.log_bot_run(False, 0, "X API validation failed")
             return
         print("✅ X API validation successful")
+    
+    coins_processed = 0
+    error_message = None
     
     try:
         cg_client = CoinGeckoAPI()
         async with aiohttp.ClientSession() as session:
-            print("Fetching coin data...")
-            # Process coins sequentially with delays to avoid rate limiting
+            print("Fetching data for all 8 coins...")
+            
+            # Fetch data for all coins with conservative delays
             results = []
             for i, coin_id in enumerate(COIN_IDS):
-                # Add substantial delays between API calls for CoinGecko free tier
-                delay = 45 + (i * 15)  # 45, 60, 75, 90, 105, 120, 135, 150 seconds
                 if i > 0:
-                    print(f"Waiting {delay}s before fetching {coin_id} (CoinGecko free tier protection)...")
+                    # Conservative delays for CoinGecko free tier
+                    delay = 60  # 1 minute between each coin
+                    print(f"Waiting {delay}s before fetching {coin_id}...")
                     await asyncio.sleep(delay)
                 
                 try:
                     print(f"Fetching data for {coin_id}...")
                     result = await fetch_coin_data(coin_id, session, cg_client)
-                    results.append(result)
-                    print(f"✅ Successfully fetched {coin_id}")
+                    if result:
+                        results.append(result)
+                        coins_processed += 1
+                        print(f"✅ Successfully fetched {coin_id}")
+                    else:
+                        print(f"❌ Failed to fetch {coin_id}")
                 except Exception as e:
                     logger.error(f"Failed to fetch data for {coin_id}: {e}")
                     print(f"❌ Failed to fetch {coin_id}: {e}")
-                    results.append(None)
 
-            # Filter out None results and exceptions
-            valid_results = [r for r in results if r is not None and not isinstance(r, Exception)]
-            print(f"Fetched data for {len(valid_results)} coins.")
+            print(f"Successfully fetched data for {len(results)} coins.")
 
             # Store data to database
-            if valid_results:
+            if results:
                 print("Storing data to database...")
-                await store_data_to_database(valid_results)
+                await store_data_to_database(results)
 
-            # Fetch news for all coins
-            print("Fetching news data...")
-            news_items = await fetch_news(COIN_IDS, session)
-            print(f"Fetched {len(news_items)} news items.")
-
-            # Format the main post
-            current_time = datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
-            main_post = f"🚀 Crypto Market Update ({current_time})! 📈 Latest on top altcoins: Ripple, Hedera Hashgraph, Stellar, XDC Network, Sui, Ondo, Algorand, Casper. #Crypto #Altcoins\n"
-            print("Posting main update...")
-            main_tweet_id = None
+            # Create thread format for X/Twitter
+            current_time = datetime.now().strftime("%Y-%m-%d at %H:%M")
+            main_post = f"🚀 Daily Crypto Update ({current_time})!\n📊 8 Top Altcoins Thread:\n#Crypto #Altcoins #DeFi"
             
             if test_discord:
-                print("Posting main update to Discord...")
-                await post_to_discord(main_post, news_items)
+                print("Posting to Discord...")
+                await post_to_discord(main_post, [])
+                for data in results:
+                    formatted_data = format_coin_data(data)
+                    await post_to_discord(formatted_data, [])
             else:
-                print("Posting main update to X...")
-                # Add initial delay to respect rate limits
-                print("Waiting 10s before posting to respect rate limits...")
-                await asyncio.sleep(10)
+                print("Posting thread to X...")
                 try:
-                    main_tweet_id = await post_to_x(main_post, news_items)
+                    # Post main thread starter
+                    main_tweet_id = await post_to_x(main_post)
+                    logger.info(f"Posted main thread tweet: {main_tweet_id}")
+                    
+                    # Wait before posting thread replies
+                    await asyncio.sleep(60)  # 1 minute delay
+                    
+                    # Post each coin as a thread reply with generous delays
+                    for idx, data in enumerate(results):
+                        formatted_data = format_coin_data(data)
+                        try:
+                            await post_to_x(formatted_data, [], main_tweet_id)
+                            logger.info(f"Posted thread reply for {data['coin_id']}")
+                            
+                            # Progressive delays to respect X free tier (up to 5 minutes between posts)
+                            if idx < len(results) - 1:  # Don't wait after the last post
+                                delay = min(120 + (idx * 30), 300)  # 2-5 minute delays
+                                print(f"Waiting {delay}s before next thread post...")
+                                await asyncio.sleep(delay)
+                                
+                        except tweepy.TooManyRequests as e:
+                            logger.error(f"X rate limited at coin {idx+1}/{len(results)}")
+                            error_message = f"X rate limited after {idx+1} coins"
+                            break
+                        except Exception as e:
+                            logger.error(f"Failed to post {data['coin_id']}: {e}")
+                            continue
+                    
                 except tweepy.TooManyRequests as e:
-                    track_rate_limit('twitter')
-                    logger.error(f"X/Twitter rate limited when posting main tweet. Skipping individual updates to avoid further limits.")
-                    print("❌ X/Twitter rate limited - stopping execution to avoid further rate limit violations")
-                    return
+                    logger.error("X rate limited on main tweet")
+                    error_message = "X rate limited on main tweet"
                 except Exception as e:
                     logger.error(f"Failed to post main tweet: {e}")
-                    print("❌ Failed to post main tweet - stopping execution")
-                    return
+                    error_message = f"Failed to post main tweet: {e}"
 
-            # Format and post individual coin updates as thread replies
-            print("Posting individual coin updates...")
-            for idx, data in enumerate(valid_results):
-                formatted_data = format_coin_data(data)
-                if test_discord:
-                    print(f"Posting {data['coin_id']} to Discord...")
-                    await post_to_discord(formatted_data, [news_items[idx % len(news_items)]] if news_items else [])
-                else:
-                    print(f"Posting {data['coin_id']} to X thread...")
-                    try:
-                        await post_to_x(formatted_data, [news_items[idx % len(news_items)]] if news_items else [], main_tweet_id)
-                        # Progressive delay between thread replies to avoid rate limiting
-                        delay = min(30 + (idx * 10), 120)  # 30-120 second delays for free tier
-                        print(f"Waiting {delay}s before next post...")
-                        await asyncio.sleep(delay)
-                    except tweepy.TooManyRequests as e:
-                        track_rate_limit('twitter')
-                        logger.error(f"X/Twitter rate limited when posting {data['coin_id']}. Stopping thread updates.")
-                        print(f"❌ X/Twitter rate limited at {data['coin_id']} - stopping further posts")
-                        break
-                    except Exception as e:
-                        logger.error(f"Failed to post {data['coin_id']}: {e}")
-                        print(f"⚠️ Failed to post {data['coin_id']}, continuing with next coin")
-                        continue
-
-            # Clean up old data periodically
+            # Clean up old data
             print("Cleaning up old data...")
             await db_manager.cleanup_old_data(days_to_keep=30)
             
-            # Reset rate limit tracking on successful run
-            reset_rate_limit_tracking()
-            print("✅ Reset API rate limit tracking")
+            # Log successful run
+            await db_manager.log_bot_run(True, coins_processed, error_message)
+            print(f"✅ Daily run completed successfully - processed {coins_processed} coins")
 
     except Exception as e:
-        logger.error(f"Error in main function: {e}")
-        print(f"Error occurred: {e}")
+        error_msg = f"Error in main bot run: {e}"
+        logger.error(error_msg)
+        await db_manager.log_bot_run(False, coins_processed, error_msg)
+        print(f"❌ Daily run failed: {e}")
+
+def run_scheduler():
+    """Run the scheduler that checks every hour if bot should run."""
+    # Schedule to check every hour
+    schedule.every().hour.do(lambda: asyncio.create_task(main_bot_run()))
+    
+    print("🕐 Scheduler started - bot will run once every 24 hours")
+    print("⏰ Next check in 1 hour...")
+    
+    while True:
+        schedule.run_pending()
+        time.sleep(3600)  # Check every hour
+
+async def main(test_discord: bool = False, run_once: bool = False):
+    """Main entry point with scheduler support."""
+    if run_once:
+        # Run immediately for testing
+        await main_bot_run(test_discord)
+    else:
+        # Run with scheduler
+        print("Starting 24-hour scheduler...")
+        # Check if we should run immediately on startup
+        if await should_run_today():
+            print("Running bot immediately on startup...")
+            await main_bot_run(test_discord)
+        
+        # Start the scheduler in a separate thread
+        import threading
+        scheduler_thread = threading.Thread(target=run_scheduler)
+        scheduler_thread.daemon = True
+        scheduler_thread.start()
+        
+        # Keep the main thread alive
+        try:
+            while True:
+                await asyncio.sleep(3600)  # Sleep for 1 hour
+        except KeyboardInterrupt:
+            print("Shutting down...")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Crypto Market Update Bot")
+    parser = argparse.ArgumentParser(description="Crypto Market Update Bot - Daily Edition")
     parser.add_argument("--test-discord", action="store_true",
                         help="Test output to Discord instead of posting to X")
+    parser.add_argument("--run-once", action="store_true",
+                        help="Run once and exit (for testing)")
     args = parser.parse_args()
 
     # For Cloud Run, start a simple HTTP server alongside the bot
@@ -504,7 +609,7 @@ if __name__ == "__main__":
         def do_GET(self):
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b'Bot is running')
+            self.wfile.write(b'Daily CryptoBot is running')
             
         def log_message(self, format, *args):
             pass  # Suppress HTTP server logs
@@ -517,4 +622,4 @@ if __name__ == "__main__":
     print("Health check server started on port 8080")
     
     # Run the main function
-    asyncio.run(main(test_discord=args.test_discord))
+    asyncio.run(main(test_discord=args.test_discord, run_once=args.run_once))
