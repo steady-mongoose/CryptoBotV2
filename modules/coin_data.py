@@ -275,10 +275,13 @@ async def fetch_coin_prices_multi_source(coin_ids: List[str], cg_client: CoinGec
                 
         except Exception as e:
             error_str = str(e).lower()
-            if "rate" in error_str and "limit" in error_str:
+            # Better rate limit detection
+            if any(keyword in error_str for keyword in ["rate", "limit", "429", "too many"]):
+                logger.warning(f"CoinGecko rate limit detected: {e}")
                 if track_rate_limit('coingecko'):
                     logger.error("CoinGecko rate limited - switching to alternative APIs")
-            logger.error(f"CoinGecko API error: {e}")
+            else:
+                logger.error(f"CoinGecko API error: {e}")
             failed_coins = coin_ids  # All coins failed, try fallbacks
     else:
         logger.info("Skipping CoinGecko due to rate limit warnings, using alternative APIs")

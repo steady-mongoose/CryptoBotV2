@@ -398,8 +398,8 @@ async def main(test_discord: bool = False):
             results = []
             for i, coin_id in enumerate(COIN_IDS):
                 if i > 0:
-                    # Add progressive delays between API calls for CoinGecko rate limits
-                    delay = min(10 + (i * 2.0), 20)  # Progressive delay up to 20 seconds
+                    # Add conservative delays between API calls for CoinGecko rate limits
+                    delay = min(15 + (i * 3.0), 30)  # Progressive delay up to 30 seconds
                     print(f"Waiting {delay}s before fetching {coin_id}...")
                     await asyncio.sleep(delay)
                 
