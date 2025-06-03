@@ -32,6 +32,7 @@ from modules.social_media import (
 from modules.utils import get_date
 from modules.posting_utils import post_to_discord, post_to_x
 from modules.api_clients import get_x_api_key, get_x_client
+from modules.x_rate_limits import check_x_rate_limits, print_x_usage_report
 
 # Database configuration
 DB_PATH = "data/crypto_bot.db"
@@ -455,6 +456,20 @@ async def main_bot_run(test_discord: bool = False):
             await db_manager.log_bot_run(False, 0, "X API validation failed")
             return
         print("✅ X API validation successful")
+        
+        # Check rate limits before proceeding
+        print("\nChecking X API rate limits...")
+        await print_x_usage_report()
+        
+        # Get rate limit status to decide if we should proceed
+        usage_info = await check_x_rate_limits()
+        if usage_info.get('status') == 'rate_limited':
+            print("🚫 Rate limited! Stopping execution to avoid API violations")
+            await db_manager.log_bot_run(False, 0, "Rate limited - execution stopped")
+            return
+        elif usage_info.get('status') == 'warning':
+            print("⚠️  High API usage detected - proceeding with extra caution")
+        print("=" * 50)
     
     coins_processed = 0
     error_message = None
@@ -599,7 +614,15 @@ if __name__ == "__main__":
                         help="Test output to Discord instead of posting to X")
     parser.add_argument("--run-once", action="store_true",
                         help="Run once and exit (for testing)")
+    parser.add_argument("--check-limits", action="store_true",
+                        help="Check X API rate limits and exit")
     args = parser.parse_args()
+
+    # Handle rate limit checking
+    if args.check_limits:
+        print("🔍 Checking X API rate limits...")
+        asyncio.run(print_x_usage_report())
+        return
 
     # For Cloud Run, start a simple HTTP server alongside the bot
     import threading
