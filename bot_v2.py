@@ -397,17 +397,20 @@ async def main(test_discord: bool = False):
             # Process coins sequentially with delays to avoid rate limiting
             results = []
             for i, coin_id in enumerate(COIN_IDS):
+                # Add substantial delays between API calls for CoinGecko free tier
+                delay = 45 + (i * 15)  # 45, 60, 75, 90, 105, 120, 135, 150 seconds
                 if i > 0:
-                    # Add conservative delays between API calls for CoinGecko rate limits
-                    delay = min(15 + (i * 3.0), 30)  # Progressive delay up to 30 seconds
-                    print(f"Waiting {delay}s before fetching {coin_id}...")
+                    print(f"Waiting {delay}s before fetching {coin_id} (CoinGecko free tier protection)...")
                     await asyncio.sleep(delay)
                 
                 try:
+                    print(f"Fetching data for {coin_id}...")
                     result = await fetch_coin_data(coin_id, session, cg_client)
                     results.append(result)
+                    print(f"✅ Successfully fetched {coin_id}")
                 except Exception as e:
                     logger.error(f"Failed to fetch data for {coin_id}: {e}")
+                    print(f"❌ Failed to fetch {coin_id}: {e}")
                     results.append(None)
 
             # Filter out None results and exceptions

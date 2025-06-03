@@ -407,14 +407,24 @@ def fetch_coin_prices(coin_ids: List[str], cg_client: CoinGeckoAPI) -> Dict[str,
     return prices
 
 async def fetch_volume(coin_id: str, session: aiohttp.ClientSession) -> float:
-    """Fetch 24h volume for a coin from CoinGecko API with rate limiting handling."""
+    """Fetch 24h volume for a coin from CoinGecko API with aggressive rate limiting protection."""
     import asyncio
 
-    max_retries = 3
-    retry_delay = 2  # seconds
+    # Check if we should skip CoinGecko due to rate limits
+    skip_coingecko = RATE_LIMIT_WARNINGS.get('coingecko', 0) >= MAX_RATE_LIMIT_WARNINGS
+    if skip_coingecko:
+        logger.info(f"Skipping volume fetch for {coin_id} due to CoinGecko rate limits")
+        return 0.0
+
+    max_retries = 2  # Reduced retries to avoid hitting limits
+    retry_delay = 30  # Much longer delays
 
     for attempt in range(max_retries):
         try:
+            # Add delay before each request
+            if attempt > 0:
+                await asyncio.sleep(retry_delay)
+            
             url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
             async with session.get(url) as response:
                 if response.status == 200:
@@ -422,17 +432,13 @@ async def fetch_volume(coin_id: str, session: aiohttp.ClientSession) -> float:
                     volume = data.get("market_data", {}).get("total_volume", {}).get("usd", 0)
                     return round(volume / 1_000_000, 2)  # Convert to millions
                 elif response.status == 429:  # Rate limited
-                    if attempt < max_retries - 1:
-                        wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
-                        logger.warning(f"Rate limited for {coin_id}, waiting {wait_time}s before retry {attempt + 1}")
-                        await asyncio.sleep(wait_time)
-                        continue
-                    else:
-                        logger.error(f"Rate limited for {coin_id}, max retries exceeded")
-                        return 0.0
+                    logger.warning(f"CoinGecko rate limited for volume {coin_id}")
+                    if track_rate_limit('coingecko'):
+                        logger.error("Switching away from CoinGecko for volume fetches")
+                    return 0.0
                 else:
                     error_text = await response.text()
-                    logger.error(f"CoinGecko API error for volume {coin_id}: {response.status}, message='{error_text}', url='{url}'")
+                    logger.error(f"CoinGecko API error for volume {coin_id}: {response.status}")
                     return 0.0
         except Exception as e:
             logger.error(f"Error fetching volume for {coin_id}: {e}")
@@ -444,36 +450,49 @@ async def fetch_volume(coin_id: str, session: aiohttp.ClientSession) -> float:
     return 0.0
 
 async def fetch_top_project(coin_id: str, session: aiohttp.ClientSession) -> str:
-    """Fetch the top project (exchange) for a coin using CoinGecko API."""
+    """Fetch the top project (exchange) for a coin using CoinGecko API with rate limit protection."""
     cache = load_top_project_cache()
     if coin_id in cache:
         logger.debug(f"Using cached top project for {coin_id}: {cache[coin_id]}")
         return cache[coin_id]
 
+    # Check if we should skip CoinGecko due to rate limits
+    skip_coingecko = RATE_LIMIT_WARNINGS.get('coingecko', 0) >= MAX_RATE_LIMIT_WARNINGS
+    if skip_coingecko:
+        logger.info(f"Skipping top project fetch for {coin_id} due to CoinGecko rate limits, using fallback")
+        project_map = {
+            "hedera-hashgraph": "Binance CEX",
+            "stellar": "Binance CEX", 
+            "sui": "Binance CEX",
+            "algorand": "Binance CEX",
+            "xdce-crowd-sale": "Gate",
+            "casper-network": "Gate",
+            "ondo-finance": "Binance CEX",
+            "ripple": "Binance CEX"
+        }
+        top_project = project_map.get(coin_id, "N/A")
+        cache[coin_id] = top_project
+        save_top_project_cache(cache)
+        return top_project
+
     try:
+        # Add delay before API call
+        await asyncio.sleep(5)
+        
         url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/tickers"
         async with session.get(url) as response:
             if response.status == 429:
-                logger.warning(f"CoinGecko rate limit hit for {coin_id}, using fallback data")
+                logger.warning(f"CoinGecko rate limited for top project {coin_id}")
+                if track_rate_limit('coingecko'):
+                    logger.error("Switching away from CoinGecko for top project fetches")
                 raise aiohttp.ClientResponseError(None, None, status=429, message="Rate limited")
             response.raise_for_status()
             data = await response.json()
-            logger.debug(f"CoinGecko API response for top project {coin_id}: {data}")
+            
             if 'tickers' not in data or not data['tickers']:
                 logger.warning(f"No tickers found for {coin_id}, using fallback.")
-                project_map = {
-                    "hedera-hashgraph": "Binance CEX",
-                    "stellar": "Binance CEX",
-                    "sui": "Binance CEX",
-                    "algorand": "Binance CEX",
-                    "xdce-crowd-sale": "Gate",
-                    "casper-network": "Gate",
-                    "ondo-finance": "Binance CEX"
-                }
-                top_exchange = project_map.get(coin_id, "N/A")
-                cache[coin_id] = top_exchange
-                save_top_project_cache(cache)
-                return top_exchange
+                raise ValueError("No tickers found")
+                
             top_ticker = max(data['tickers'], key=lambda x: x.get('volume', 0))
             top_exchange = top_ticker.get('market', {}).get('name', "N/A")
             if top_exchange == "N/A":
@@ -481,12 +500,13 @@ async def fetch_top_project(coin_id: str, session: aiohttp.ClientSession) -> str
             cache[coin_id] = top_exchange
             save_top_project_cache(cache)
             return top_exchange
+            
     except (aiohttp.ClientError, ValueError) as e:
         logger.warning(f"CoinGecko API error for top project {coin_id}: {e}, using fallback")
         project_map = {
             "hedera-hashgraph": "Binance CEX",
             "stellar": "Binance CEX",
-            "sui": "Binance CEX",
+            "sui": "Binance CEX", 
             "algorand": "Binance CEX",
             "xdce-crowd-sale": "Gate",
             "casper-network": "Gate",
