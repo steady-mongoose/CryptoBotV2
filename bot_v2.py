@@ -398,7 +398,7 @@ async def main(test_discord: bool = False):
             for i, coin_id in enumerate(COIN_IDS):
                 if i > 0:
                     # Add progressive delays between API calls
-                    delay = min(2 + (i * 0.5), 5)  # Progressive delay up to 5 seconds
+                    delay = min(5 + (i * 1.0), 10)  # Progressive delay up to 10 seconds
                     print(f"Waiting {delay}s before fetching {coin_id}...")
                     await asyncio.sleep(delay)
                 
@@ -434,6 +434,9 @@ async def main(test_discord: bool = False):
                 await post_to_discord(main_post, news_items)
             else:
                 print("Posting main update to X...")
+                # Add initial delay to respect rate limits
+                print("Waiting 10s before posting to respect rate limits...")
+                await asyncio.sleep(10)
                 try:
                     main_tweet_id = await post_to_x(main_post, news_items)
                 except tweepy.TooManyRequests as e:
@@ -457,7 +460,7 @@ async def main(test_discord: bool = False):
                     try:
                         await post_to_x(formatted_data, [news_items[idx % len(news_items)]] if news_items else [], main_tweet_id)
                         # Progressive delay between thread replies to avoid rate limiting
-                        delay = min(5 + (idx * 2), 15)  # 5-15 second delays
+                        delay = min(30 + (idx * 10), 120)  # 30-120 second delays for free tier
                         print(f"Waiting {delay}s before next post...")
                         await asyncio.sleep(delay)
                     except tweepy.TooManyRequests as e:

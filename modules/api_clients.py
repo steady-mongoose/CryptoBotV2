@@ -32,7 +32,7 @@ def get_x_client() -> tweepy.Client:
             consumer_secret=x_api_secret,
             access_token=x_access_token,
             access_token_secret=x_access_token_secret,
-            wait_on_rate_limit=True
+            wait_on_rate_limit=False  # Handle rate limiting manually for better control
         )
     except Exception as e:
         logger.error(f"Error initializing X client: {e}")

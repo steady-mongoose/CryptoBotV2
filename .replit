@@ -37,6 +37,19 @@ args = "echo \"🚀 Starting CryptoBot with rate limiting protection...\""
 task = "shell.exec"
 args = "python bot_v2.py"
 
+[[workflows.workflow]]
+name = "Run Bot (Slower Posting)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🐌 Starting CryptoBot with extended delays for free tier rate limits...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py"
+
 [deployment]
 deploymentTarget = "gce"
 run = ["sh", "-c", "python bot_v2.py"]

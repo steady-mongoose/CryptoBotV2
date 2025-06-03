@@ -40,52 +40,66 @@ async def post_to_discord(message, news_items):
             raise
 
 async def post_to_x(message: str, news_items: List[Dict] = None, main_tweet_id: str = None):
-    """Post message to X (formerly Twitter) as part of a thread."""
-    try:
-        x_client = get_x_client()
+    """Post message to X (formerly Twitter) as part of a thread with enhanced rate limiting."""
+    max_retries = 3
+    base_delay = 300  # 5 minutes initial delay for rate limits
+    
+    for attempt in range(max_retries):
+        try:
+            x_client = get_x_client()
 
-        # Validate message length (X has a 280 character limit)
-        if len(message) > 280:
-            message = message[:277] + "..."
-            logger.warning("Tweet message truncated to fit 280 character limit")
+            # Validate message length (X has a 280 character limit)
+            if len(message) > 280:
+                message = message[:277] + "..."
+                logger.warning("Tweet message truncated to fit 280 character limit")
 
-        # Post tweet (either main tweet or reply to thread)
-        if main_tweet_id:
-            # This is a reply in the thread
-            response = x_client.create_tweet(text=message, in_reply_to_tweet_id=main_tweet_id)
-            tweet_id = response.data['id']
-            logger.info(f"Posted reply tweet to thread {main_tweet_id}: {tweet_id}")
-        else:
-            # This is the main tweet that starts the thread
-            response = x_client.create_tweet(text=message)
-            tweet_id = response.data['id']
-            logger.info(f"Posted main tweet to X: {tweet_id}")
+            # Post tweet (either main tweet or reply to thread)
+            if main_tweet_id:
+                # This is a reply in the thread
+                response = x_client.create_tweet(text=message, in_reply_to_tweet_id=main_tweet_id)
+                tweet_id = response.data['id']
+                logger.info(f"Posted reply tweet to thread {main_tweet_id}: {tweet_id}")
+            else:
+                # This is the main tweet that starts the thread
+                response = x_client.create_tweet(text=message)
+                tweet_id = response.data['id']
+                logger.info(f"Posted main tweet to X: {tweet_id}")
 
-        return tweet_id
+            return tweet_id
 
-    except tweepy.Unauthorized as e:
-        logger.error(f"X API Unauthorized (401): Check your API credentials in Replit Secrets")
-        logger.error(f"Ensure your X API keys have write permissions and are not expired")
-        logger.error(f"FREE TIER: Verify your app has proper permissions and isn't restricted")
-        raise
-    except tweepy.Forbidden as e:
-        logger.error(f"X API Forbidden (403): {e}")
-        logger.error("Your account may be restricted or the app may not have proper permissions")
-        logger.error("FREE TIER: Check if you've exceeded monthly tweet limits (1,500 tweets/month)")
-        raise
-    except tweepy.TooManyRequests as e:
-        logger.error(f"X API Rate Limited (429): {e}")
-        logger.error("FREE TIER: Rate limits are stricter - consider reducing posting frequency")
-        logger.error("Wait time may be longer than expected for free tier")
-        raise
-    except tweepy.BadRequest as e:
-        logger.error(f"X API Bad Request (400): {e}")
-        logger.error("FREE TIER: You may have exceeded your monthly usage limits or have invalid request")
-        logger.error("Consider upgrading to a paid plan or reducing bot activity")
-        raise
-    except Exception as e:
-        logger.error(f"Error posting main tweet to X: {e}")
-        raise
+        except tweepy.TooManyRequests as e:
+            if attempt < max_retries - 1:
+                # Calculate exponential backoff delay
+                delay = base_delay * (2 ** attempt)
+                logger.warning(f"Rate limited (attempt {attempt + 1}/{max_retries}). Waiting {delay} seconds...")
+                await asyncio.sleep(delay)
+                continue
+            else:
+                logger.error(f"X API Rate Limited after {max_retries} attempts: {e}")
+                logger.error("FREE TIER: Rate limits exceeded - stopping execution")
+                raise
+
+        except tweepy.Unauthorized as e:
+            logger.error(f"X API Unauthorized (401): Check your API credentials in Replit Secrets")
+            logger.error(f"Ensure your X API keys have write permissions and are not expired")
+            logger.error(f"FREE TIER: Verify your app has proper permissions and isn't restricted")
+            raise
+        except tweepy.Forbidden as e:
+            logger.error(f"X API Forbidden (403): {e}")
+            logger.error("Your account may be restricted or the app may not have proper permissions")
+            logger.error("FREE TIER: Check if you've exceeded monthly tweet limits (1,500 tweets/month)")
+            raise
+        except tweepy.BadRequest as e:
+            logger.error(f"X API Bad Request (400): {e}")
+            logger.error("FREE TIER: You may have exceeded your monthly usage limits or have invalid request")
+            logger.error("Consider upgrading to a paid plan or reducing bot activity")
+            raise
+        except Exception as e:
+            logger.error(f"Error posting tweet to X: {e}")
+            raise
+
+    # This should never be reached due to the raise statements above
+    raise Exception("Failed to post after all retry attempts")
 
 # Engage with influencers
 async def engage_with_influencers(coin_name, coin_data, x_client):
