@@ -2,12 +2,83 @@ import logging
 import tweepy
 import asyncio
 import aiohttp
-from modules.utils import get_timestamp, get_date, format_tweet, truncate_text
+import json
+from modules.utils import get_timestamp, get_date
 from modules.api_clients import get_discord_webhook_url, get_x_client
 import os
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 logger = logging.getLogger('CryptoBot')
+
+def format_tweet(text: str, max_length: int = 280) -> str:
+    """Format text for X/Twitter with character limit."""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length-3] + "..."
+
+def truncate_text(text: str, max_length: int) -> str:
+    """Truncate text to specified length."""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length-3] + "..."
+
+async def post_to_discord(content: str, attachments: List = None):
+    """Post content to Discord webhook."""
+    try:
+        webhook_url = get_discord_webhook_url()
+        if not webhook_url:
+            logger.error("Discord webhook URL not found")
+            return False
+        
+        async with aiohttp.ClientSession() as session:
+            payload = {"content": content}
+            async with session.post(webhook_url, json=payload) as response:
+                if response.status == 200:
+                    logger.info("Successfully posted to Discord")
+                    return True
+                else:
+                    logger.error(f"Failed to post to Discord: {response.status}")
+                    return False
+    except Exception as e:
+        logger.error(f"Error posting to Discord: {e}")
+        return False
+
+async def post_to_x(content: str, attachments: List = None, reply_to_id: Optional[str] = None) -> Optional[str]:
+    """Post content to X/Twitter with rate limiting protection."""
+    try:
+        client = get_x_client()
+        
+        # Format content for X's character limit
+        formatted_content = format_tweet(content, 280)
+        
+        # Create tweet parameters
+        tweet_params = {"text": formatted_content}
+        if reply_to_id:
+            tweet_params["in_reply_to_tweet_id"] = reply_to_id
+        
+        # Post the tweet
+        response = client.create_tweet(**tweet_params)
+        
+        if response.data:
+            tweet_id = response.data['id']
+            logger.info(f"Successfully posted to X: {tweet_id}")
+            return str(tweet_id)
+        else:
+            logger.error("Failed to get tweet ID from response")
+            return None
+            
+    except tweepy.TooManyRequests as e:
+        logger.error(f"X rate limit exceeded: {e}")
+        raise
+    except tweepy.Forbidden as e:
+        logger.error(f"X API forbidden (check account status): {e}")
+        raise
+    except tweepy.Unauthorized as e:
+        logger.error(f"X API unauthorized (check credentials): {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error posting to X: {e}")
+        raise
 
 def get_discord_webhook_url():
     """Get Discord webhook URL from environment variables."""

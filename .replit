@@ -89,6 +89,19 @@ args = "echo \"🧪 Testing daily bot run with Discord output...\""
 task = "shell.exec"
 args = "python bot_v2.py --run-once --test-discord"
 
+[[workflows.workflow]]
+name = "Test Bot Fixed"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔧 Testing bot with fixes...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --run-once --test-discord"
+
 [deployment]
 deploymentTarget = "gce"
 run = ["sh", "-c", "python bot_v2.py"]

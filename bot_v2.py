@@ -464,12 +464,12 @@ async def main_bot_run(test_discord: bool = False):
         async with aiohttp.ClientSession() as session:
             print("Fetching data for all 8 coins...")
             
-            # Fetch data for all coins with conservative delays
+            # Fetch data for all coins with very conservative delays
             results = []
             for i, coin_id in enumerate(COIN_IDS):
                 if i > 0:
-                    # Conservative delays for CoinGecko free tier
-                    delay = 60  # 1 minute between each coin
+                    # Very conservative delays for free tier compliance
+                    delay = 90  # 1.5 minutes between each coin
                     print(f"Waiting {delay}s before fetching {coin_id}...")
                     await asyncio.sleep(delay)
                 
@@ -511,18 +511,18 @@ async def main_bot_run(test_discord: bool = False):
                     logger.info(f"Posted main thread tweet: {main_tweet_id}")
                     
                     # Wait before posting thread replies
-                    await asyncio.sleep(60)  # 1 minute delay
+                    await asyncio.sleep(180)  # 3 minute delay
                     
-                    # Post each coin as a thread reply with generous delays
+                    # Post each coin as a thread reply with very generous delays for free tier
                     for idx, data in enumerate(results):
                         formatted_data = format_coin_data(data)
                         try:
                             await post_to_x(formatted_data, [], main_tweet_id)
                             logger.info(f"Posted thread reply for {data['coin_id']}")
                             
-                            # Progressive delays to respect X free tier (up to 5 minutes between posts)
+                            # Very generous delays to respect X free tier (up to 10 minutes between posts)
                             if idx < len(results) - 1:  # Don't wait after the last post
-                                delay = min(120 + (idx * 30), 300)  # 2-5 minute delays
+                                delay = min(300 + (idx * 60), 600)  # 5-10 minute delays
                                 print(f"Waiting {delay}s before next thread post...")
                                 await asyncio.sleep(delay)
                                 

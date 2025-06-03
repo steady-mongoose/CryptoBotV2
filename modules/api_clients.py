@@ -15,6 +15,39 @@ COINMARKETCAP_API_KEY = os.getenv("COINMARKETCAP_API_KEY")
 COINBASE_API_KEY = os.getenv("COINBASE_API_KEY")
 COINBASE_API_SECRET = os.getenv("COINBASE_API_SECRET")
 
+# X/Twitter API credentials
+X_API_KEY = os.getenv("X_API_KEY")
+X_API_SECRET = os.getenv("X_API_SECRET")
+X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
+X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
+X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
+
+def get_x_api_key():
+    """Return the X API key."""
+    if not X_API_KEY:
+        logger.error("X API key not found")
+        return ""
+    return X_API_KEY
+
+def get_x_client():
+    """Initialize and return the X API client."""
+    try:
+        if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET]):
+            raise ValueError("Missing X API credentials")
+        
+        client = tweepy.Client(
+            bearer_token=X_BEARER_TOKEN,
+            consumer_key=X_API_KEY,
+            consumer_secret=X_API_SECRET,
+            access_token=X_ACCESS_TOKEN,
+            access_token_secret=X_ACCESS_TOKEN_SECRET,
+            wait_on_rate_limit=True
+        )
+        return client
+    except Exception as e:
+        logger.error(f"Error initializing X client: {e}")
+        raise
+
 def get_x_client() -> tweepy.Client:
     """Initialize and return the X API client using Tweepy 4.15.0 with Twitter API v2."""
     try:
