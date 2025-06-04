@@ -141,6 +141,19 @@ args = "echo \"🔄 Starting CryptoBot with X posting and Discord fallback...\""
 task = "shell.exec"
 args = "python bot_v2.py --dual-post"
 
+[[workflows.workflow]]
+name = "Post with X Thread Fallback"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Starting CryptoBot with X thread posting and Discord fallback...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --dual-post"
+
 [deployment]
 deploymentTarget = "gce"
 run = ["sh", "-c", "python bot_v2.py"]
