@@ -219,6 +219,19 @@ args = "echo \"📅 Daily CryptoBot run optimized for X API free tier compliance
 task = "shell.exec"
 args = "python bot_v2.py"
 
+[[workflows.workflow]]
+name = "Simultaneous Post (X + Discord)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔄 Starting simultaneous posting to X and Discord with manual template fallback...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --simultaneous"
+
 [deployment]
 deploymentTarget = "gce"
 run = ["sh", "-c", "python bot_v2.py"]

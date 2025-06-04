@@ -289,7 +289,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
             "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto"
         }
 
-async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False):
+async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False, simultaneous_post: bool = False):
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
 
@@ -423,6 +423,111 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             except Exception as e:
                 logger.error(f"Error with main thread tweet: {e}")
                 queue_x_post(main_post['text'], priority=1)
+
+        # Handle simultaneous posting mode (X + Discord simultaneously, manual template on X failure)
+        elif simultaneous_post and not test_discord:
+            logger.info("Simultaneous posting mode: Posting to both X and Discord, manual template on X failure")
+
+            # Start the queue worker
+            start_x_queue()
+
+            # Always post to Discord first (guaranteed to work)
+            if DISCORD_WEBHOOK_URL:
+                async with aiohttp.ClientSession() as discord_session:
+                    # Post main update to Discord
+                    async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
+                        if response.status == 204:
+                            logger.info("Successfully posted main update to Discord. Status code: 204")
+                        else:
+                            logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
+
+                    # Post coin updates to Discord
+                    for data in results:
+                        reply_text = format_tweet(data)
+                        async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
+                            if response.status == 204:
+                                logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
+                            else:
+                                logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
+                        await asyncio.sleep(0.5)
+            else:
+                logger.error("DISCORD_WEBHOOK_URL not set. Cannot post to Discord.")
+
+            # Attempt X posting simultaneously
+            x_success = False
+            try:
+                main_tweet = x_client.create_tweet(text=main_post['text'])
+                logger.info(f"Posted main tweet to X with ID: {main_tweet.data['id']}.")
+                x_success = True
+
+                previous_tweet_id = main_tweet.data['id']
+                for data in results:
+                    reply_text = format_tweet(data)
+                    try:
+                        reply_tweet = x_client.create_tweet(
+                            text=reply_text,
+                            in_reply_to_tweet_id=previous_tweet_id
+                        )
+                        previous_tweet_id = reply_tweet.data['id']
+                        logger.info(f"Posted reply for {data['coin_name']} to X with ID: {reply_tweet.data['id']}.")
+                        await asyncio.sleep(2)
+
+                    except tweepy.TooManyRequests:
+                        logger.warning(f"Rate limited while posting {data['coin_name']} to X")
+                        x_success = False
+                        break
+
+                    except Exception as e:
+                        logger.error(f"Error posting {data['coin_name']} to X: {e}")
+                        x_success = False
+                        break
+
+            except tweepy.TooManyRequests:
+                logger.warning("Rate limited on main tweet to X")
+                x_success = False
+
+            except Exception as e:
+                logger.error(f"Error with main tweet to X: {e}")
+                x_success = False
+
+            # If X posting failed, generate manual template
+            if not x_success:
+                logger.info("X posting failed, generating manual thread template")
+                current_date = get_date()
+                current_time = get_timestamp()
+                
+                thread_content = []
+                thread_content.append(f"=== MANUAL X THREAD TEMPLATE ===")
+                thread_content.append(f"Generated on: {current_date} at {current_time}")
+                thread_content.append(f"Reason: X API rate limit exceeded\n")
+                
+                thread_content.append(f"=== MAIN POST ===")
+                thread_content.append(f"{main_post['text']}\n")
+                
+                for i, data in enumerate(results, 1):
+                    reply_text = format_tweet(data)
+                    thread_content.append(f"=== REPLY {i} - {data['coin_name']} ===")
+                    thread_content.append(f"{reply_text}\n")
+                
+                thread_content.append("=== POSTING INSTRUCTIONS ===")
+                thread_content.append("1. Copy the MAIN POST content and post it to X")
+                thread_content.append("2. Reply to the main post with REPLY 1 content")
+                thread_content.append("3. Reply to REPLY 1 with REPLY 2 content")
+                thread_content.append("4. Continue replying to create a thread")
+                thread_content.append("5. Each reply should be posted as a response to the previous tweet")
+                
+                filename = f"manual_x_thread_{current_date}_{current_time.replace(':', '-')}.txt"
+                
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write('\n'.join(thread_content))
+                
+                logger.info(f"Manual X thread template saved to: {filename}")
+                print(f"\n🚨 X POSTING FAILED - MANUAL TEMPLATE GENERATED 🚨")
+                print(f"Template saved as: {filename}")
+                print(f"Discord posting completed successfully.")
+                print(f"Please manually post the thread template to X when rate limits reset.")
+            else:
+                logger.info("Successfully posted to both X and Discord")
 
         # Handle dual posting mode (X + Discord fallback)
         elif dual_post and not test_discord:
@@ -573,10 +678,11 @@ if __name__ == "__main__":
     parser.add_argument("--test-discord", action="store_true", help="Test mode: post to Discord instead of X")
     parser.add_argument("--dual-post", action="store_true", help="Dual post mode: try X first, fallback to Discord if rate limited")
     parser.add_argument("--thread", action="store_true", help="Thread mode: post as a threaded tweet series to X")
+    parser.add_argument("--simultaneous", action="store_true", help="Simultaneous mode: post to both X and Discord, generate manual template on X failure")
     args = parser.parse_args()
 
     try:
-        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post, thread_mode=args.thread))
+        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post, thread_mode=args.thread, simultaneous_post=args.simultaneous))
     except Exception as e:
         logger.error(f"Script failed with error: {str(e)}")
         raise
