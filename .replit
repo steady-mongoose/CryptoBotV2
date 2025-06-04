@@ -128,6 +128,19 @@ args = "echo \"🔍 Checking X posting queue status...\""
 task = "shell.exec"
 args = "python check_queue_status.py"
 
+[[workflows.workflow]]
+name = "Post X with Discord Fallback"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔄 Starting CryptoBot with X posting and Discord fallback...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --dual-post"
+
 [deployment]
 deploymentTarget = "gce"
 run = ["sh", "-c", "python bot_v2.py"]

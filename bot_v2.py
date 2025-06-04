@@ -167,7 +167,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
         logger.error(f"Error fetching YouTube video for {coin}: {str(e)}")
         return {"title": "N/A", "url": "N/A"}
 
-async def main_bot_run(test_discord: bool = False):
+async def main_bot_run(test_discord: bool = False, dual_post: bool = False):
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
 
@@ -228,7 +228,7 @@ async def main_bot_run(test_discord: bool = False):
         }
 
         # Post updates
-        if test_discord:
+        if test_discord or dual_post:
             if not DISCORD_WEBHOOK_URL:
                 logger.error("DISCORD_WEBHOOK_URL not set. Cannot post to Discord.")
                 return
@@ -250,7 +250,78 @@ async def main_bot_run(test_discord: bool = False):
                         else:
                             logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
                     await asyncio.sleep(0.5)
-        else:
+        
+        # Handle dual posting mode (X + Discord fallback)
+        if dual_post and not test_discord:
+            logger.info("Dual posting mode: Attempting X first, Discord as fallback")
+            
+            # Start the queue worker
+            start_x_queue()
+            
+            x_success = False
+            try:
+                # Attempt X posting first
+                main_tweet = x_client.create_tweet(text=main_post['text'])
+                logger.info(f"Posted main tweet to X with ID: {main_tweet.data['id']}.")
+                x_success = True
+
+                previous_tweet_id = main_tweet.data['id']
+                for data in results:
+                    reply_text = format_tweet(data)
+                    try:
+                        reply_tweet = x_client.create_tweet(
+                            text=reply_text,
+                            in_reply_to_tweet_id=previous_tweet_id
+                        )
+                        previous_tweet_id = reply_tweet.data['id']
+                        logger.info(f"Posted reply for {data['coin_name']} to X with ID: {reply_tweet.data['id']}.")
+                        await asyncio.sleep(0.5)
+                        
+                    except tweepy.TooManyRequests:
+                        logger.warning(f"Rate limited while posting {data['coin_name']}, falling back to Discord")
+                        x_success = False
+                        break
+                        
+                    except Exception as e:
+                        logger.error(f"Error posting {data['coin_name']} to X: {e}")
+                        x_success = False
+                        break
+                        
+            except tweepy.TooManyRequests:
+                logger.warning("Rate limited on main tweet, falling back to Discord")
+                x_success = False
+                
+            except Exception as e:
+                logger.error(f"Error with main tweet: {e}")
+                x_success = False
+
+            # If X posting failed, post to Discord
+            if not x_success:
+                logger.info("X posting failed, posting to Discord instead")
+                if DISCORD_WEBHOOK_URL:
+                    async with aiohttp.ClientSession() as discord_session:
+                        # Post main update
+                        async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
+                            if response.status == 204:
+                                logger.info("Successfully posted main update to Discord. Status code: 204")
+                            else:
+                                logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
+
+                        # Post coin updates
+                        for data in results:
+                            reply_text = format_tweet(data)
+                            async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
+                                if response.status == 204:
+                                    logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
+                                else:
+                                    logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
+                            await asyncio.sleep(0.5)
+                else:
+                    logger.error("DISCORD_WEBHOOK_URL not set. Cannot fallback to Discord.")
+            else:
+                logger.info("Successfully posted to X, no Discord fallback needed")
+                
+        elif not test_discord and not dual_post:
             # Post to X using thread queue system
             logger.debug("Starting X posting with thread queue fallback")
             
@@ -327,10 +398,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="CryptoBotV2 - Post daily crypto updates to X or Discord")
     parser.add_argument("--test-discord", action="store_true", help="Test mode: post to Discord instead of X")
+    parser.add_argument("--dual-post", action="store_true", help="Dual post mode: try X first, fallback to Discord if rate limited")
     args = parser.parse_args()
 
     try:
-        asyncio.run(main_bot_run(test_discord=args.test_discord))
+        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post))
     except Exception as e:
         logger.error(f"Script failed with error: {str(e)}")
         raise
