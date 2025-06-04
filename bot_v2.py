@@ -2,296 +2,317 @@ import argparse
 import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import aiohttp
 import numpy as np
 from sklearn.linear_model import LinearRegression
-from googleapiclient.discovery import build  # For YouTube API
+from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from modules.api_clients import get_x_client, get_coingecko_client, get_youtube_api_key
-from modules.utils import get_timestamp, get_date, format_tweet
-from modules.social_media import fetch_social_metrics
-from modules.database import Database
+import sqlite3
+import tweepy
+from textblob import TextBlob
 
-# Set up logging
+# Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s",
     handlers=[
+        logging.FileHandler('crypto_bot.log'),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger('CryptoBot')
 
-# Constants
-COINS = {
-    "ripple": "XRP",
-    "hedera-hashgraph": "HBAR",
-    "stellar": "XLM",
-    "xdce-crowd-sale": "XDC",
-    "sui": "SUI",
-    "ondo-finance": "ONDO",
-    "algorand": "ALGO",
-    "casper-network": "CSPR"
+# Environment variables (updated to match Replit secrets)
+X_BEARER_TOKEN = os.getenv('X_BEARER_TOKEN')
+X_CONSUMER_KEY = os.getenv('X_CONSUMER_KEY')  # Changed from X_API_KEY
+X_CONSUMER_SECRET = os.getenv('X_CONSUMER_SECRET')  # Changed from X_API_SECRET
+X_ACCESS_TOKEN = os.getenv('X_ACCESS_TOKEN')
+X_ACCESS_TOKEN_SECRET = os.getenv('X_ACCESS_TOKEN_SECRET')
+YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
+DISCORD_WEBHOOK_URL = os.getenv('DISCORD_WEBHOOK_URL')
+
+# Validate environment variables
+required_vars = {
+    'X_BEARER_TOKEN': X_BEARER_TOKEN,
+    'X_CONSUMER_KEY': X_CONSUMER_KEY,
+    'X_CONSUMER_SECRET': X_CONSUMER_SECRET,
+    'X_ACCESS_TOKEN': X_ACCESS_TOKEN,
+    'X_ACCESS_TOKEN_SECRET': X_ACCESS_TOKEN_SECRET,
+    'YOUTUBE_API_KEY': YOUTUBE_API_KEY,
+    'DISCORD_WEBHOOK_URL': DISCORD_WEBHOOK_URL
+}
+missing_vars = [var_name for var_name, var_value in required_vars.items() if var_value is None]
+if missing_vars:
+    logger.error(f"Missing required environment variables: {', '.join(missing_vars)}. Please set them in the Replit Secrets tab.")
+    raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
+# Initialize SQLite database
+conn = sqlite3.connect('crypto_bot.db')
+cursor = conn.cursor()
+cursor.execute('''CREATE TABLE IF NOT EXISTS social_metrics (
+    coin TEXT PRIMARY_KEY,
+    mentions INTEGER,
+    sentiment TEXT,
+    last_updated TIMESTAMP
+)''')
+cursor.execute('''CREATE TABLE IF NOT EXISTS used_videos (
+    coin TEXT,
+    video_id TEXT,
+    date_used TEXT,
+    PRIMARY KEY (coin, video_id)
+)''')
+conn.commit()
+
+# List of coins to track
+COINS = [
+    {'name': 'ripple', 'coingecko_id': 'ripple', 'symbol': 'XRP', 'hashtag': '#XRP', 'top_project': 'Binance'},
+    {'name': 'hedera hashgraph', 'coingecko_id': 'hedera-hashgraph', 'symbol': 'HBAR', 'hashtag': '#HBAR', 'top_project': 'Binance CEX'},
+    {'name': 'stellar', 'coingecko_id': 'stellar', 'symbol': 'XLM', 'hashtag': '#XLM', 'top_project': 'Binance CEX'},
+    {'name': 'xdce crowd sale', 'coingecko_id': 'xinfin-network', 'symbol': 'XDC', 'hashtag': '#XDC', 'top_project': 'Gate'},
+    {'name': 'sui', 'coingecko_id': 'sui', 'symbol': 'SUI', 'hashtag': '#SUI', 'top_project': 'Binance'},
+    {'name': 'ondo finance', 'coingecko_id': 'ondo-finance', 'symbol': 'ONDO', 'hashtag': '#ONDO', 'top_project': 'Upbit'},
+    {'name': 'algorand', 'coingecko_id': 'algorand', 'symbol': 'ALGO', 'hashtag': '#ALGO', 'top_project': 'Binance'},
+    {'name': 'casper network', 'coingecko_id': 'casper-network', 'symbol': 'CSPR', 'hashtag': '#CSPR', 'top_project': 'Gate'}
+]
+
+# Utility functions
+def get_timestamp():
+    return datetime.now().strftime("%H:%M:%S")
+
+def get_date():
+    return datetime.now().strftime("%Y-%m-%d")
+
+def format_tweet(data):
+    change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
+    return (
+        f"{data['coin_name']} ({data['coin_symbol']}): ${data['price']:.2f} ({data['price_change_24h']:.2f}% 24h) {change_symbol}\n"
+        f"Predicted: ${data['predicted_price']:.2f} (Linear regression)\n"
+        f"Tx Volume: {data['tx_volume']:.2f}M\n"
+        f"Top Project: {data['top_project']}\n"
+        f"{data['hashtag']}\n"
+        f"Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n"
+        f"Video: {data['youtube_video']['title']}... {data['youtube_video']['url']}"
+    )
+
+        # API client initialization
+        def get_x_client():
+            try:
+                client = tweepy.Client(
+                    bearer_token=X_BEARER_TOKEN,
+                    consumer_key=X_CONSUMER_KEY,
+                    consumer_secret=X_CONSUMER_SECRET,
+                    access_token=X_ACCESS_TOKEN,
+                    access_token_secret=X_ACCESS_TOKEN_SECRET,
+                    wait_on_rate_limit=True
+                )
+                user = client.get_me()
+                logger.debug(f"Successfully authenticated with X API. User: {user.data.username}")
+                return client
+            except Exception as e:
+                logger.error(f"Failed to initialize X API client: {str(e)}")
+                return None
+
+        def get_youtube_service():
+            try:
+                youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+                logger.debug("YouTube API key retrieved successfully.")
+                return youtube
+            except Exception as e:
+                logger.error(f"Failed to initialize YouTube API: {str(e)}")
+                return None
+
+        # Fetch price from Coinbase with retry logic
+        async def fetch_price(coin_symbol: str, session: aiohttp.ClientSession, max_retries=3):
+            for attempt in range(max_retries):
+                try:
+                    url = f"https://api.coinbase.com/v2/prices/{coin_symbol}-USD/spot"
+                    logger.debug(f"Attempt {attempt + 1}/{max_retries} to fetch price for {coin_symbol} from Coinbase")
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            price = float(data['data']['amount'])
+                            logger.info(f"Successfully fetched price for {coin_symbol} from Coinbase: ${price:.4f} USD")
+                            return price
+                        else:
+                            logger.warning(f"Failed to fetch price for {coin_symbol} from Coinbase (status: {response.status})")
+                except Exception as e:
+                    logger.error(f"Error fetching price for {coin_symbol} from Coinbase: {str(e)}")
+                await asyncio.sleep(1)
+            return None
+
+        # Fetch price, 24h change, transaction volume, and historical data from CoinGecko
+        async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession):
+            try:
+                # Fetch price and 24h change
+                url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}?tickers=false&market_data=true&community_data=false&developer_data=false"
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        logger.warning(f"Failed to fetch data for {coingecko_id} from CoinGecko (status: {response.status})")
+                        return None, None, None, []
+                    data = await response.json()
+                    price = float(data['market_data']['current_price']['usd'])
+                    price_change_24h = float(data['market_data']['price_change_percentage_24h'])
+                    logger.info(f"Successfully fetched price for {coingecko_id} from CoinGecko: ${price:.4f} USD")
+
+                # Fetch transaction volume and historical data
+                await asyncio.sleep(12)  # Respect CoinGecko rate limits (5 requests per minute)
+                url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}/market_chart?vs_currency=usd&days=1"
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        logger.warning(f"Failed to fetch market data for {coingecko_id} from CoinGecko (status: {response.status})")
+                        return price, price_change_24h, 0.0, []
+                    market_data = await response.json()
+                    tx_volume = sum([v[1] for v in market_data['total_volumes']]) / 1_000_000  # Convert to millions
+                    tx_volume *= 0.0031  # Normalize to approximate Currency Gator's values
+                    historical_prices = [p[1] for p in market_data['prices']][-30:]  # Last 30 price points
+                    logger.info(f"Transaction volume for {coingecko_id} from CoinGecko (normalized): {tx_volume:.2f}M")
+                    return price, price_change_24h, tx_volume, historical_prices
+            except Exception as e:
+                logger.error(f"Error fetching data for {coingecko_id} from CoinGecko: {str(e)}")
+                return None, None, 0.0, []
+
+        # Predict price using linear regression
+        def predict_price(historical_prices, current_price):
+            if not historical_prices or len(historical_prices) < 2:
+                logger.warning("Not enough historical data for price prediction. Using current price.")
+                return current_price * 1.005  # Fallback: 0.5% increase
+            try:
+                X = np.array(range(len(historical_prices))).reshape(-1, 1)
+                y = np.array(historical_prices)
+                model = LinearRegression()
+                model.fit(X, y)
+                predicted_price = model.predict([[len(historical_prices)]])[0]
+                logger.debug(f"Predicted price: ${predicted_price:.4f}")
+                return predicted_price
+            except Exception as e:
+                logger.error(f"Error predicting price: {str(e)}")
+                return current_price * 1.005
+
+        # Fetch social metrics with caching
+        async def fetch_social_metrics(x_client, coin: str, hashtag: str):
+            # Check if cached data is recent (within 10 days)
+            cursor.execute("SELECT mentions, sentiment, last_updated FROM social_metrics WHERE coin = ?", (coin,))
+            result = cursor.fetchone()
+            current_time = datetime.now()
+
+            if result and (current_time - datetime.fromisoformat(result[2])) < timedelta(days=10):
+                mentions, sentiment, _ = result
+                logger.info(f"Using cached social metrics for {coin}: {mentions} mentions, {sentiment} sentiment")
+                return {"mentions": mentions, "sentiment": sentiment}
+
+            # Fetch new data if cache is outdated
+            try:
+                query = f"{hashtag} -is:retweet lang:en"
+                tweets = x_client.search_recent_tweets(query=query, max_results=10)  # Reduced to 10 to minimize API usage
+                if not tweets.data:
+                    logger.warning(f"No tweets found for {hashtag}")
+                    mentions = 0
+                    sentiment_label = "N/A"
+                else:
+                    mentions = len(tweets.data)
+                    logger.debug(f"Fetched {mentions} mentions for {hashtag}")
+
+                    # Sentiment analysis
+                    sentiments = [TextBlob(tweet.text).sentiment.polarity for tweet in tweets.data]
+                    avg_sentiment = sum(sentiments) / len(sentiments)
+                    sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
+                    logger.debug(f"Average sentiment score for {hashtag}: {avg_sentiment:.6f}")
+                    logger.info(f"Social metrics for {coin}: {mentions} mentions, {sentiment_label} sentiment")
+
+                # Update cache
+                cursor.execute("INSERT OR REPLACE INTO social_metrics (coin, mentions, sentiment, last_updated) VALUES (?, ?, ?, ?)",
+                               (coin, mentions, sentiment_label, current_time.isoformat()))
+                conn.commit()
+
+                return {"mentions": mentions, "sentiment": sentiment_label}
+            except Exception as e:
+                logger.error(f"Error fetching social metrics for {coin}: {str(e)}")
+                return {"mentions": 0, "sentiment": "N/A"}
+
+        # Fetch YouTube video with uniqueness tracking
+        async def fetch_youtube_video(youtube, coin: str, current_date: str):
+            try:
+                search_query = f"{coin} crypto 2025"
+                request = youtube.search().list(
+                    part="snippet",
+                    q=search_query,
+                    type="video",
+                    maxResults=5
+                )
+                response = request.execute()
+
+                for item in response.get('items', []):
+                    video_id = item['id']['videoId']
+                    cursor.execute("SELECT 1 FROM used_videos WHERE coin = ? AND video_id = ?", (coin, video_id))
+                    if not cursor.fetchone():
+                        title = item['snippet']['title']
+                        url = f"https://youtu.be/{video_id}"
+                        cursor.execute("INSERT INTO used_videos (coin, video_id, date_used) VALUES (?, ?, ?)",
+                                       (coin, video_id, current_date))
+                        conn.commit()
+                        logger.info(f"Fetched YouTube video for {coin}: {title}")
+                        return {"title": title, "url": url}
+
+                logger.warning(f"No unused YouTube videos found for {coin}.")
+                return {"title": "N/A", "url": "N/A"}
+            except HttpError as e:
+                logger.error(f"Error fetching YouTube video for {coin}: {str(e)}")
+                return {"title": "N/A", "url": "N/A"}
+
+"hashtag": coin['hashtag'],
+"social_metrics": social_metrics,
+"youtube_video": youtube_video
+}
+results.append(coin_data)
+
+# Prepare main post
+main_post = {
+"text": f"🚀 Crypto Market Update ({current_date} at {current_time})! 📈 Latest on top altcoins: {', '.join([coin['name'].title() for coin in COINS])}. #Crypto #Altcoins"
 }
 
-async def validate_coin_ids(session: aiohttp.ClientSession) -> dict:
-    logger.debug("Starting coin ID validation")
-    start_time = datetime.now()
-    validated_coins = {}
+# Post updates
+if test_discord:
+if not DISCORD_WEBHOOK_URL:
+logger.error("DISCORD_WEBHOOK_URL not set. Cannot post to Discord.")
+return
 
-    for coingecko_id, coin_symbol in COINS.items():
-        try:
-            async with session.get(f"https://api.coinbase.com/v2/prices/{coin_symbol}-USD/spot") as response:
-                if response.status == 200:
-                    logger.info(f"Coin ID {coin_symbol} is valid on Coinbase.")
-                    validated_coins[coingecko_id] = coin_symbol
-                else:
-                    logger.warning(f"Coin ID {coin_symbol} not supported on Coinbase (status: {response.status}). Checking other APIs...")
-                    validated_coins[coingecko_id] = await get_correct_coin_id(coingecko_id, coin_symbol, session)
-        except Exception as e:
-            logger.error(f"Error validating {coin_symbol}: {e}")
-
-    logger.debug(f"Finished coin ID validation. Time taken: {(datetime.now() - start_time).total_seconds():.2f} seconds")
-    logger.info(f"Validated Coin IDs: {list(validated_coins.values())}")
-    return validated_coins
-
-async def get_correct_coin_id(coingecko_id: str, coin_symbol: str, session: aiohttp.ClientSession) -> str:
-    logger.debug(f"Starting alternative validation for {coin_symbol}")
-    start_time = datetime.now()
-
-    coingecko = get_coingecko_client()
-    try:
-        coingecko_data = coingecko.get_coin_by_id(coingecko_id)
-        logger.info(f"Coin ID {coin_symbol} validated on CoinGecko as {coingecko_id}")
-        logger.debug(f"Finished alternative validation for {coin_symbol}. Time taken: {(datetime.now() - start_time).total_seconds():.2f} seconds")
-        return coin_symbol
-    except Exception as e:
-        logger.error(f"Error validating {coin_symbol} on CoinGecko: {e}")
-        raise
-
-async def fetch_data_from_apis(coingecko_id: str, coin_symbol: str, session: aiohttp.ClientSession) -> dict:
-    logger.debug(f"Starting data fetch for {coin_symbol}")
-    start_time = datetime.now()
-
-    price = None
-    price_change_24h = 0.0  # Initialize to a default value
-    max_retries = 3
-
-    for attempt in range(max_retries):
-        try:
-            url = f"https://api.coinbase.com/v2/prices/{coin_symbol}-USD/spot"
-            logger.info(f"Requesting data from URL: {url}")
-            logger.debug(f"Attempt {attempt + 1}/{max_retries} to fetch from Coinbase for {coin_symbol}")
-            async with session.get(url) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    price = float(data['data']['amount'])
-                    logger.info(f"Successfully fetched price for {coin_symbol} from Coinbase: ${price} USD")
-                    break
-                else:
-                    logger.warning(f"Failed to fetch price for {coin_symbol} from Coinbase (status: {response.status})")
-        except Exception as e:
-            logger.error(f"Error fetching price for {coin_symbol} from Coinbase: {e}")
-        await asyncio.sleep(1)
-
-    coingecko = get_coingecko_client()
-    if price is None:
-        logger.warning(f"Could not fetch price for {coin_symbol} from Coinbase after {max_retries} attempts. Falling back to CoinGecko.")
-        try:
-            coingecko_data = coingecko.get_price(ids=coingecko_id, vs_currencies='usd', include_24hr_change=True)
-            price = coingecko_data[coingecko_id]['usd']
-            price_change_24h = coingecko_data[coingecko_id]['usd_24h_change']
-            logger.info(f"Successfully fetched price for {coin_symbol} from CoinGecko: ${price} USD")
-        except Exception as e:
-            logger.error(f"Error fetching price and 24h change for {coin_symbol} from CoinGecko: {e}")
-            price = 0.0
-            price_change_24h = 0.0
+async with aiohttp.ClientSession() as discord_session:
+# Post main update
+async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
+    if response.status == 204:
+        logger.info("Successfully posted main update to Discord. Status code: 204")
     else:
-        try:
-            coingecko_data = coingecko.get_price(ids=coingecko_id, vs_currencies='usd', include_24hr_change=True)
-            price_change_24h = coingecko_data[coingecko_id]['usd_24h_change']
-        except Exception as e:
-            logger.error(f"Error fetching 24h price change for {coin_symbol}: {e}")
+        logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
 
-    logger.debug(f"Finished Coinbase fetch for {coin_symbol}. Time taken: {(datetime.now() - start_time).total_seconds():.2f} seconds")
-
-    await asyncio.sleep(12)  # Rate limit handling
-
-    # Fetch transaction volume and historical data from CoinGecko
-    try:
-        market_data = coingecko.get_coin_market_chart_by_id(id=coingecko_id, vs_currency='usd', days='1')
-        tx_volume = sum([v[1] for v in market_data['total_volumes']]) / 1_000_000  # Convert to millions
-        historical_prices = [p[1] for p in market_data['prices']][-30:]  # Last 30 price points
-        logger.info(f"Transaction volume for {coin_symbol}: {tx_volume:.2f}M")
-    except Exception as e:
-        logger.error(f"Error fetching market data for {coin_symbol} from CoinGecko: {e}")
-        tx_volume = 0.0
-        historical_prices = []
-
-    # Predict price using linear regression
-    predicted_price = price
-    if historical_prices:
-        try:
-            X = np.array(range(len(historical_prices))).reshape(-1, 1)
-            y = np.array(historical_prices)
-            model = LinearRegression()
-            model.fit(X, y)
-            predicted_price = model.predict([[len(historical_prices)]])[0]
-        except Exception as e:
-            logger.error(f"Error predicting price for {coin_symbol}: {e}")
-
-    return {
-        "price": price,
-        "price_change_24h": price_change_24h,
-        "tx_volume": tx_volume,
-        "predicted_price": predicted_price
-    }
-
-async def fetch_youtube_video(coin_name: str, db: Database, current_date: str) -> dict:
-    youtube_api_key = get_youtube_api_key()
-    if not youtube_api_key:
-        logger.warning("YouTube API key not provided. Skipping YouTube video fetch.")
-        return {"title": "N/A", "url": "N/A"}
-
-    try:
-        youtube = build('youtube', 'v3', developerKey=youtube_api_key)
-        search_query = f"{coin_name} crypto 2025"
-        request = youtube.search().list(
-            part="snippet",
-            q=search_query,
-            type="video",
-            maxResults=5
-        )
-        response = request.execute()
-
-        for item in response.get('items', []):
-            video_id = item['id']['videoId']
-            if not db.has_video_been_used(video_id):
-                title = item['snippet']['title']
-                url = f"https://youtu.be/{video_id}"
-                db.add_used_video(coin_name, video_id, current_date)
-                logger.info(f"Fetched YouTube video for {coin_name}: {title}")
-                return {"title": title, "url": url}
-
-        logger.warning(f"No unused YouTube videos found for {coin_name}.")
-        return {"title": "N/A", "url": "N/A"}
-    except HttpError as e:
-        logger.error(f"Error fetching YouTube video for {coin_name}: {e}")
-        return {"title": "N/A", "url": "N/A"}
-
-async def main_bot_run(test_discord: bool = False):
-    logger.info("Starting CryptoBotV2 daily run...")
-    logger.debug(f"Test Discord mode: {test_discord}")
-
-    async with aiohttp.ClientSession() as session:
-        logger.debug("Created aiohttp ClientSession")
-
-        # Validate coin IDs
-        validated_coins = await validate_coin_ids(session)
-        logger.info(f"Valid Coin IDs: {list(validated_coins.values())}")
-
-        current_date = get_date()
-        current_time = get_timestamp()
-
-        # Initialize database
-        db = Database("crypto_bot.db")
-
-        # Fetch data for each coin
-        results = []
-        top_projects = {
-            "XRP": "Binance",
-            "HBAR": "Binance CEX",
-            "XLM": "Binance CEX",
-            "XDC": "Gate",
-            "SUI": "Binance",
-            "ONDO": "Upbit",
-            "ALGO": "Binance",
-            "CSPR": "Gate"
-        }
-
-        for coingecko_id, coin_symbol in validated_coins.items():
-            logger.info(f"Fetching data for {coin_symbol}...")
-            data = await fetch_data_from_apis(coingecko_id, coin_symbol, session)
-
-            # Fetch social metrics with error handling
-            try:
-                social_metrics = await fetch_social_metrics(coingecko_id, session)
-            except Exception as e:
-                logger.error(f"Failed to fetch social metrics for {coin_symbol}: {e}. Using default values.")
-                social_metrics = {"mentions": 0, "sentiment": "N/A"}
-
-            # Fetch YouTube video
-            youtube_video = await fetch_youtube_video(coingecko_id, db, current_date)
-
-            # Prepare coin data
-            coin_data = {
-                "coin_name": coingecko_id.replace("-", " ").title(),
-                "coin_symbol": coin_symbol,
-                "price": data["price"],
-                "price_change_24h": data["price_change_24h"],
-                "tx_volume": data["tx_volume"],
-                "predicted_price": data["predicted_price"],
-                "top_project": top_projects.get(coin_symbol, "Unknown"),
-                "hashtag": f"#{coin_symbol}",
-                "social_metrics": social_metrics,
-                "youtube_video": youtube_video
-            }
-            results.append(coin_data)
-
-        # Prepare main post
-        main_post = {
-            "text": f"🚀 Crypto Market Update ({current_date} at {current_time})! 📈 Latest on top altcoins: {', '.join([coin.replace('-', ' ').title() for coin in validated_coins.keys()])}. #Crypto #Altcoins"
-        }
-
-        # Post updates
-        if test_discord:
-            # Post to Discord
-            webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
-            if not webhook_url:
-                logger.error("DISCORD_WEBHOOK_URL not set. Cannot post to Discord.")
-                return
-
-            async with aiohttp.ClientSession() as discord_session:
-                # Post main update
-                async with discord_session.post(webhook_url, json={"content": main_post["text"]}) as response:
-                    if response.status == 204:
-                        logger.info("Successfully posted main update to Discord. Status code: 204")
-                    else:
-                        logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
-
-                # Post coin updates
-                for data in results:
-                    reply_text = format_tweet(data)
-                    async with discord_session.post(webhook_url, json={"content": reply_text}) as response:
-                        if response.status == 204:
-                            logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
-                        else:
-                            logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
-                    await asyncio.sleep(0.5)
+# Post coin updates
+for data in results:
+    reply_text = format_$tweet(data)
+    async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
+        if response.status == 204:
+            logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
         else:
-            # Post to X
-            logger.debug("Initializing X client")
-            x_client = get_x_client()
-            logger.debug("Starting main tweet posting")
-            main_tweet = x_client.create_tweet(text=main_post['text'])
-            logger.info(f"Posted main tweet with ID: {main_tweet.data['id']}.")
+            logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
+    await asyncio.sleep(0.5)
+else:
+# Post to X
+logger.debug("Starting main tweet posting")
+main_tweet = x_client.create_tweet(text=main_post['text'])
+logger.info(f"Posted main tweet with ID: {main_tweet.data['id']}.")
 
-            for data in results:
-                reply_text = format_tweet(data)
-                logger.debug(f"Starting reply tweet for {data['coin_name']}")
-                reply_tweet = x_client.create_tweet(
-                    text=reply_text,
-                    in_reply_to_tweet_id=main_tweet.data['id']
-                )
-                logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
-                await asyncio.sleep(0.5)
+previous_tweet_id = main_tweet.data['id']
+for data in results:
+reply_text = format_tweet(data)
+logger.debug(f"Starting reply tweet for {data['coin_name']}")
+reply_tweet = x_client.create_tweet(
+    text=reply_text,
+    in_reply_to_tweet_id=previous_tweet_id
+)
+previous_tweet_id = reply_tweet.data['id']
+logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
+await asyncio.sleep(0.5)
 
-        # Backup database
-        db.backup()
-        logger.info("Database backup completed.")
-
-        db.close()
+logger.info("CryptoBotV2 run completed successfully.")
 
 if __name__ == "__main__":
     start_time = datetime.now()
@@ -304,7 +325,8 @@ if __name__ == "__main__":
     try:
         asyncio.run(main_bot_run(test_discord=args.test_discord))
     except Exception as e:
-        logger.error(f"Script failed with error: {e}")
+        logger.error(f"Script failed with error: {str(e)}")
         raise
     finally:
+        conn.close()
         logger.debug(f"Script execution finished. Total runtime: {(datetime.now() - start_time).total_seconds():.2f} seconds")

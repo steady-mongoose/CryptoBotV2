@@ -1,0 +1,202 @@
+import logging
+import json
+import os
+import time
+import asyncio
+import tweepy
+from datetime import datetime
+from modules.api_clients import get_x_client
+
+logger = logging.getLogger('CryptoBot')
+
+# Symbol mapping (same as in social_media.py)
+SYMBOL_MAP = {
+    "ripple": "XRP",
+    "hedera-hashgraph": "HBAR",
+    "stellar": "XLM",
+    "xdce-crowd-sale": "XDC",
+    "sui": "SUI",
+    "ondo-finance": "ONDO",
+    "algorand": "ALGO",
+    "casper-network": "CSPR"
+}
+
+TOP_ACCOUNTS_CACHE_FILE = "top_accounts_cache.json"
+INTERACTION_LOG_FILE = "interaction_log.json"
+MAX_INTERACTIONS_PER_DAY = 20  # Stay within free tier write limit (25/day, with buffer)
+INTERACTION_TYPES = ["like", "retweet", "reply"]
+
+def load_top_accounts_cache() -> dict:
+    """Load cached top accounts from a file."""
+    if os.path.exists(TOP_ACCOUNTS_CACHE_FILE):
+        try:
+            with open(TOP_ACCOUNTS_CACHE_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading top accounts cache: {e}")
+            return {}
+    return {}
+
+def save_top_accounts_cache(cache: dict):
+    """Save top accounts to a file."""
+    try:
+        with open(TOP_ACCOUNTS_CACHE_FILE, 'w') as f:
+            json.dump(cache, f, indent=4)
+        logger.debug("Top accounts cache saved successfully.")
+    except Exception as e:
+        logger.error(f"Error saving top accounts cache: {e}")
+
+def load_interaction_log() -> dict:
+    """Load interaction log to track daily interactions."""
+    if os.path.exists(INTERACTION_LOG_FILE):
+        try:
+            with open(INTERACTION_LOG_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading interaction log: {e}")
+            return {}
+    return {}
+
+def save_interaction_log(log: dict):
+    """Save interaction log to a file."""
+    try:
+        with open(INTERACTION_LOG_FILE, 'w') as f:
+            json.dump(log, f, indent=4)
+        logger.debug("Interaction log saved successfully.")
+    except Exception as e:
+        logger.error(f"Error saving interaction log: {e}")
+
+async def fetch_top_accounts(coin_id: str, hashtag: str, x_client: tweepy.Client) -> list:
+    """Fetch top accounts for a given coin by analyzing recent tweets."""
+    logger.debug(f"Fetching top accounts for {coin_id} using hashtag {hashtag}")
+    try:
+        query = f"{hashtag} -is:retweet lang:en"
+        tweets = x_client.search_recent_tweets(
+            query=query,
+            max_results=100,
+            user_fields=["public_metrics"],
+            expansions=["author_id"]
+        )
+
+        if not tweets.data:
+            logger.info(f"No recent tweets found for {hashtag}")
+            return []
+
+        # Map user IDs to user objects
+        users = {user.id: user for user in tweets.includes.get("users", [])}
+        # Analyze users based on follower count
+        user_scores = []
+        for tweet in tweets.data:
+            user = users.get(tweet.author_id)
+            if user:
+                follower_count = user.public_metrics.get("followers_count", 0)
+                user_scores.append({
+                    "username": user.username,
+                    "follower_count": follower_count,
+                    "user_id": user.id
+                })
+
+        # Sort by follower count and take top 5
+        user_scores.sort(key=lambda x: x["follower_count"], reverse=True)
+        top_accounts = user_scores[:5]
+        logger.info(f"Top accounts for {hashtag}: {[acc['username'] for acc in top_accounts]}")
+        return top_accounts
+
+    except Exception as e:
+        logger.error(f"Error fetching top accounts for {coin_id}: {e}")
+        return []
+
+async def interact_with_top_accounts():
+    """Interact with top accounts for each coin within free tier limits."""
+    logger.info("Starting interaction with top accounts...")
+
+    x_client = get_x_client()
+    if not x_client:
+        logger.error("X API client not available. Cannot interact with top accounts.")
+        return
+
+    # Load caches and logs
+    top_accounts_cache = load_top_accounts_cache()
+    interaction_log = load_interaction_log()
+    current_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+    # Reset interaction count if it's a new day
+    if interaction_log.get("date") != current_date:
+        interaction_log = {"date": current_date, "count": 0, "interactions": []}
+
+    # Fetch or load top accounts for each coin
+    for coin_id, symbol in SYMBOL_MAP.items():
+        hashtag = f"#{symbol}"
+        if coin_id not in top_accounts_cache or not top_accounts_cache[coin_id].get("accounts"):
+            logger.info(f"No cached top accounts for {coin_id}. Fetching...")
+            top_accounts = await fetch_top_accounts(coin_id, hashtag, x_client)
+            top_accounts_cache[coin_id] = {
+                "accounts": top_accounts,
+                "timestamp": time.time()
+            }
+            save_top_accounts_cache(top_accounts_cache)
+            # Respect rate limits (10 queries per 15 minutes in free tier)
+            await asyncio.sleep(90)  # 90 seconds delay between queries (8 coins, 15 min = 900 sec)
+
+        top_accounts = top_accounts_cache[coin_id]["accounts"]
+        if not top_accounts:
+            logger.warning(f"No top accounts found for {coin_id}. Skipping interactions.")
+            continue
+
+        # Fetch recent tweets from top accounts and interact
+        for account in top_accounts:
+            if interaction_log["count"] >= MAX_INTERACTIONS_PER_DAY:
+                logger.warning("Reached daily interaction limit. Stopping interactions.")
+                break
+
+            try:
+                user_id = account["user_id"]
+                tweets = x_client.get_users_tweets(
+                    id=user_id,
+                    max_results=5,
+                    exclude=["retweets", "replies"],
+                    tweet_fields=["created_at"]
+                )
+
+                if not tweets.data:
+                    logger.info(f"No recent tweets found for {account['username']}")
+                    continue
+
+                # Interact with the most recent tweet
+                tweet = tweets.data[0]
+                tweet_id = tweet.id
+
+                # Choose interaction type (rotate through like, retweet, reply)
+                interaction_type = INTERACTION_TYPES[interaction_log["count"] % len(INTERACTION_TYPES)]
+                if interaction_type == "like":
+                    x_client.like(tweet_id)
+                    logger.info(f"Liked tweet {tweet_id} from {account['username']}")
+                elif interaction_type == "retweet":
+                    x_client.retweet(tweet_id)
+                    logger.info(f"Retweeted tweet {tweet_id} from {account['username']}")
+                else:  # reply
+                    reply_text = f"Interesting take on {hashtag}! What are your thoughts on its future? 🤔"
+                    x_client.create_tweet(text=reply_text, in_reply_to_tweet_id=tweet_id)
+                    logger.info(f"Replied to tweet {tweet_id} from {account['username']}")
+
+                interaction_log["count"] += 1
+                interaction_log["interactions"].append({
+                    "coin_id": coin_id,
+                    "username": account["username"],
+                    "tweet_id": str(tweet_id),
+                    "interaction_type": interaction_type,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+                save_interaction_log(interaction_log)
+                # Delay to avoid hitting write rate limits
+                await asyncio.sleep(300)  # 5 minutes between interactions (20 interactions over 100 minutes)
+
+            except tweepy.errors.TooManyRequests as e:
+                logger.warning("Rate limit hit during interactions. Stopping for now.")
+                break
+            except Exception as e:
+                logger.error(f"Error interacting with {account['username']} for {coin_id}: {e}")
+                continue
+
+if __name__ == "__main__":
+    asyncio.run(interact_with_top_accounts())

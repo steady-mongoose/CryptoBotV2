@@ -2,6 +2,7 @@ import os
 import logging
 import tweepy
 from pycoingecko import CoinGeckoAPI
+from binance.client import Client as BinanceClient  # Import Binance client
 
 logger = logging.getLogger('CryptoBot')
 
@@ -24,6 +25,13 @@ X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 def get_x_client() -> tweepy.Client:
     """Initialize and return the X API client using Tweepy with Twitter API v2 and rate limit handling."""
     try:
+        # Log the presence of credentials (without revealing their values)
+        logger.debug(f"X API Credentials - Consumer Key set: {bool(X_API_KEY)}, "
+                     f"Consumer Secret set: {bool(X_API_SECRET)}, "
+                     f"Access Token set: {bool(X_ACCESS_TOKEN)}, "
+                     f"Access Token Secret set: {bool(X_ACCESS_TOKEN_SECRET)}, "
+                     f"Bearer Token set: {bool(X_BEARER_TOKEN)}")
+
         if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET, X_BEARER_TOKEN]):
             raise ValueError("Missing one or more X API credentials (X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET, X_BEARER_TOKEN)")
 
@@ -36,10 +44,25 @@ def get_x_client() -> tweepy.Client:
             wait_on_rate_limit=True  # Enable automatic rate limit handling
         )
         logger.debug("X API client initialized successfully with rate limit handling enabled.")
+
+        # Test the client with a simple API call to verify authentication
+        try:
+            user = client.get_me()
+            logger.debug(f"Successfully authenticated with X API. User: {user.data.username}")
+        except tweepy.Unauthorized as e:
+            logger.error(f"Failed to authenticate with X API: Unauthorized - {e}. Check if credentials are valid and app has 'Read and Write' permissions.")
+            return None
+        except tweepy.Forbidden as e:
+            logger.error(f"Failed to authenticate with X API: Forbidden - {e}. Check if the app or account is restricted.")
+            return None
+        except tweepy.TweepyException as e:
+            logger.error(f"Failed to authenticate with X API: {e}")
+            return None
+
         return client
     except Exception as e:
         logger.error(f"Error initializing X client: {e}")
-        raise
+        return None
 
 def get_coinmarketcap_api_key() -> str:
     """Return the CoinMarketCap API key."""
@@ -100,3 +123,28 @@ def get_coinbase_api_credentials() -> tuple:
         return "", ""
     logger.debug("Coinbase API credentials retrieved successfully.")
     return COINBASE_API_KEY, COINBASE_API_SECRET
+
+def get_binance_client() -> BinanceClient:
+    """Initialize and return the Binance API client using API key and secret for authenticated endpoints."""
+    try:
+        api_key = os.getenv("BINANCE_US_API_KEY")
+        api_secret = os.getenv("BINANCE_US_API_SECRET")
+
+        # Log the presence of Binance credentials (without revealing their values)
+        logger.debug(f"Binance API Credentials - API Key set: {bool(api_key)}, API Secret set: {bool(api_secret)}")
+
+        if not api_key or not api_secret:
+            logger.warning("Binance API key or secret not found in environment variables. Falling back to public client.")
+            client = BinanceClient()  # Public client for unauthenticated endpoints
+        else:
+            client = BinanceClient(api_key, api_secret)
+            # Test the client with a simple API call to verify authentication
+            client.get_system_status()
+            logger.debug("Binance API client initialized successfully with authenticated access.")
+            return client
+
+        logger.debug("Binance API public client initialized successfully.")
+        return client
+    except Exception as e:
+        logger.error(f"Failed to initialize Binance API client: {e}")
+        return None
