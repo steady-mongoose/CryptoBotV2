@@ -175,29 +175,66 @@ def predict_price(historical_prices, current_price):
 
 async def fetch_youtube_video(youtube, coin: str, current_date: str):
     try:
-        search_query = f"{coin} crypto 2025"
+        # Try multiple search queries for better results
+        search_queries = [
+            f"{coin} crypto 2025",
+            f"{coin} cryptocurrency news",
+            f"{coin} price prediction 2025",
+            f"{coin} analysis crypto"
+        ]
+        
+        for search_query in search_queries:
+            request = youtube.search().list(
+                part="snippet",
+                q=search_query,
+                type="video",
+                maxResults=10,  # Increased for better selection
+                publishedAfter="2024-01-01T00:00:00Z"  # Only recent videos
+            )
+            response = request.execute()
+
+            for item in response.get('items', []):
+                video_id = item['id']['videoId']
+                if not db.has_video_been_used(video_id):
+                    title = item['snippet']['title']
+                    url = f"https://youtu.be/{video_id}"
+                    db.add_used_video(coin, video_id, current_date)
+                    logger.info(f"Fetched YouTube video for {coin}: {title}")
+                    return {"title": title, "url": url}
+
+        # If no unused videos found, use the most recent one anyway but don't mark as used
+        logger.warning(f"No unused YouTube videos found for {coin}, using most recent video.")
+        final_query = f"{coin} crypto 2025"
         request = youtube.search().list(
             part="snippet",
-            q=search_query,
+            q=final_query,
             type="video",
-            maxResults=5
+            maxResults=1,
+            publishedAfter="2024-01-01T00:00:00Z"
         )
         response = request.execute()
-
-        for item in response.get('items', []):
-            video_id = item['id']['videoId']
-            if not db.has_video_been_used(video_id):
-                title = item['snippet']['title']
-                url = f"https://youtu.be/{video_id}"
-                db.add_used_video(coin, video_id, current_date)
-                logger.info(f"Fetched YouTube video for {coin}: {title}")
-                return {"title": title, "url": url}
-
-        logger.warning(f"No unused YouTube videos found for {coin}.")
-        return {"title": "N/A", "url": "N/A"}
+        
+        if response.get('items'):
+            item = response['items'][0]
+            title = item['snippet']['title']
+            url = f"https://youtu.be/{item['id']['videoId']}"
+            logger.info(f"Using recent video for {coin} (may be reused): {title}")
+            return {"title": title, "url": url}
+        
+        # Final fallback - generic crypto content
+        logger.warning(f"No videos found for {coin}, using generic fallback.")
+        return {
+            "title": f"Latest {coin.title()} Crypto Analysis", 
+            "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025"
+        }
+        
     except HttpError as e:
         logger.error(f"Error fetching YouTube video for {coin}: {str(e)}")
-        return {"title": "N/A", "url": "N/A"}
+        # Fallback to search URL instead of N/A
+        return {
+            "title": f"{coin.title()} Crypto Updates", 
+            "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto"
+        }
 
 async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False):
     logger.info("Starting CryptoBotV2 daily run...")
