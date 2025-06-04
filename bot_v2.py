@@ -11,6 +11,7 @@ from googleapiclient.errors import HttpError
 from modules.api_clients import get_x_client, get_youtube_api_key
 from modules.social_media import fetch_social_metrics
 from modules.database import Database
+from modules.x_thread_queue import start_x_queue, stop_x_queue, queue_x_thread, queue_x_post, get_x_queue_status
 
 # Configure logging
 logging.basicConfig(
@@ -250,22 +251,73 @@ async def main_bot_run(test_discord: bool = False):
                             logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
                     await asyncio.sleep(0.5)
         else:
-            # Post to X
-            logger.debug("Starting main tweet posting")
-            main_tweet = x_client.create_tweet(text=main_post['text'])
-            logger.info(f"Posted main tweet with ID: {main_tweet.data['id']}.")
+            # Post to X using thread queue system
+            logger.debug("Starting X posting with thread queue fallback")
+            
+            # Start the queue worker
+            start_x_queue()
+            
+            try:
+                # Attempt direct posting first
+                main_tweet = x_client.create_tweet(text=main_post['text'])
+                logger.info(f"Posted main tweet with ID: {main_tweet.data['id']}.")
 
-            previous_tweet_id = main_tweet.data['id']
-            for data in results:
-                reply_text = format_tweet(data)
-                logger.debug(f"Starting reply tweet for {data['coin_name']}")
-                reply_tweet = x_client.create_tweet(
-                    text=reply_text,
-                    in_reply_to_tweet_id=previous_tweet_id
-                )
-                previous_tweet_id = reply_tweet.data['id']
-                logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
-                await asyncio.sleep(0.5)
+                previous_tweet_id = main_tweet.data['id']
+                for data in results:
+                    reply_text = format_tweet(data)
+                    try:
+                        reply_tweet = x_client.create_tweet(
+                            text=reply_text,
+                            in_reply_to_tweet_id=previous_tweet_id
+                        )
+                        previous_tweet_id = reply_tweet.data['id']
+                        logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
+                        await asyncio.sleep(0.5)
+                        
+                    except tweepy.TooManyRequests:
+                        logger.warning(f"Rate limited while posting {data['coin_name']}, using thread queue fallback")
+                        
+                        # Queue remaining posts
+                        remaining_posts = []
+                        for remaining_data in results[results.index(data):]:
+                            remaining_posts.append({
+                                'text': format_tweet(remaining_data),
+                                'coin_name': remaining_data['coin_name']
+                            })
+                        
+                        # Queue the thread
+                        queue_x_thread(remaining_posts, f"📊 Continuing thread... (Rate limit reached)")
+                        
+                        logger.info(f"Queued {len(remaining_posts)} remaining posts for later posting")
+                        break
+                        
+                    except Exception as e:
+                        logger.error(f"Error posting {data['coin_name']}: {e}")
+                        # Queue this post for retry
+                        queue_x_post(reply_text, previous_tweet_id, priority=2)
+                        
+            except tweepy.TooManyRequests:
+                logger.warning("Rate limited on main tweet, using full thread queue fallback")
+                
+                # Queue entire thread
+                thread_posts = []
+                for data in results:
+                    thread_posts.append({
+                        'text': format_tweet(data),
+                        'coin_name': data['coin_name']
+                    })
+                
+                queue_x_thread(thread_posts, main_post['text'])
+                logger.info(f"Queued complete thread with {len(thread_posts)} posts due to rate limits")
+                
+            except Exception as e:
+                logger.error(f"Error with main tweet: {e}")
+                # Queue main post for retry
+                queue_x_post(main_post['text'], priority=1)
+                
+            # Show queue status
+            status = get_x_queue_status()
+            logger.info(f"X Queue Status: {status['post_queue_size']} posts, {status['thread_queue_size']} threads queued")
 
         logger.info("CryptoBotV2 run completed successfully.")
 
@@ -283,5 +335,7 @@ if __name__ == "__main__":
         logger.error(f"Script failed with error: {str(e)}")
         raise
     finally:
+        # Clean up
+        stop_x_queue()
         db.close()
         logger.debug(f"Script execution finished. Total runtime: {(datetime.now() - start_time).total_seconds():.2f} seconds")
