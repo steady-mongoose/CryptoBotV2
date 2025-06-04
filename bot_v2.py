@@ -275,7 +275,6 @@ if __name__ == "__main__":
     logger.debug("Script execution started")
 
     parser = argparse.ArgumentParser(description="CryptoBotV2 - Post daily crypto updates to X or Discord")
-    parser.add_argument("--test-discord", action="store_true", help LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     parser.add_argument("--test-discord", action="store_true", help="Test mode: post to Discord instead of X")
     args = parser.parse_args()
 
