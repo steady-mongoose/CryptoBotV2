@@ -4,7 +4,7 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Daily Bot Run"
+runButton = "Test Discord"
 
 [[workflows.workflow]]
 name = "Test Discord"
@@ -124,3 +124,7 @@ ignorePorts = true
 [[ports]]
 localPort = 8080
 externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081

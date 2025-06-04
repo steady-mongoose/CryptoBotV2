@@ -1,0 +1,74 @@
+import argparse
+import asyncio
+import logging
+import aiohttp
+from pycoingecko import CoinGeckoAPI
+from datetime import datetime
+import tweepy
+from modules.coin_data import fetch_coin_prices
+from modules.posting_utils import post_to_x
+from modules.api_clients import get_x_client
+import schedule
+import time
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('CryptoBot')
+
+COIN_IDS = [
+    "ripple", "hedera-hashgraph", "stellar", "xdce-crowd-sale",
+    "sui", "ondo-finance", "algorand", "casper-network"
+]
+
+async def fetch_coin_data(coin_id, session, cg_client):
+    """Fetch coin price data asynchronously."""
+    try:
+        price_info = await fetch_coin_prices([coin_id], cg_client)  # Ensure fetch_coin_prices is async
+        if isinstance(price_info, dict) and coin_id in price_info:
+            return {
+                'coin_id': coin_id,
+                'price': price_info[coin_id]['usd'],
+                'name': coin_id.capitalize()
+            }
+        else:
+            logger.error(f"No price info returned for {coin_id}")
+            return None
+    except Exception as e:
+        logger.error(f"Error fetching data for {coin_id}: {e}")
+        return None
+
+async def store_results_to_db(results):
+    """Placeholder for database code, assuming a database manager exists."""
+    pass
+
+async def main_bot_run(test_discord: bool = False):
+    """Main function to run the bot."""
+    logger.info("Starting CryptoBotV2 daily run...")
+    cg_client = CoinGeckoAPI()
+    
+    async with aiohttp.ClientSession() as session:
+        results = []
+        for coin_id in COIN_IDS:
+            logger.info(f"Fetching data for {coin_id}...")
+            result = await fetch_coin_data(coin_id, session, cg_client)  # Await data fetching correctly
+            if result:
+                results.append(result)
+
+        if results:
+            await store_results_to_db(results)
+
+            current_time = datetime.now().strftime("%Y-%m-%d at %H:%M")
+            main_post = f"🚀 Daily Crypto Update ({current_time})!\n📊 8 Top Altcoins Thread:\n#Crypto #Altcoins #DeFi"
+            try:
+                main_tweet_id = await post_to_x(main_post)
+                for data in results:
+                    formatted_data = f"{data['name']}: ${data['price']}"
+                    await post_to_x(formatted_data, [], main_tweet_id)
+            except Exception as e:
+                logger.error(f"Error posting updates to X: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(main_bot_run())

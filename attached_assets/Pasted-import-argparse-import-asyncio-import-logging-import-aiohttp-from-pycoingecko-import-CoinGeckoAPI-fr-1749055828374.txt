@@ -1,0 +1,78 @@
+import argparse
+import asyncio
+import logging
+import aiohttp
+from pycoingecko import CoinGeckoAPI
+from datetime import datetime
+import tweepy
+from modules.coin_data import fetch_coin_prices_multi_source
+from modules.posting_utils import post_to_x
+from modules.api_clients import get_x_client
+import os
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('CryptoBot')
+
+COIN_IDS = [
+    "ripple", "hedera-hashgraph", "stellar", "xdce-crowd-sale",
+    "sui", "ondo-finance", "algorand", "casper-network"
+]
+
+# Tracking warning count for rate limits
+rate_limit_warnings = 0
+
+async def fetch_data_from_apis(coin_id, session):
+    """Fetch data from various APIs asynchronously."""
+    global rate_limit_warnings
+    try:
+        coinbase_api_url = f"https://api.coinbase.com/v2/prices/{coin_id}/spot"
+
+        async with session.get(coinbase_api_url) as response:
+            if response.status == 429:  # Rate limit exceeded
+                rate_limit_warnings += 1
+                logger.warning(f"Rate limit warning from Coinbase for {coin_id}. Warnings count: {rate_limit_warnings}")
+                if rate_limit_warnings >= 2:
+                    logger.error("Switching to a different API due to multiple rate limit warnings.")
+                    return None  
+            else:
+                rate_limit_warnings = 0  
+                coinbase_data = await response.json()
+
+        return {
+            'coinbase': coinbase_data,
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching data for {coin_id}: {e}")
+        return None
+
+async def main_bot_run(test_discord: bool = False):
+    """Main function to run the bot."""
+    logger.info("Starting CryptoBotV2 daily run...")
+    cg_client = CoinGeckoAPI()
+
+    async with aiohttp.ClientSession() as session:
+        results = []
+        for coin_id in COIN_IDS:
+            logger.info(f"Fetching data for {coin_id}...")
+            external_data = await fetch_data_from_apis(coin_id, session)
+            if external_data:
+                results.append({'coin_id': coin_id, 'external_data': external_data})
+
+        if results:
+            current_time = datetime.now().strftime("%Y-%m-%d at %H:%M")
+            main_post = f"🚀 Daily Crypto Update ({current_time})!\n📊 8 Top Altcoins Thread:\n#Crypto #Altcoins #DeFi"
+            try:
+                main_tweet_id = await post_to_x(main_post)
+                for data in results:
+                    formatted_data = f"{data['coin_id']}: {data['external_data']}"
+                    await post_to_x(formatted_data, [], main_tweet_id)
+            except Exception as e:
+                logger.error(f"Error posting updates to X: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(main_bot_run())

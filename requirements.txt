@@ -7,3 +7,4 @@ aiosqlite
 numpy
 python-binance
 schedule==1.2.0
+coinbase

@@ -1,3 +1,4 @@
+
 import tweepy
 import logging
 from datetime import datetime, timedelta
@@ -8,28 +9,28 @@ logger = logging.getLogger('CryptoBot')
 
 class XRateLimitChecker:
     """Monitor X API rate limits for free tier compliance."""
-
+    
     def __init__(self):
         self.client = None
         self.last_check = None
         self.rate_limits = {}
-
+    
     async def get_rate_limit_status(self) -> Dict:
         """Get current rate limit status from X API - simplified for free tier."""
         try:
             if not self.client:
                 self.client = get_x_client()
-
+            
             # Test basic connectivity and authentication
             me = self.client.get_me()
             if not me.data:
                 logger.error("Could not authenticate with X API")
                 return {}
-
+            
             # For free tier, we'll return estimated limits since rate limit endpoints are restricted
             current_time = datetime.now()
             reset_time = current_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-
+            
             # Free tier limits (estimated)
             rate_limits = {
                 'tweets': {
@@ -43,12 +44,12 @@ class XRateLimitChecker:
                     'reset': reset_time
                 }
             }
-
+            
             self.rate_limits = rate_limits
             self.last_check = current_time
-
+            
             return rate_limits
-
+            
         except tweepy.Unauthorized:
             logger.error("X API unauthorized - check credentials")
             return {}
@@ -58,32 +59,32 @@ class XRateLimitChecker:
         except Exception as e:
             logger.error(f"Error getting rate limit status: {e}")
             return {}
-
+    
     async def check_daily_usage(self) -> Dict:
         """Check daily usage for free tier (1,500 tweets/month = ~50/day)."""
         rate_limits = await self.get_rate_limit_status()
-
+        
         if not rate_limits:
             return {
                 'status': 'unknown',
                 'message': 'Could not retrieve rate limit data'
             }
-
+        
         # Free tier monthly limits
         FREE_TIER_MONTHLY_TWEETS = 1500
         FREE_TIER_DAILY_ESTIMATE = FREE_TIER_MONTHLY_TWEETS // 30  # ~50 per day
-
+        
         usage_info = {
             'daily_estimate_limit': FREE_TIER_DAILY_ESTIMATE,
             'monthly_limit': FREE_TIER_MONTHLY_TWEETS,
             'endpoints': {}
         }
-
+        
         # Check tweet limits
         if 'tweets' in rate_limits:
             tweet_data = rate_limits['tweets']
             tweets_used_in_window = tweet_data['limit'] - tweet_data['remaining']
-
+            
             usage_info['endpoints']['tweets'] = {
                 'limit_per_window': tweet_data['limit'],
                 'remaining_in_window': tweet_data['remaining'],
@@ -91,7 +92,7 @@ class XRateLimitChecker:
                 'window_resets_at': tweet_data['reset'].strftime('%Y-%m-%d %H:%M:%S'),
                 'percentage_used': (tweets_used_in_window / tweet_data['limit']) * 100 if tweet_data['limit'] > 0 else 0
             }
-
+        
         # Check search limits
         if 'search' in rate_limits:
             search_data = rate_limits['search']
@@ -106,7 +107,7 @@ class XRateLimitChecker:
                 'status': 'disabled',
                 'note': 'Search typically disabled on free tier'
             }
-
+        
         # Determine overall status
         if 'tweets' in usage_info['endpoints']:
             tweet_info = usage_info['endpoints']['tweets']
@@ -122,18 +123,18 @@ class XRateLimitChecker:
         else:
             usage_info['status'] = 'unknown'
             usage_info['message'] = 'Could not determine tweet rate limit status'
-
+        
         return usage_info
-
+    
     def format_usage_report(self, usage_info: Dict) -> str:
         """Format usage information into a readable report."""
         if not usage_info or usage_info.get('status') == 'unknown':
             return "❌ Could not retrieve X API usage information"
-
+        
         report = []
         report.append("📊 X API Free Tier Usage Report")
         report.append("=" * 40)
-
+        
         # Overall status
         status_emoji = {
             'ok': '✅',
@@ -141,17 +142,17 @@ class XRateLimitChecker:
             'rate_limited': '🚫',
             'unknown': '❓'
         }
-
+        
         emoji = status_emoji.get(usage_info['status'], '❓')
         report.append(f"{emoji} Status: {usage_info['message']}")
         report.append("")
-
+        
         # Free tier limits
         report.append(f"📅 Free Tier Limits:")
         report.append(f"   • Monthly tweets: {usage_info['monthly_limit']:,}")
         report.append(f"   • Estimated daily: {usage_info['daily_estimate_limit']}")
         report.append("")
-
+        
         # Endpoint details
         if 'endpoints' in usage_info:
             for endpoint, data in usage_info['endpoints'].items():
@@ -163,7 +164,7 @@ class XRateLimitChecker:
                     report.append(f"   • Usage: {data['percentage_used']:.1f}%")
                     report.append(f"   • Resets: {data['window_resets_at']}")
                     report.append("")
-
+                
                 elif endpoint == 'search':
                     if data.get('status') == 'disabled':
                         report.append(f"🔍 Search Endpoint: {data['note']}")
@@ -172,7 +173,7 @@ class XRateLimitChecker:
                         report.append(f"   • Remaining: {data['remaining_in_window']}")
                         report.append(f"   • Resets: {data['window_resets_at']}")
                     report.append("")
-
+        
         # Recommendations
         report.append("💡 Recommendations:")
         if usage_info['status'] == 'rate_limited':
@@ -184,7 +185,7 @@ class XRateLimitChecker:
         else:
             report.append("   • Current usage is within safe limits")
             report.append("   • Continue monitoring before major posting")
-
+        
         return "\n".join(report)
 
 # Global instance

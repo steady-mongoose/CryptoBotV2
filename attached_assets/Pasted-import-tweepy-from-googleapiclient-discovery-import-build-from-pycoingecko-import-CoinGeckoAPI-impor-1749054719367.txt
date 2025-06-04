@@ -1,11 +1,12 @@
+import tweepy
+from googleapiclient.discovery import build
+from pycoingecko import CoinGeckoAPI
 import os
 import logging
-import tweepy
-from pycoingecko import CoinGeckoAPI
 
 logger = logging.getLogger('CryptoBot')
 
-# Get environment variables for various APIs
+# Get environment variables
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 LUNARCRUSH_API_KEY = os.getenv("LUNARCRUSH_API_KEY")
 NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
@@ -15,15 +16,34 @@ COINBASE_API_KEY = os.getenv("COINBASE_API_KEY")
 COINBASE_API_SECRET = os.getenv("COINBASE_API_SECRET")
 
 # X/Twitter API credentials
-X_API_KEY = os.getenv("X_CONSUMER_KEY")
-X_API_SECRET = os.getenv("X_CONSUMER_SECRET")
+X_API_KEY = os.getenv("X_API_KEY")
+X_API_SECRET = os.getenv("X_API_SECRET")
 X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
 X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
 X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 
+def get_x_api_key():
+    """Return the X API key."""
+    if not X_API_KEY:
+        logger.error("X API key not found")
+        return ""
+    return X_API_KEY
+
+def get_coinbase_api_credentials():
+    """Return Coinbase API credentials."""
+    api_key = os.getenv("COINBASE_API_KEY")
+    api_secret = os.getenv("COINBASE_API_SECRET")
+
+    if not all([api_key, api_secret]):
+        logger.error("Coinbase API credentials not found")
+        return None, None
+
+    return api_key, api_secret
+
 def get_x_client() -> tweepy.Client:
     """Initialize and return the X API client using Tweepy with Twitter API v2."""
     try:
+        # Get credentials from environment variables (Replit Secrets)
         if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET]):
             raise ValueError("Missing X API credentials")
 
@@ -33,19 +53,12 @@ def get_x_client() -> tweepy.Client:
             consumer_secret=X_API_SECRET,
             access_token=X_ACCESS_TOKEN,
             access_token_secret=X_ACCESS_TOKEN_SECRET,
-            wait_on_rate_limit=False
+            wait_on_rate_limit=False  # Handle rate limiting manually for better control
         )
         return client
     except Exception as e:
         logger.error(f"Error initializing X client: {e}")
         raise
-
-def get_coinmarketcap_api_key():
-    """Return the CoinMarketCap API key."""
-    key = os.getenv("COINMARKETCAP_API_KEY")
-    if not key:
-        logger.error("CoinMarketCap API key not found")
-    return key
 
 def get_coingecko_client():
     """Initialize and return the CoinGecko API client."""
@@ -69,10 +82,16 @@ def get_lunarcrush_api_key():
         return ""
     return LUNARCRUSH_API_KEY
 
-def get_cryptocompare_api_key():
-    """Return the CryptoCompare API key."""
-    key = os.getenv("CRYPTOCOMPARE_API_KEY")
-    if not key:
-        logger.error("CryptoCompare API key not found")
+def get_coinmarketcap_api_key():
+    """Return the CoinMarketCap API key."""
+    if not COINMARKETCAP_API_KEY:
+        logger.error("CoinMarketCap API key not found")
         return ""
-    return key
+    return COINMARKETCAP_API_KEY
+
+def get_discord_webhook_url():
+    """Return the Discord webhook URL."""
+    if not DISCORD_WEBHOOK_URL:
+        logger.error("Discord webhook URL not found")
+        return ""
+    return DISCORD_WEBHOOK_URL

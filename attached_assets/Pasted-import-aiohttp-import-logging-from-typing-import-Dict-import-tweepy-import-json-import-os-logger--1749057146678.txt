@@ -7,16 +7,15 @@ import os
 
 logger = logging.getLogger('CryptoBot')
 
-# Updated symbol mapping for correct coin IDs
 symbol_map = {
     "ripple": "XRP",
     "hedera-hashgraph": "HBAR",
     "stellar": "XLM",
-    "xdc-network": "XDC",  # Ensure this reflects the ID used in bot_v2.py
+    "xdce-crowd-sale": "XDC",
     "sui": "SUI",
     "ondo-finance": "ONDO",
     "algorand": "ALGO",
-    "casper": "CSPR"  # Ensure this matches properly as well
+    "casper-network": "CSPR"
 }
 
 SOCIAL_METRICS_CACHE_FILE = "social_metrics_cache.json"
@@ -55,21 +54,14 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession) -> 
         cache[coin_id] = result
         save_social_metrics_cache(cache)
         return result
-    except tweepy.Unauthorized as e:
-        logger.error(f"X API unauthorized error for {coin_id}: {e}")
-        result = {"mentions": 0, "sentiment": "N/A"}
-        cache[coin_id] = result
-        save_social_metrics_cache(cache)
-        return result
-    except tweepy.Forbidden as e:
-        logger.error(f"X API forbidden error for {coin_id}: {e}")
-        result = {"mentions": 0, "sentiment": "N/A"}
-        cache[coin_id] = result
-        save_social_metrics_cache(cache)
-        return result
     except Exception as e:
         logger.error(f"X API error for {coin_id}: {e}")
         result = {"mentions": 0, "sentiment": "N/A"}
         cache[coin_id] = result
         save_social_metrics_cache(cache)
         return result
+
+def save_social_metrics_cache(cache: Dict[str, Dict[str, str]]):
+    """Save social metrics to a cache file."""
+    with open(SOCIAL_METRICS_CACHE_FILE, 'w') as f:
+        json.dump(cache, f)

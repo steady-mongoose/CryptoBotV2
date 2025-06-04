@@ -5,12 +5,13 @@ cursor = conn.cursor()
 
 coins = [
     ("Ripple", "ripple"),
-    ("Hedera Hashgraph", "hedera"),
+    ("Hedera Hashgraph", "hedera-hashgraph"),
     ("Stellar", "stellar"),
-    ("XDC Network", "xdc-network"),
+    ("XDC Network", "xdc"),  # Updated for XDC
     ("Sui", "sui"),
-    ("Ondo", "ondo"),
-    ("Algorand", "algorand")
+    ("Ondo", "ondo-finance"),
+    ("Algorand", "algorand"),
+    ("Casper", "casper")  # Updated for Casper
 ]
 
 for name, coin_id in coins:
