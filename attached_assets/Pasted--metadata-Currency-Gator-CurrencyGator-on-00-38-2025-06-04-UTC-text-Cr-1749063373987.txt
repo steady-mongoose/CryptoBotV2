@@ -1,0 +1,45 @@
+[
+  {
+    "metadata": "Currency Gator @CurrencyGator on 00:38 2025-06-04 UTC",
+    "text": "🚀 Crypto Market Update (2025-06-04 at 00:38:19)! 📈 Latest on top altcoins: Ripple, Hedera Hashgraph, Stellar, XDC Network, Sui, Ondo, Algorand, Casper. #Crypto #Altcoins",
+    "hashtags": ["Crypto", "Altcoins"],
+    "replies": [
+      {
+        "metadata": "Currency Gator @CurrencyGator on 00:38 2025-06-04 UTC",
+        "text": "ripple (XRP): $2.24 (1.72% 24h) 📈\nPredicted: $2.21 (Linear regression)\nTx Volume: 0.00M\nTop Project: Binance\n#XRP\nSocial: 0 mentions, N/A\nVideo: This CONFIRMS Just How BIG Ripple XRP Will Be (TIMELINE EXPOSED)... https://t.co/3q5a9haxvI",
+        "hashtags": ["XRP"],
+        "urls": ["https://t.co/3q5a9haxvI"]
+      },
+      {
+        "metadata": "Currency Gator @CurrencyGator on 00:38 2025-06-04 UTC",
+        "text": "hedera hashgraph (HBAR): $0.17 (-0.05% 24h) 📉\nPredicted: $0.17 (Linear regression)\nTx Volume: 0.00M\nTop Project: Binance CEX\n#HBAR\nSocial: 0 mentions, N/A\nVideo: 21Shares Just Announced A Hedera Hashgraph HBAR ETP!!! This Is Just the Beginning!!!... https://t.co/tJFYhp2QG1",
+        "hashtags": ["HBAR"],
+        "urls": ["https://t.co/tJFYhp2QG1"]
+      },
+      {
+        "metadata": "Currency Gator @CurrencyGator on 00:38 2025-06-04 UTC",
+        "text": "stellar (XLM): $0.27 (0.11% 24h) 📈\nPredicted: $0.27 (Linear regression)\nTx Volume: 0.00M\nTop Project: Binance CEX\n#XLM\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "hashtags": ["XLM"],
+        "urls": []
+      },
+      {
+        "metadata": "Currency Gator @CurrencyGator on 00:38 2025-06-04 UTC",
+        "text": "xdce crowd sale (XDC): $0.06 (1.97% 24h) 📈\nPredicted: $0.06 (Linear regression)\nTx Volume: 0.00M\nTop Project: Gate\n#XDC\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "hashtags": ["XDC"],
+        "urls": []
+      },
+      {
+        "metadata": "Currency Gator @CurrencyGator on 00:38 2025-06-04 UTC",
+        "text": "sui (SUI): $3.25 (-2.81% 24h) 📉\nPredicted: $3.32 (Linear regression)\nTx Volume: 0.00M\nTop Project: Binance\n#SUI\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "hashtags": ["SUI"],
+        "urls": []
+      },
+      {
+        "metadata": "Currency Gator @CurrencyGator on 00:38 2025-06-04 UTC",
+        "text": "ondo finance (ONDO): $0.85 (-0.54% 24h) 📉\nPredicted: $0.85 (Linear regression)\nTx Volume: 0.00M\nTop Project: Upbit\n#ONDO\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "hashtags": ["ONDO"],
+        "urls": []
+      }
+    ]
+  }
+]

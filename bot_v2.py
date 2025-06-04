@@ -1,295 +1,288 @@
 import argparse
 import asyncio
 import logging
-import aiohttp
-from pycoingecko import CoinGeckoAPI
-from datetime import datetime
-import tweepy
-import time
-import requests  # For Discord webhook posting
-from modules.api_clients import get_x_client, get_coinmarketcap_api_key, get_cryptocompare_api_key, get_lunarcrush_api_key
 import os
+from datetime import datetime
+import aiohttp
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from modules.api_clients import get_x_client, get_coingecko_client
+from modules.utils import get_timestamp, get_date, format_tweet
+from modules.social_media import fetch_social_metrics
+from modules.database import Database
 
-# Set up logging with more detailed output
+# Set up logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s] - %(message)s'
+    format="%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger('CryptoBot')
 
-# Updated list of valid coin IDs for Coinbase
-COIN_IDS = [
-    "XRP", "HBAR", "XLM", "XDC", "SUI", "ONDO", "ALGO", "CSPR"
-]
+# Constants
+COINS = {
+    "ripple": "XRP",
+    "hedera-hashgraph": "HBAR",
+    "stellar": "XLM",
+    "xdce-crowd-sale": "XDC",
+    "sui": "SUI",
+    "ondo-finance": "ONDO",
+    "algorand": "ALGO",
+    "casper-network": "CSPR"
+}
 
-async def validate_coin_ids(coin_ids, session):
-    """Validate coin IDs for Coinbase and map unsupported coins to CoinGecko IDs."""
-    start_time = time.time()
+async def validate_coin_ids(session: aiohttp.ClientSession) -> dict:
+    """Validate coin IDs across Coinbase and fallback to CoinGecko if necessary."""
     logger.debug("Starting coin ID validation")
-    valid_ids = []
-    coingecko_mapping = {
-        "XDC": "xdce-crowd-sale",
-        "ONDO": "ondo-finance",
-        "CSPR": "casper-network"
-    }
+    start_time = datetime.now()
+    validated_coins = {}
 
-    for coin_id in coin_ids:
-        coinbase_url = f"https://api.coinbase.com/v2/prices/{coin_id}-USD/spot"
+    for coingecko_id, coin_symbol in COINS.items():
         try:
-            logger.debug(f"Validating {coin_id} on Coinbase")
-            async with session.get(coinbase_url) as response:
+            async with session.get(f"https://api.coinbase.com/v2/prices/{coin_symbol}-USD/spot") as response:
+                if response.status == 200:
+                    logger.info(f"Coin ID {coin_symbol} is valid on Coinbase.")
+                    validated_coins[coingecko_id] = coin_symbol
+                else:
+                    logger.warning(f"Coin ID {coin_symbol} not supported on Coinbase (status: {response.status}). Checking other APIs...")
+                    validated_coins[coingecko_id] = await get_correct_coin_id(coingecko_id, coin_symbol, session)
+        except Exception as e:
+            logger.error(f"Error validating {coin_symbol}: {e}")
+
+    logger.debug(f"Finished coin ID validation. Time taken: {(datetime.now() - start_time).total_seconds():.2f} seconds")
+    logger.info(f"Validated Coin IDs: {list(validated_coins.values())}")
+    return validated_coins
+
+async def get_correct_coin_id(coingecko_id: str, coin_symbol: str, session: aiohttp.ClientSession) -> str:
+    """Fallback validation for coin IDs using CoinGecko."""
+    logger.debug(f"Starting alternative validation for {coin_symbol}")
+    start_time = datetime.now()
+
+    coingecko = get_coingecko_client()
+    try:
+        coingecko_data = coingecko.get_coin_by_id(coingecko_id)
+        logger.info(f"Coin ID {coin_symbol} validated on CoinGecko as {coingecko_id}")
+        logger.debug(f"Finished alternative validation for {coin_symbol}. Time taken: {(datetime.now() - start_time).total_seconds():.2f} seconds")
+        return coin_symbol
+    except Exception as e:
+        logger.error(f"Error validating {coin_symbol} on CoinGecko: {e}")
+        raise
+
+async def fetch_data_from_apis(coingecko_id: str, coin_symbol: str, session: aiohttp.ClientSession) -> dict:
+    """Fetch price, transaction volume, and historical data for a coin."""
+    logger.debug(f"Starting data fetch for {coin_symbol}")
+    start_time = datetime.now()
+
+    price = None
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            url = f"https://api.coinbase.com/v2/prices/{coin_symbol}-USD/spot"
+            logger.info(f"Requesting data from URL: {url}")
+            logger.debug(f"Attempt {attempt + 1}/{max_retries} to fetch from Coinbase for {coin_symbol}")
+            async with session.get(url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if 'data' in data and 'amount' in data['data']:
-                        valid_ids.append(coin_id)
-                        logger.info(f"Coin ID {coin_id} is valid on Coinbase.")
-                    else:
-                        logger.warning(f"Coin ID {coin_id} returned 200 but no price data: {data}. Checking other APIs...")
-                        correct_id = await get_correct_coin_id(coin_id, session, coingecko_mapping)
-                        if correct_id:
-                            valid_ids.append(correct_id)
+                    price = float(data['data']['amount'])
+                    logger.info(f"Successfully fetched price for {coin_symbol} from Coinbase: ${price} USD")
+                    break
                 else:
-                    logger.warning(f"Coin ID {coin_id} not supported on Coinbase (status: {response.status}). Checking other APIs...")
-                    correct_id = await get_correct_coin_id(coin_id, session, coingecko_mapping)
-                    if correct_id:
-                        valid_ids.append(correct_id)
+                    logger.warning(f"Failed to fetch price for {coin_symbol} from Coinbase (status: {response.status})")
         except Exception as e:
-            logger.error(f"Error validating {coin_id} on Coinbase: {e}")
-            correct_id = await get_correct_coin_id(coin_id, session, coingecko_mapping)
-            if correct_id:
-                valid_ids.append(correct_id)
+            logger.error(f"Error fetching price for {coin_symbol} from Coinbase: {e}")
+        await asyncio.sleep(1)
 
-        # Add a small delay to avoid rate limiting
-        await asyncio.sleep(0.1)
+    if price is None:
+        logger.warning(f"Could not fetch price for {coin_symbol} from Coinbase after {max_retries} attempts. Falling back to CoinGecko.")
+        coingecko = get_coingecko_client()
+        try:
+            coingecko_data = coingecko.get_price(ids=coingecko_id, vs_currencies='usd')
+            price = coingecko_data[coingecko_id]['usd']
+            logger.info(f"Successfully fetched price for {coin_symbol} from CoinGecko: ${price} USD")
+        except Exception as e:
+            logger.error(f"Error fetching price for {coin_symbol} from CoinGecko: {e}")
+            price = 0.0
 
-    logger.debug(f"Finished coin ID validation. Time taken: {time.time() - start_time:.2f} seconds")
-    logger.info(f"Validated Coin IDs: {valid_ids}")
-    return valid_ids
+    logger.debug(f"Finished Coinbase fetch for {coin_symbol}. Time taken: {(datetime.now() - start_time).total_seconds():.2f} seconds")
 
-async def get_correct_coin_id(coin_id, session, coingecko_mapping):
-    """Attempt to retrieve the correct coin ID from CoinGecko or other APIs if Coinbase fails."""
-    start_time = time.time()
-    logger.debug(f"Starting alternative validation for {coin_id}")
-
-    # Try CoinGecko first
-    cg_client = CoinGeckoAPI()
+    # Fetch transaction volume and historical data from CoinGecko
+    coingecko = get_coingecko_client()
     try:
-        logger.debug(f"Validating {coin_id} on CoinGecko")
-        coingecko_id = coingecko_mapping.get(coin_id, coin_id.lower())
-        coin_data = cg_client.get_coin_by_id(coingecko_id)
-        if coin_data:
-            logger.info(f"Coin ID {coin_id} validated on CoinGecko as {coingecko_id}")
-            logger.debug(f"Finished alternative validation for {coin_id}. Time taken: {time.time() - start_time:.2f} seconds")
-            return coin_id
+        market_data = coingecko.get_coin_market_chart_by_id(id=coingecko_id, vs_currency='usd', days='1')
+        tx_volume = sum([v[1] for v in market_data['total_volumes']]) / 1_000_000  # Convert to millions
+        historical_prices = [p[1] for p in market_data['prices']][-30:]  # Last 30 price points
     except Exception as e:
-        logger.error(f"CoinGecko validation failed for {coin_id}: {e}")
+        logger.error(f"Error fetching market data for {coin_symbol} from CoinGecko: {e}")
+        tx_volume = 0.0
+        historical_prices = []
 
-    # Check other APIs (CoinMarketCap, CryptoCompare, LunarCrush)
-    coinmarketcap_key = get_coinmarketcap_api_key()
-    if coinmarketcap_key:
-        coinmarketcap_api_url = f"https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol={coin_id}&convert=USD"
-        logger.debug(f"Validating {coin_id} on CoinMarketCap")
-        async with session.get(coinmarketcap_api_url, headers={'X-CMC_PRO_API_KEY': coinmarketcap_key}) as response:
-            if response.status == 200:
-                data = await response.json()
-                if data and 'data' in data and coin_id in data['data']:
-                    logger.debug(f"Finished alternative validation for {coin_id}. Time taken: {time.time() - start_time:.2f} seconds")
-                    return coin_id
+    # Fetch price change
+    try:
+        price_change_24h = coingecko.get_price(ids=coingecko_id, vs_currencies='usd', include_24hr_change=True)[coingecko_id]['usd_24h_change']
+    except Exception as e:
+        logger.error(f"Error fetching 24h price change for {coin_symbol}: {e}")
+        price_change_24h = 0.0
 
-    cryptocompare_key = get_cryptocompare_api_key()
-    if cryptocompare_key:
-        cryptocompare_api_url = f"https://min-api.cryptocompare.com/data/price?fsym={coin_id}&tsyms=USD"
-        logger.debug(f"Validating {coin_id} on CryptoCompare")
-        async with session.get(cryptocompare_api_url) as response:
-            if response.status == 200:
-                logger.debug(f"Finished alternative validation for {coin_id}. Time taken: {time.time() - start_time:.2f} seconds")
-                return coin_id
-
-    lunarcrush_key = get_lunarcrush_api_key()
-    if lunarcrush_key:
-        lunarcrush_api_url = f"https://api.lunarcrush.com/v2?data=coins&key={lunarcrush_key}&symbol={coin_id}"
-        logger.debug(f"Validating {coin_id} on LunarCrush")
-        async with session.get(lunarcrush_api_url) as response:
-            if response.status == 200:
-                logger.debug(f"Finished alternative validation for {coin_id}. Time taken: {time.time() - start_time:.2f} seconds")
-                return coin_id
-
-    logger.error(f"Coin ID '{coin_id}' not found in any API.")
-    logger.debug(f"Finished alternative validation for {coin_id}. Time taken: {time.time() - start_time:.2f} seconds")
-    return None
-
-async def fetch_data_from_apis(coin_id, session, max_retries=3, rate_limit_delay=10):
-    """Fetch data from Coinbase, with fallback to CoinGecko for unsupported coins."""
-    start_time = time.time()
-    logger.debug(f"Starting data fetch for {coin_id}")
-
-    # Coinbase fetch
-    coinbase_api_url = f"https://api.coinbase.com/v2/prices/{coin_id}-USD/spot"
-    logger.info(f"Requesting data from URL: {coinbase_api_url}")
-
-    for attempt in range(max_retries):
+    # Predict price using linear regression
+    predicted_price = price
+    if historical_prices:
         try:
-            logger.debug(f"Attempt {attempt + 1}/{max_retries} to fetch from Coinbase for {coin_id}")
-            async with session.get(coinbase_api_url) as response:
-                if response.status == 200:
-                    coinbase_data = await response.json()
-                    if 'data' in coinbase_data and 'amount' in coinbase_data['data']:
-                        price = float(coinbase_data['data']['amount'])
-                        logger.info(f"Successfully fetched price for {coin_id} from Coinbase: ${price} USD")
-                        logger.debug(f"Finished Coinbase fetch for {coin_id}. Time taken: {time.time() - start_time:.2f} seconds")
-                        return {'source': 'coinbase', 'price': price}
-                    else:
-                        logger.warning(f"Coinbase returned 200 but no price data for {coin_id}: {coinbase_data}")
-                elif response.status == 429:
-                    retry_after = int(response.headers.get('Retry-After', rate_limit_delay))
-                    logger.warning(f"Rate limit hit for Coinbase on {coin_id}. Retrying after {retry_after} seconds...")
-                    await asyncio.sleep(retry_after)
-                    continue
-                else:
-                    logger.error(f"Coinbase API error for {coin_id}: {response.status}. Response: {await response.text()}")
+            X = np.array(range(len(historical_prices))).reshape(-1, 1)
+            y = np.array(historical_prices)
+            model = LinearRegression()
+            model.fit(X, y)
+            predicted_price = model.predict([[len(historical_prices)]])[0]
         except Exception as e:
-            logger.error(f"Coinbase fetch error for {coin_id}: {e}")
-            break
+            logger.error(f"Error predicting price for {coin_symbol}: {e}")
 
-    # Fallback to CoinGecko
-    coingecko_mapping = {
-        "XDC": "xdce-crowd-sale",
-        "ONDO": "ondo-finance",
-        "CSPR": "casper-network"
+    return {
+        "price": price,
+        "price_change_24h": price_change_24h,
+        "tx_volume": tx_volume,
+        "predicted_price": predicted_price
     }
-    coingecko_id = coingecko_mapping.get(coin_id, coin_id.lower())
-    coingecko_url = f"https://api.coingecko.com/api/v3/simple/price?ids={coingecko_id}&vs_currencies=usd"
-    logger.info(f"Falling back to CoinGecko for {coin_id}. Requesting data from URL: {coingecko_url}")
 
-    for attempt in range(max_retries):
-        try:
-            logger.debug(f"Attempt {attempt + 1}/{max_retries} to fetch from CoinGecko for {coin_id}")
-            async with session.get(coingecko_url) as response:
-                if response.status == 200:
-                    coingecko_data = await response.json()
-                    if coingecko_id in coingecko_data:
-                        price = coingecko_data[coingecko_id]['usd']
-                        logger.info(f"Successfully fetched price for {coin_id} from CoinGecko: ${price} USD")
-                        logger.debug(f"Finished CoinGecko fetch for {coin_id}. Time taken: {time.time() - start_time:.2f} seconds")
-                        return {'source': 'coingecko', 'price': float(price)}
-                    else:
-                        logger.error(f"CoinGecko data for {coin_id} not found in response: {coingecko_data}")
-                elif response.status == 429:
-                    retry_after = int(response.headers.get('Retry-After', rate_limit_delay))
-                    logger.warning(f"Rate limit hit for CoinGecko on {coin_id}. Retrying after {retry_after} seconds...")
-                    await asyncio.sleep(retry_after)
-                    continue
-                else:
-                    logger.error(f"CoinGecko API error for {coin_id}: {response.status}. Response: {await response.text()}")
-        except Exception as e:
-            logger.error(f"CoinGecko fetch error for {coin_id}: {e}")
-            break
-
-    logger.debug(f"Finished data fetch for {coin_id} with no data. Time taken: {time.time() - start_time:.2f} seconds")
-    return None
+async def fetch_youtube_video(coin_name: str, db: Database, current_date: str) -> dict:
+    """Fetch a YouTube video for a coin, ensuring it hasn't been used before."""
+    from modules.api_clients import get_youtube_api_key
+    youtube_api_key = get_youtube_api_key()
+    if not youtube_api_key:
+        logger.warning("YouTube API key not provided. Skipping YouTube video fetch.")
+        return {"title": "N/A", "url": "N/A"}
+    # Placeholder; YouTube API integration can be added here if the key is available
+    return {"title": "N/A", "url": "N/A"}
 
 async def main_bot_run(test_discord: bool = False):
-    """Main function to run the bot."""
-    start_time = time.time()
+    """Main function to run the CryptoBotV2 daily update."""
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
 
     async with aiohttp.ClientSession() as session:
         logger.debug("Created aiohttp ClientSession")
-        valid_coin_ids = await validate_coin_ids(COIN_IDS, session)
-        logger.info(f"Valid Coin IDs: {valid_coin_ids}")
 
+        # Validate coin IDs
+        validated_coins = await validate_coin_ids(session)
+        logger.info(f"Valid Coin IDs: {list(validated_coins.values())}")
+
+        current_date = get_date()
+        current_time = get_timestamp()
+
+        # Initialize database
+        db = Database("crypto_bot.db")
+
+        # Fetch data for each coin
         results = []
-        for coin_id in valid_coin_ids:
-            logger.info(f"Fetching data for {coin_id}...")
-            data = await fetch_data_from_apis(coin_id, session)
-            if data:
-                formatted_data = f"{coin_id}: ${data['price']:.3f} USD (Source: {data['source'].capitalize()})"
-                results.append({'coin_id': coin_id, 'formatted_data': formatted_data})
-            else:
-                logger.warning(f"No data fetched for {coin_id}")
-            # Add a small delay to avoid rate limiting
-            logger.debug(f"Starting 200ms delay after fetching {coin_id}")
-            delay_start = time.time()
-            await asyncio.sleep(0.2)
-            logger.debug(f"Finished 200ms delay after fetching {coin_id}. Actual delay: {time.time() - delay_start:.2f} seconds")
+        top_projects = {
+            "XRP": "Binance",
+            "HBAR": "Binance CEX",
+            "XLM": "Binance CEX",
+            "XDC": "Gate",
+            "SUI": "Binance",
+            "ONDO": "Upbit",
+            "ALGO": "Binance",
+            "CSPR": "Gate"
+        }
 
-        if results:
-            current_time = datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
-            main_post = f"🚀 Crypto Market Update ({current_time})! 📈 Latest on top altcoins: {', '.join(valid_coin_ids)}. #Crypto #Altcoins"
-            
+        for coingecko_id, coin_symbol in validated_coins.items():
+            logger.info(f"Fetching data for {coin_symbol}...")
+
+            # Fetch price, transaction volume, and predicted price
+            data = await fetch_data_from_apis(coingecko_id, coin_symbol, session)
+
+            # Fetch social metrics with error handling
             try:
-                if test_discord:
-                    # Post to Discord
-                    logger.debug("Preparing to post updates to Discord.")
-                    webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
-                    if webhook_url:
-                        logger.debug(f"Using Discord webhook URL: {webhook_url}")
-                        # Post the main message
-                        payload = {
-                            "content": main_post,
-                            "username": "CryptoBot"
-                        }
-                        response = requests.post(webhook_url, json=payload)
-                        if 200 <= response.status_code < 300:
-                            logger.info(f"Successfully posted main update to Discord. Status code: {response.status_code}")
-                        else:
-                            logger.error(f"Failed to post main update to Discord. Status code: {response.status_code}, Response: {response.text}")
-                        
-                        # Post individual coin updates
-                        for data in results:
-                            payload = {
-                                "content": data['formatted_data'],
-                                "username": "CryptoBot"
-                            }
-                            response = requests.post(webhook_url, json=payload)
-                            if 200 <= response.status_code < 300:
-                                logger.info(f"Successfully posted {data['coin_id']} update to Discord. Status code: {response.status_code}")
-                            else:
-                                logger.error(f"Failed to post {data['coin_id']} update to Discord. Status code: {response.status_code}, Response: {response.text}")
-                            # Add a small delay to avoid rate limiting
-                            await asyncio.sleep(0.5)
-                    else:
-                        logger.error("Discord webhook URL is not set. Cannot post to Discord.")
-                else:
-                    # Post to X
-                    logger.debug("Initializing X client")
-                    x_client = get_x_client()
-                    logger.debug("Starting main tweet posting")
-                    post_start = time.time()
-                    main_tweet = x_client.create_tweet(text=main_post)
-                    logger.info(f"Posted main tweet with ID: {main_tweet.data['id']}. Time taken: {time.time() - post_start:.2f} seconds")
-                    main_tweet_id = main_tweet.data['id']
-
-                    for data in results:
-                        logger.debug(f"Starting reply tweet for {data['coin_id']}")
-                        reply_start = time.time()
-                        reply_tweet = x_client.create_tweet(
-                            text=data['formatted_data'],
-                            in_reply_to_tweet_id=main_tweet_id
-                        )
-                        logger.info(f"Posted reply for {data['coin_id']} with ID: {reply_tweet.data['id']}. Time taken: {time.time() - reply_start:.2f} seconds")
-                        logger.debug(f"Starting 200ms delay after posting reply for {data['coin_id']}")
-                        delay_start = time.time()
-                        await asyncio.sleep(0.2)
-                        logger.debug(f"Finished 200ms delay after posting reply for {data['coin_id']}. Actual delay: {time.time() - delay_start:.2f} seconds")
+                social_metrics = await fetch_social_metrics(coingecko_id, session)
             except Exception as e:
-                logger.error(f"Error posting updates: {e}")
-        else:
-            logger.warning("No data to post.")
+                logger.error(f"Failed to fetch social metrics for {coin_symbol}: {e}. Using default values.")
+                social_metrics = {"mentions": 0, "sentiment": "N/A"}
 
-    logger.debug(f"Finished entire bot run. Total time taken: {time.time() - start_time:.2f} seconds")
+            # Fetch YouTube video
+            youtube_video = await fetch_youtube_video(coingecko_id, db, current_date)
+
+            # Prepare coin data
+            coin_data = {
+                "coin_name": coingecko_id.replace("-", " ").title(),
+                "coin_symbol": coin_symbol,
+                "price": data["price"],
+                "price_change_24h": data["price_change_24h"],
+                "tx_volume": data["tx_volume"],
+                "predicted_price": data["predicted_price"],
+                "top_project": top_projects.get(coin_symbol, "Unknown"),
+                "hashtag": f"#{coin_symbol}",
+                "social_metrics": social_metrics,
+                "youtube_video": youtube_video
+            }
+            results.append(coin_data)
+
+        # Prepare main post
+        main_post = {
+            "text": f"🚀 Crypto Market Update ({current_date} at {current_time})! 📈 Latest on top altcoins: {', '.join([coin.replace('-', ' ').title() for coin in validated_coins.keys()])}. #Crypto #Altcoins"
+        }
+
+        # Post updates
+        if test_discord:
+            # Post to Discord
+            webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+            if not webhook_url:
+                logger.error("DISCORD_WEBHOOK_URL not set. Cannot post to Discord.")
+                return
+
+            async with aiohttp.ClientSession() as discord_session:
+                # Post main update
+                async with discord_session.post(webhook_url, json={"content": main_post["text"]}) as response:
+                    if response.status == 204:
+                        logger.info("Successfully posted main update to Discord. Status code: 204")
+                    else:
+                        logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
+
+                # Post coin updates
+                for data in results:
+                    reply_text = format_tweet(data)
+                    async with discord_session.post(webhook_url, json={"content": reply_text}) as response:
+                        if response.status == 204:
+                            logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
+                        else:
+                            logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
+                    await asyncio.sleep(0.5)
+        else:
+            # Post to X
+            logger.debug("Initializing X client")
+            x_client = get_x_client()
+            logger.debug("Starting main tweet posting")
+            main_tweet = x_client.create_tweet(text=main_post['text'])
+            logger.info(f"Posted main tweet with ID: {main_tweet.data['id']}.")
+
+            for data in results:
+                reply_text = format_tweet(data)
+                logger.debug(f"Starting reply tweet for {data['coin_name']}")
+                reply_tweet = x_client.create_tweet(
+                    text=reply_text,
+                    in_reply_to_tweet_id=main_tweet.data['id']
+                )
+                logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
+                await asyncio.sleep(0.5)
+
+        # Backup database
+        db.backup()
+        logger.info("Database backup completed.")
+
+        db.close()
 
 if __name__ == "__main__":
-    start_time = time.time()
+    start_time = datetime.now()
     logger.debug("Script execution started")
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test-discord", action="store_true", help="Run in test mode for Discord")
+
+    parser = argparse.ArgumentParser(description="CryptoBotV2 - Post daily crypto updates to X or Discord")
+    parser.add_argument("--test-discord", action="store_true", help LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    parser.add_argument("--test-discord", action="store_true", help="Test mode: post to Discord instead of X")
     args = parser.parse_args()
 
     try:
         asyncio.run(main_bot_run(test_discord=args.test_discord))
     except Exception as e:
         logger.error(f"Script failed with error: {e}")
+        raise
     finally:
-        logger.debug(f"Script execution finished. Total runtime: {time.time() - start_time:.2f} seconds")
+        logger.debug(f"Script execution finished. Total runtime: {(datetime.now() - start_time).total_seconds():.2f} seconds")
