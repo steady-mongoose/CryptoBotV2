@@ -167,6 +167,19 @@ args = "echo \"🧵 Starting CryptoBot in thread mode for X...\""
 task = "shell.exec"
 args = "python bot_v2.py --thread"
 
+[[workflows.workflow]]
+name = "Generate X Thread Template"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📝 Generating X thread template for manual posting...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python generate_thread_template.py"
+
 [deployment]
 deploymentTarget = "gce"
 run = ["sh", "-c", "python bot_v2.py"]
