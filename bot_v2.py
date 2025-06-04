@@ -64,6 +64,38 @@ def format_tweet(data):
         f"Video: {data['youtube_video']['title']}... {data['youtube_video']['url']}"
     )
 
+def create_thread_post(results):
+    """Create a thread-style post for X with multiple tweets."""
+    current_date = get_date()
+    current_time = get_timestamp()
+    
+    # Main thread starter
+    main_post = f"🧵 THREAD: Crypto Market Deep Dive ({current_date} at {current_time})\n\nAnalysis of top altcoins with predictions, social sentiment, and project updates 👇\n\n#CryptoThread #Altcoins 1/{len(results) + 1}"
+    
+    # Individual thread posts
+    thread_posts = []
+    for i, data in enumerate(results, 2):
+        change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
+        
+        post_text = (
+            f"{i}/{len(results) + 1} {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n\n"
+            f"💰 Price: ${data['price']:.2f}\n"
+            f"📊 24h Change: {data['price_change_24h']:.2f}%\n"
+            f"🔮 Predicted: ${data['predicted_price']:.2f}\n"
+            f"💹 Volume: {data['tx_volume']:.2f}M\n"
+            f"🏢 Top Project: {data['top_project']}\n\n"
+            f"📱 Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n\n"
+            f"🎥 Latest: {data['youtube_video']['title'][:50]}...\n{data['youtube_video']['url']}\n\n"
+            f"{data['hashtag']}"
+        )
+        
+        thread_posts.append({
+            'text': post_text,
+            'coin_name': data['coin_name']
+        })
+    
+    return main_post, thread_posts
+
 def get_youtube_service():
     try:
         youtube_api_key = get_youtube_api_key()
@@ -167,7 +199,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
         logger.error(f"Error fetching YouTube video for {coin}: {str(e)}")
         return {"title": "N/A", "url": "N/A"}
 
-async def main_bot_run(test_discord: bool = False, dual_post: bool = False):
+async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False):
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
 
@@ -222,10 +254,14 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False):
             }
             results.append(coin_data)
 
-        # Prepare main post
-        main_post = {
-            "text": f"🚀 Crypto Market Update ({current_date} at {current_time})! 📈 Latest on top altcoins: {', '.join([coin['name'].title() for coin in COINS])}. #Crypto #Altcoins"
-        }
+        # Prepare main post (different for thread mode)
+        if thread_mode:
+            main_post_text, thread_posts = create_thread_post(results)
+            main_post = {"text": main_post_text}
+        else:
+            main_post = {
+                "text": f"🚀 Crypto Market Update ({current_date} at {current_time})! 📈 Latest on top altcoins: {', '.join([coin['name'].title() for coin in COINS])}. #Crypto #Altcoins"
+            }
 
         # Post updates
         if test_discord or dual_post:
@@ -251,8 +287,55 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False):
                             logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
                     await asyncio.sleep(0.5)
         
+        # Handle thread mode posting
+        if thread_mode and not test_discord:
+            logger.info("Thread mode: Posting complete thread to X")
+            
+            # Start the queue worker
+            start_x_queue()
+            
+            try:
+                # Post main thread starter
+                main_tweet = x_client.create_tweet(text=main_post['text'])
+                logger.info(f"Posted main thread tweet with ID: {main_tweet.data['id']}.")
+
+                previous_tweet_id = main_tweet.data['id']
+                for i, post_data in enumerate(thread_posts):
+                    try:
+                        reply_tweet = x_client.create_tweet(
+                            text=post_data['text'],
+                            in_reply_to_tweet_id=previous_tweet_id
+                        )
+                        previous_tweet_id = reply_tweet.data['id']
+                        logger.info(f"Posted thread post {i+1}/{len(thread_posts)} for {post_data['coin_name']} with ID: {reply_tweet.data['id']}.")
+                        await asyncio.sleep(1)  # Longer delay for thread posts
+                        
+                    except tweepy.TooManyRequests:
+                        logger.warning(f"Rate limited during thread posting, queuing remaining posts")
+                        
+                        # Queue remaining thread posts
+                        remaining_posts = thread_posts[i:]
+                        queue_x_thread(remaining_posts, f"🧵 Continuing thread... (Rate limit reached)")
+                        
+                        logger.info(f"Queued {len(remaining_posts)} remaining thread posts")
+                        break
+                        
+                    except Exception as e:
+                        logger.error(f"Error posting thread for {post_data['coin_name']}: {e}")
+                        # Queue this post for retry
+                        queue_x_post(post_data['text'], previous_tweet_id, priority=2)
+                        
+            except tweepy.TooManyRequests:
+                logger.warning("Rate limited on main thread tweet, using queue fallback")
+                queue_x_thread(thread_posts, main_post['text'])
+                logger.info(f"Queued complete thread with {len(thread_posts)} posts due to rate limits")
+                
+            except Exception as e:
+                logger.error(f"Error with main thread tweet: {e}")
+                queue_x_post(main_post['text'], priority=1)
+
         # Handle dual posting mode (X + Discord fallback)
-        if dual_post and not test_discord:
+        elif dual_post and not test_discord:
             logger.info("Dual posting mode: Attempting X first, Discord as fallback")
             
             # Start the queue worker
@@ -399,10 +482,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CryptoBotV2 - Post daily crypto updates to X or Discord")
     parser.add_argument("--test-discord", action="store_true", help="Test mode: post to Discord instead of X")
     parser.add_argument("--dual-post", action="store_true", help="Dual post mode: try X first, fallback to Discord if rate limited")
+    parser.add_argument("--thread", action="store_true", help="Thread mode: post as a threaded tweet series to X")
     args = parser.parse_args()
 
     try:
-        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post))
+        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post, thread_mode=args.thread))
     except Exception as e:
         logger.error(f"Script failed with error: {str(e)}")
         raise
