@@ -638,29 +638,33 @@ if __name__ == "__main__":
             pass  # Suppress HTTP server logs
     
     # Start HTTP server in background thread with port availability check
-    port = 8080
-    max_port_attempts = 5
+    import socket
     
-    for attempt in range(max_port_attempts):
+    def find_free_port(start_port=8080, max_attempts=10):
+        """Find a free port starting from start_port."""
+        for port in range(start_port, start_port + max_attempts):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                try:
+                    sock.bind(('0.0.0.0', port))
+                    return port
+                except OSError:
+                    continue
+        return None
+    
+    # Find an available port
+    port = find_free_port()
+    if port:
         try:
             server = HTTPServer(('0.0.0.0', port), HealthHandler)
             server_thread = threading.Thread(target=server.serve_forever)
             server_thread.daemon = True
             server_thread.start()
             print(f"Health check server started on port {port}")
-            break
-        except OSError as e:
-            if e.errno == 98:  # Address already in use
-                port += 1
-                if attempt < max_port_attempts - 1:
-                    print(f"Port {port-1} in use, trying port {port}...")
-                    continue
-                else:
-                    print(f"Could not find available port after {max_port_attempts} attempts")
-                    break
-            else:
-                print(f"Error starting HTTP server: {e}")
-                break
+        except Exception as e:
+            print(f"Failed to start HTTP server on port {port}: {e}")
+    else:
+        print("Could not find an available port for HTTP server")
     
     # Run the main function
     asyncio.run(main(test_discord=args.test_discord, run_once=args.run_once))
