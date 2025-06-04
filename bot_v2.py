@@ -68,15 +68,15 @@ def create_thread_post(results):
     """Create a thread-style post for X with multiple tweets."""
     current_date = get_date()
     current_time = get_timestamp()
-    
+
     # Main thread starter
     main_post = f"🧵 THREAD: Crypto Market Deep Dive ({current_date} at {current_time})\n\nAnalysis of top altcoins with predictions, social sentiment, and project updates 👇\n\n#CryptoThread #Altcoins 1/{len(results) + 1}"
-    
+
     # Individual thread posts
     thread_posts = []
     for i, data in enumerate(results, 2):
         change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
-        
+
         post_text = (
             f"{i}/{len(results) + 1} {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n\n"
             f"💰 Price: ${data['price']:.2f}\n"
@@ -88,12 +88,12 @@ def create_thread_post(results):
             f"🎥 Latest: {data['youtube_video']['title'][:50]}...\n{data['youtube_video']['url']}\n\n"
             f"{data['hashtag']}"
         )
-        
+
         thread_posts.append({
             'text': post_text,
             'coin_name': data['coin_name']
         })
-    
+
     return main_post, thread_posts
 
 def get_youtube_service():
@@ -182,7 +182,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
             f"{coin} price prediction 2025",
             f"{coin} analysis crypto"
         ]
-        
+
         for search_query in search_queries:
             request = youtube.search().list(
                 part="snippet",
@@ -213,21 +213,21 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
             publishedAfter="2024-01-01T00:00:00Z"
         )
         response = request.execute()
-        
+
         if response.get('items'):
             item = response['items'][0]
             title = item['snippet']['title']
             url = f"https://youtu.be/{item['id']['videoId']}"
             logger.info(f"Using recent video for {coin} (may be reused): {title}")
             return {"title": title, "url": url}
-        
+
         # Final fallback - generic crypto content
         logger.warning(f"No videos found for {coin}, using generic fallback.")
         return {
             "title": f"Latest {coin.title()} Crypto Analysis", 
             "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025"
         }
-        
+
     except HttpError as e:
         logger.error(f"Error fetching YouTube video for {coin}: {str(e)}")
         # Fallback to search URL instead of N/A
@@ -323,14 +323,14 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         else:
                             logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
                     await asyncio.sleep(0.5)
-        
+
         # Handle thread mode posting
         if thread_mode and not test_discord:
             logger.info("Thread mode: Posting complete thread to X")
-            
+
             # Start the queue worker
             start_x_queue()
-            
+
             try:
                 # Post main thread starter
                 main_tweet = x_client.create_tweet(text=main_post['text'])
@@ -346,27 +346,27 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         previous_tweet_id = reply_tweet.data['id']
                         logger.info(f"Posted thread post {i+1}/{len(thread_posts)} for {post_data['coin_name']} with ID: {reply_tweet.data['id']}.")
                         await asyncio.sleep(1)  # Longer delay for thread posts
-                        
+
                     except tweepy.TooManyRequests:
                         logger.warning(f"Rate limited during thread posting, queuing remaining posts")
-                        
+
                         # Queue remaining thread posts
                         remaining_posts = thread_posts[i:]
                         queue_x_thread(remaining_posts, f"🧵 Continuing thread... (Rate limit reached)")
-                        
+
                         logger.info(f"Queued {len(remaining_posts)} remaining thread posts")
                         break
-                        
+
                     except Exception as e:
                         logger.error(f"Error posting thread for {post_data['coin_name']}: {e}")
                         # Queue this post for retry
                         queue_x_post(post_data['text'], previous_tweet_id, priority=2)
-                        
+
             except tweepy.TooManyRequests:
                 logger.warning("Rate limited on main thread tweet, using queue fallback")
                 queue_x_thread(thread_posts, main_post['text'])
                 logger.info(f"Queued complete thread with {len(thread_posts)} posts due to rate limits")
-                
+
             except Exception as e:
                 logger.error(f"Error with main thread tweet: {e}")
                 queue_x_post(main_post['text'], priority=1)
@@ -374,10 +374,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
         # Handle dual posting mode (X + Discord fallback)
         elif dual_post and not test_discord:
             logger.info("Dual posting mode: Attempting X first, Discord as fallback")
-            
+
             # Start the queue worker
             start_x_queue()
-            
+
             x_success = False
             try:
                 # Attempt X posting first
@@ -395,22 +395,22 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         )
                         previous_tweet_id = reply_tweet.data['id']
                         logger.info(f"Posted reply for {data['coin_name']} to X with ID: {reply_tweet.data['id']}.")
-                        await asyncio.sleep(0.5)
-                        
+                        await asyncio.sleep(2)  # Extended delay for free tier compliance
+
                     except tweepy.TooManyRequests:
                         logger.warning(f"Rate limited while posting {data['coin_name']}, falling back to Discord")
                         x_success = False
                         break
-                        
+
                     except Exception as e:
                         logger.error(f"Error posting {data['coin_name']} to X: {e}")
                         x_success = False
                         break
-                        
+
             except tweepy.TooManyRequests:
                 logger.warning("Rate limited on main tweet, falling back to Discord")
                 x_success = False
-                
+
             except Exception as e:
                 logger.error(f"Error with main tweet: {e}")
                 x_success = False
@@ -440,14 +440,14 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     logger.error("DISCORD_WEBHOOK_URL not set. Cannot fallback to Discord.")
             else:
                 logger.info("Successfully posted to X, no Discord fallback needed")
-                
+
         elif not test_discord and not dual_post:
             # Post to X using thread queue system
             logger.debug("Starting X posting with thread queue fallback")
-            
+
             # Start the queue worker
             start_x_queue()
-            
+
             try:
                 # Attempt direct posting first
                 main_tweet = x_client.create_tweet(text=main_post['text'])
@@ -463,11 +463,11 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         )
                         previous_tweet_id = reply_tweet.data['id']
                         logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
-                        await asyncio.sleep(0.5)
-                        
+                        await asyncio.sleep(2)  # Extended delay for free tier compliance
+
                     except tweepy.TooManyRequests:
                         logger.warning(f"Rate limited while posting {data['coin_name']}, using thread queue fallback")
-                        
+
                         # Queue remaining posts
                         remaining_posts = []
                         for remaining_data in results[results.index(data):]:
@@ -475,21 +475,21 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                                 'text': format_tweet(remaining_data),
                                 'coin_name': remaining_data['coin_name']
                             })
-                        
+
                         # Queue the thread
                         queue_x_thread(remaining_posts, f"📊 Continuing thread... (Rate limit reached)")
-                        
+
                         logger.info(f"Queued {len(remaining_posts)} remaining posts for later posting")
                         break
-                        
+
                     except Exception as e:
                         logger.error(f"Error posting {data['coin_name']}: {e}")
                         # Queue this post for retry
                         queue_x_post(reply_text, previous_tweet_id, priority=2)
-                        
+
             except tweepy.TooManyRequests:
                 logger.warning("Rate limited on main tweet, using full thread queue fallback")
-                
+
                 # Queue entire thread
                 thread_posts = []
                 for data in results:
@@ -497,15 +497,15 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         'text': format_tweet(data),
                         'coin_name': data['coin_name']
                     })
-                
+
                 queue_x_thread(thread_posts, main_post['text'])
                 logger.info(f"Queued complete thread with {len(thread_posts)} posts due to rate limits")
-                
+
             except Exception as e:
                 logger.error(f"Error with main tweet: {e}")
                 # Queue main post for retry
                 queue_x_post(main_post['text'], priority=1)
-                
+
             # Show queue status
             status = get_x_queue_status()
             logger.info(f"X Queue Status: {status['post_queue_size']} posts, {status['thread_queue_size']} threads queued")

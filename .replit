@@ -4,7 +4,7 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Test Discord"
+runButton = "Daily Bot (Free Tier)"
 
 [[workflows.workflow]]
 name = "Test Discord"
@@ -179,6 +179,45 @@ args = "echo \"📝 Generating X thread template for manual posting...\""
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python generate_thread_template.py"
+
+[[workflows.workflow]]
+name = "Post X (Free Tier Safe)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🐌 Starting CryptoBot optimized for X API free tier (8 coins, extended delays)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py"
+
+[[workflows.workflow]]
+name = "Post X Thread (Free Tier)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧵 Starting CryptoBot thread mode optimized for free tier...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --thread"
+
+[[workflows.workflow]]
+name = "Daily Bot (Free Tier)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📅 Daily CryptoBot run optimized for X API free tier compliance...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py"
 
 [deployment]
 deploymentTarget = "gce"
