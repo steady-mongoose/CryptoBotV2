@@ -109,6 +109,35 @@ def get_youtube_service():
         logger.error(f"Failed to initialize YouTube API: {str(e)}")
         return None
 
+async def fetch_price_from_coinbase(coin_symbol: str, session: aiohttp.ClientSession):
+    """Fetch real-time price from Coinbase."""
+    try:
+        url = f"https://api.coinbase.com/v2/prices/{coin_symbol}-USD/spot"
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                price = float(data['data']['amount'])
+                logger.info(f"Real-time price from Coinbase for {coin_symbol}: ${price:.4f}")
+                return price
+    except Exception as e:
+        logger.warning(f"Coinbase failed for {coin_symbol}: {e}")
+    return None
+
+async def fetch_price_from_binance(coin_symbol: str, session: aiohttp.ClientSession):
+    """Fetch real-time price from Binance."""
+    try:
+        binance_symbol = f"{coin_symbol}USDT"
+        url = f"https://api.binance.com/api/v3/ticker/price?symbol={binance_symbol}"
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                price = float(data['price'])
+                logger.info(f"Real-time price from Binance for {coin_symbol}: ${price:.4f}")
+                return price
+    except Exception as e:
+        logger.warning(f"Binance failed for {coin_symbol}: {e}")
+    return None
+
 async def fetch_price(coin_symbol: str, session: aiohttp.ClientSession, max_retries=3):
     for attempt in range(3):  # CoinGecko specific retries
         try:
@@ -314,8 +343,17 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
         for coin in COINS:
             logger.info(f"Fetching data for {coin['symbol']}...")
 
-            # Fetch price data from CoinGecko
+            # Try multiple real-time price sources first
+            real_price = await fetch_price_from_coinbase(coin['symbol'], session)
+            if real_price is None:
+                real_price = await fetch_price_from_binance(coin['symbol'], session)
+            
+            # Fetch comprehensive data from CoinGecko
             price, price_change_24h, tx_volume, historical_prices = await fetch_coingecko_data(coin['coingecko_id'], session)
+            
+            # Use real price if available
+            if real_price is not None:
+                price = real_price
 
             if price is None:
                 logger.warning(f"Failed to fetch price for {coin['symbol']}, skipping...")

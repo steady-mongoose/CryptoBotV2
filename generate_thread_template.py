@@ -188,14 +188,15 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
                     if not db.has_video_been_used(video_id):
                         title = item['snippet']['title']
                         url = f"https://youtu.be/{video_id}"
-                        # Get thumbnail image
+                        # Get thumbnail image (prioritize high quality)
                         thumbnails = item['snippet'].get('thumbnails', {})
                         image_url = (thumbnails.get('maxres', {}).get('url') or 
                                    thumbnails.get('high', {}).get('url') or
                                    thumbnails.get('medium', {}).get('url') or
                                    thumbnails.get('default', {}).get('url'))
 
-                        logger.info(f"Found video for {coin}: {title[:50]}...")
+                        db.add_used_video(coin, video_id, current_date)
+                        logger.info(f"Found video for {coin}: {title[:50]}... (Image: {bool(image_url)})")
                         return {"title": title, "url": url, "image_url": image_url}
 
             except Exception as e:
