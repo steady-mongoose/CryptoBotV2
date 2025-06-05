@@ -793,8 +793,16 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             mode_desc = "Queue-only mode" if queue_only else "Smart queue mode"
             logger.info(f"Starting X posting with immediate queue system - {mode_desc} (avoiding rate limits)")
 
+            # Verify X client can be initialized before starting queue
+            test_client = get_x_client(posting_only=True)
+            if not test_client:
+                logger.error("Cannot start X posting - X API client initialization failed")
+                logger.error("Please check your X API credentials in Secrets")
+                return
+
             # Start the queue worker
             start_x_queue()
+            logger.info("X queue worker started successfully")
 
             # SKIP direct posting attempts - queue everything immediately
             logger.info("Queueing all posts to avoid rate limit errors on main workflow")
@@ -813,6 +821,14 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # Show queue status
             status = get_x_queue_status()
             logger.info(f"X Queue Status: {status['post_queue_size']} posts, {status['thread_queue_size']} threads queued")
+            
+            # Wait a moment for worker to start processing
+            import time
+            time.sleep(3)
+            
+            # Show updated status
+            final_status = get_x_queue_status()
+            logger.info(f"Final Queue Status: Worker running: {final_status['worker_running']}, Posts: {final_status['post_queue_size']}, Threads: {final_status['thread_queue_size']}")
 
         logger.info("CryptoBotV2 run completed successfully.")
 

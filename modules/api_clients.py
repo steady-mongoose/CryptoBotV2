@@ -23,49 +23,35 @@ X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
 X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 
 def get_x_client(posting_only: bool = False) -> tweepy.Client:
-    """
-    Initialize and return the X API client using Tweepy with Twitter API v2 and rate limit handling.
-    
-    Args:
-        posting_only: If True, only initialize for posting (no search/read operations)
-    """
+    """Get authenticated X API client."""
     try:
-        # Log the presence of credentials (without revealing their values)
-        logger.debug(f"X API Credentials - Consumer Key set: {bool(X_API_KEY)}, "
-                     f"Consumer Secret set: {bool(X_API_SECRET)}, "
-                     f"Access Token set: {bool(X_ACCESS_TOKEN)}, "
-                     f"Access Token Secret set: {bool(X_ACCESS_TOKEN_SECRET)}, "
-                     f"Bearer Token set: {bool(X_BEARER_TOKEN)}")
+        # Get X API credentials from environment
+        consumer_key = os.getenv('X_CONSUMER_KEY')
+        consumer_secret = os.getenv('X_CONSUMER_SECRET')
+        access_token = os.getenv('X_ACCESS_TOKEN')
+        access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET')
 
-        if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET, X_BEARER_TOKEN]):
-            raise ValueError("Missing one or more X API credentials (X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET, X_BEARER_TOKEN)")
+        if not all([consumer_key, consumer_secret, access_token, access_token_secret]):
+            logger.error("Missing X API credentials in environment variables")
+            return None
 
-        # Configure client with conservative rate limit handling for posting-only mode
-        wait_on_rate_limit = True if not posting_only else False
-        
+        # Create X API client
         client = tweepy.Client(
-            bearer_token=X_BEARER_TOKEN,
-            consumer_key=X_API_KEY,
-            consumer_secret=X_API_SECRET,
-            access_token=X_ACCESS_TOKEN,
-            access_token_secret=X_ACCESS_TOKEN_SECRET,
-            wait_on_rate_limit=wait_on_rate_limit
+            consumer_key=consumer_key,
+            consumer_secret=consumer_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret,
+            wait_on_rate_limit=False  # Don't wait to avoid blocking
         )
-        
-        if posting_only:
-            logger.debug("X API client initialized for POSTING ONLY (bypassing search to avoid 429 errors)")
-        else:
-            logger.debug("X API client initialized with full functionality and rate limit handling enabled.")
 
-        # SKIP authentication test to avoid rate limits - trust credentials are valid
         if posting_only:
-            logger.info("X API client initialized for POSTING ONLY - skipping auth test to prevent rate limits")
+            logger.info("X API client initialized for POSTING ONLY - search functionality bypassed")
         else:
-            logger.info("X API client initialized - skipping auth test to prevent rate limits")
-
+            logger.info("X API client initialized successfully")
         return client
+
     except Exception as e:
-        logger.error(f"Error initializing X client: {e}")
+        logger.error(f"Failed to initialize X API client: {str(e)}")
         return None
 
 def get_coinmarketcap_api_key() -> str:

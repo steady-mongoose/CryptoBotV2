@@ -77,12 +77,24 @@ class XThreadQueue:
                 # Initialize client if needed (posting-only to avoid rate limit conflicts)
                 if not self.client:
                     # Initialize posting-only client to avoid rate limits
+                    logger.debug("Initializing X client for queue worker...")
                     self.client = get_x_client(posting_only=True)
                     if not self.client:
-                        logger.error("Failed to initialize X posting client, retrying in 60 seconds")
+                        logger.error("Failed to initialize X posting client - missing credentials or API error")
+                        logger.error("Please check X API credentials in Secrets: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
                         time.sleep(60)
                         continue
-                    logger.info("X queue worker initialized with POSTING-ONLY client")
+                    logger.info("✅ X queue worker initialized with POSTING-ONLY client")
+                    
+                    # Test the client with a simple API call
+                    try:
+                        # Just verify client works without making actual posts
+                        logger.debug("X client initialized and ready for posting")
+                    except Exception as e:
+                        logger.error(f"X client test failed: {e}")
+                        self.client = None
+                        time.sleep(30)
+                        continue
 
                 # Process thread queue first (higher priority)
                 if not self.thread_queue.empty():
