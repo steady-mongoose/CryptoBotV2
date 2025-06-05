@@ -58,18 +58,22 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
         # Return cached data if available, otherwise return fallback data
         cache = load_social_metrics_cache()
         if coin_id in cache:
-            timestamp = cache[coin_id]["timestamp"]
-            if isinstance(timestamp, str):
-                cached_time = datetime.fromisoformat(timestamp)
-            elif isinstance(timestamp, float):
-                cached_time = datetime.fromtimestamp(timestamp)
+            # Check if cache has the expected structure
+            if "timestamp" in cache[coin_id] and "data" in cache[coin_id]:
+                timestamp = cache[coin_id]["timestamp"]
+                if isinstance(timestamp, str):
+                    cached_time = datetime.fromisoformat(timestamp)
+                elif isinstance(timestamp, float):
+                    cached_time = datetime.fromtimestamp(timestamp)
+                else:
+                    # If timestamp is already a datetime object, use it directly
+                    cached_time = timestamp
+                
+                if datetime.now() - cached_time < timedelta(hours=24):  # Use older cache for Discord-only
+                    logger.info(f"Using cached social metrics for {coin_id}")
+                    return cache[coin_id]["data"]
             else:
-                # If timestamp is already a datetime object, use it directly
-                cached_time = timestamp
-            
-            if datetime.now() - cached_time < timedelta(hours=24):  # Use older cache for Discord-only
-                logger.info(f"Using cached social metrics for {coin_id}")
-                return cache[coin_id]["data"]
+                logger.warning(f"Invalid cache structure for {coin_id}, regenerating cache entry")
         
         # Return fallback social metrics without any API calls
         return {
@@ -83,18 +87,22 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
 
     # Check if we have recent cached data (less than 2 hours old for more frequent updates)
     if coin_id in cache:
-        timestamp = cache[coin_id]["timestamp"]
-        if isinstance(timestamp, str):
-            cached_time = datetime.fromisoformat(timestamp)
-        elif isinstance(timestamp, float):
-            cached_time = datetime.fromtimestamp(timestamp)
+        # Check if cache has the expected structure
+        if "timestamp" in cache[coin_id] and "data" in cache[coin_id]:
+            timestamp = cache[coin_id]["timestamp"]
+            if isinstance(timestamp, str):
+                cached_time = datetime.fromisoformat(timestamp)
+            elif isinstance(timestamp, float):
+                cached_time = datetime.fromtimestamp(timestamp)
+            else:
+                # If timestamp is already a datetime object, use it directly
+                cached_time = timestamp
+            
+            if datetime.now() - cached_time < timedelta(hours=2):
+                logger.info(f"Using cached social metrics for {coin_id}")
+                return cache[coin_id]["data"]
         else:
-            # If timestamp is already a datetime object, use it directly
-            cached_time = timestamp
-        
-        if datetime.now() - cached_time < timedelta(hours=2):
-            logger.info(f"Using cached social metrics for {coin_id}")
-            return cache[coin_id]["data"]
+            logger.warning(f"Invalid cache structure for {coin_id}, regenerating cache entry")
 
     symbol = symbol_map.get(coin_id, coin_id.upper())
 
