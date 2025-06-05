@@ -486,10 +486,12 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
     # Only initialize X client if we're not in Discord-only mode
     x_client = None
     if not test_discord:
-        x_client = get_x_client()
+        # Initialize client for POSTING ONLY to bypass rate limit issues
+        x_client = get_x_client(posting_only=True)
         if not x_client:
             logger.error("Cannot proceed without X API client.")
             return
+        logger.info("X API client initialized for POSTING ONLY - bypassing all search/rate check features")
     else:
         logger.info("Discord-only mode: Skipping X client initialization")
 
@@ -519,9 +521,9 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # Predict price
             predicted_price = predict_price(historical_prices, price)
 
-            # Check and log X API bypass status
+            # X API bypass handler - search permanently disabled
             from modules.x_bypass_handler import x_bypass_handler
-            x_bypass_handler.log_bypass_status()
+            x_bypass_handler.force_disable_search()  # Ensure search stays disabled
 
             # Fetch social metrics
             social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=test_discord or dual_post or simultaneous_post)

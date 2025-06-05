@@ -4,7 +4,7 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Generate Manual Template Only"
+runButton = "X Post Only (Ultra Safe)"
 
 [[workflows.workflow]]
 name = "Generate Manual Template Only"
@@ -98,6 +98,47 @@ args = "python bot_v2.py --queue-only"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "echo \"✅ Test completed - check queue status\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "X Post Only (Ultra Safe)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔒 Ultra-safe X posting mode - ZERO rate limit risk\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API search: DISABLED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API auth tests: BYPASSED\" "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API rate checks: BYPASSED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Only X API posting: ENABLED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Posts queued safely - check queue status:\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

@@ -121,20 +121,17 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     sentiment_scores = []
     sources_used = []
 
-    # X API SEARCH - COMPLETELY DISABLED by default to prevent rate limits
+    # X API SEARCH - COMPLETELY DISABLED to prevent rate limits
     x_mentions_from_api = 0
     x_api_success = False
     
-    # Initialize X API bypass handler first
+    # Initialize X API bypass handler and force disable search
     from modules.x_bypass_handler import x_bypass_handler
+    x_bypass_handler.force_disable_search()  # Force disable search operations
     
-    # X API search is DISABLED by default - only enable if explicitly requested
-    if skip_x_api:
-        logger.info(f"X API search SKIPPED for {symbol} (Discord-only mode)")
-    else:
-        logger.info(f"X API search DISABLED for {symbol} (preventing rate limits - search_disabled: {x_bypass_handler.search_disabled})")
+    logger.info(f"X API search FORCE DISABLED for {symbol} (preventing ALL rate limits)")
     
-    # NO X API SEARCH ATTEMPTS - this prevents all rate limit errors
+    # NO X API SEARCH ATTEMPTS WHATSOEVER - this prevents all rate limit errors
     
     # If X API search failed, use alternative X metrics
     if not x_api_success:

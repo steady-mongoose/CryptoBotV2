@@ -15,56 +15,11 @@ class XRateLimitChecker:
         self.rate_limits = {}
 
     async def get_rate_limit_status(self) -> Dict:
-        """Get current rate limit status from X API - simplified for free tier with fallbacks."""
-        try:
-            if not self.client:
-                self.client = get_x_client()
-                if not self.client:
-                    logger.warning("X client not available for rate limit checking - using conservative estimates")
-                    return self._get_fallback_limits()
-
-            # Test basic connectivity and authentication with timeout
-            try:
-                me = self.client.get_me()
-                if not me.data:
-                    logger.error("Could not authenticate with X API - using fallback limits")
-                    return self._get_fallback_limits()
-            except (tweepy.TooManyRequests, tweepy.Forbidden):
-                logger.warning("X API rate limited during status check - using conservative limits")
-                return self._get_conservative_limits()
-
-            # For free tier, we'll return estimated limits since rate limit endpoints are restricted
-            current_time = datetime.now()
-            reset_time = current_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-
-            # Free tier limits (estimated based on successful auth)
-            rate_limits = {
-                'tweets': {
-                    'limit': 50,  # Conservative estimate for free tier
-                    'remaining': 40,  # Assume some usage
-                    'reset': reset_time
-                },
-                'search': {
-                    'limit': 0,  # Usually disabled on free tier
-                    'remaining': 0,
-                    'reset': reset_time
-                }
-            }
-
-            self.rate_limits = rate_limits
-            self.last_check = current_time
-
-            return rate_limits
-
-        except tweepy.Unauthorized:
-            logger.error("X API unauthorized - check credentials, using fallback limits")
-            return self._get_fallback_limits()
-        except tweepy.Forbidden:
-            logger.error("X API forbidden - free tier limitation, using conservative limits")
-            return self._get_conservative_limits()
-        except Exception as e:
-            logger.error(f"Error getting rate limit status: {e} - using fallback limits")
-            return self._get_fallback_limits()
+        """BYPASS rate limit checking - return safe estimates without API calls to prevent 429 errors."""
+        logger.info("BYPASSING X API rate limit check to prevent rate limits - using safe estimates")
+        
+        # Always return conservative fallback limits without any API calls
+        return self._get_fallback_limits()
     
     def _get_fallback_limits(self) -> Dict:
         """Return fallback limits when API is completely unavailable."""

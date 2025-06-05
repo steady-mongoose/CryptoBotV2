@@ -57,26 +57,11 @@ def get_x_client(posting_only: bool = False) -> tweepy.Client:
         else:
             logger.debug("X API client initialized with full functionality and rate limit handling enabled.")
 
-        # Test the client with a simple API call to verify authentication
-        try:
-            user = client.get_me()
-            logger.debug(f"Successfully authenticated with X API. User: {user.data.username}")
-        except tweepy.Unauthorized as e:
-            logger.error(f"Failed to authenticate with X API: Unauthorized - {e}. Check if credentials are valid and app has 'Read and Write' permissions.")
-            return None
-        except tweepy.Forbidden as e:
-            logger.error(f"Failed to authenticate with X API: Forbidden - {e}. Check if the app or account is restricted.")
-            return None
-        except tweepy.TooManyRequests as e:
-            if posting_only:
-                logger.warning(f"Rate limited during auth test - client still usable for posting: {e}")
-                return client  # Return client anyway for posting
-            else:
-                logger.error(f"Rate limited during authentication: {e}")
-                return None
-        except tweepy.TweepyException as e:
-            logger.error(f"Failed to authenticate with X API: {e}")
-            return None
+        # SKIP authentication test to avoid rate limits - trust credentials are valid
+        if posting_only:
+            logger.info("X API client initialized for POSTING ONLY - skipping auth test to prevent rate limits")
+        else:
+            logger.info("X API client initialized - skipping auth test to prevent rate limits")
 
         return client
     except Exception as e:
