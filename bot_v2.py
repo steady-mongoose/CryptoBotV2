@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+import tweepy
 from modules.api_clients import get_x_client, get_youtube_api_key
 from modules.social_media import fetch_social_metrics_multi_source as fetch_social_metrics
 from modules.binance_us import binance_us_api
