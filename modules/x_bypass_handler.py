@@ -13,7 +13,7 @@ class XAPIBypassHandler:
     
     def __init__(self):
         self.posting_client = None
-        self.search_disabled = True  # Always disable search to avoid 429 errors
+        self.search_disabled = False  # Start with search enabled, disable only on errors
         
     def get_posting_client(self):
         """Get X client configured for posting only."""
@@ -23,8 +23,8 @@ class XAPIBypassHandler:
         return self.posting_client
     
     def can_search(self) -> bool:
-        """Always return False to bypass search and avoid 429 errors."""
-        return False
+        """Return True if search is available, False if disabled due to errors."""
+        return not self.search_disabled
     
     def handle_rate_limit_error(self, error: tweepy.TooManyRequests, operation: str) -> bool:
         """
@@ -49,15 +49,16 @@ class XAPIBypassHandler:
             return False
     
     def is_search_available(self) -> bool:
-        """Check if search functionality should be used (always False to avoid 429)."""
-        return False
+        """Check if search functionality should be used."""
+        return not self.search_disabled
     
     def log_bypass_status(self):
         """Log the current bypass status."""
-        logger.info("X API Bypass Status:")
-        logger.info(f"  - Search operations: DISABLED (bypassed to avoid 429 errors)")
-        logger.info(f"  - Posting operations: ENABLED")
-        logger.info(f"  - Social metrics: Using alternative APIs")
+        logger.info("X API Smart Bypass Status:")
+        search_status = "DISABLED (due to errors)" if self.search_disabled else "ENABLED"
+        logger.info(f"  - Search operations: {search_status}")
+        logger.info(f"  - Posting operations: ENABLED (always preserved)")
+        logger.info(f"  - Social metrics: {'Alternative APIs only' if self.search_disabled else 'X API + alternatives'}")
 
 # Global bypass handler instance
 x_bypass_handler = XAPIBypassHandler()

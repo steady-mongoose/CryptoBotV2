@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import tweepy
 from modules.api_clients import get_x_client, get_youtube_api_key
-from modules.social_media import fetch_social_metrics_multi_source as fetch_social_metrics
+from modules.social_media import fetch_social_metrics
 from modules.binance_us import binance_us_api
 from modules.database import Database
 from modules.x_thread_queue import start_x_queue, stop_x_queue, queue_x_thread, queue_x_post, get_x_queue_status
@@ -519,6 +519,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # Predict price
             predicted_price = predict_price(historical_prices, price)
 
+            # Check and log X API bypass status
+            from modules.x_bypass_handler import x_bypass_handler
+            x_bypass_handler.log_bypass_status()
+
             # Fetch social metrics
             social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=test_discord or dual_post or simultaneous_post)
 
@@ -674,8 +678,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         logger.info(f"Posted reply for {data['coin_name']} to X with ID: {reply_tweet.data['id']}.")
                         await asyncio.sleep(2)
 
-                    except tweepy.TooManyRequests:
-                        logger.warning(f"Rate limited while posting {data['coin_name']} to X")
+                    except tweepy.TooManyRequests as e:
+                        logger.warning(f"Rate limited while posting {data['coin_name']} to X: {e}")
+                        # Handle posting rate limit through bypass handler
+                        x_bypass_handler.handle_rate_limit_error(e, 'post')
                         x_success = False
                         break
 
@@ -684,8 +690,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         x_success = False
                         break
 
-            except tweepy.TooManyRequests:
+            except tweepy.TooManyRequests as e:
                 logger.warning("Rate limited on main tweet to X")
+                # Handle posting rate limit through bypass handler
+                x_bypass_handler.handle_rate_limit_error(e, 'post')
                 x_success = False
 
             except Exception as e:
@@ -757,8 +765,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         logger.info(f"Posted reply for {data['coin_name']} to X with ID: {reply_tweet.data['id']}.")
                         await asyncio.sleep(5)  # Free tier compliant delay (12 posts max per hour)
 
-                    except tweepy.TooManyRequests:
+                    except tweepy.TooManyRequests as e:
                         logger.warning(f"Rate limited while posting {data['coin_name']}, falling back to Discord")
+                        # Handle posting rate limit through bypass handler
+                        x_bypass_handler.handle_rate_limit_error(e, 'post')
                         x_success = False
                         break
 
@@ -767,8 +777,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         x_success = False
                         break
 
-            except tweepy.TooManyRequests:
+            except tweepy.TooManyRequests as e:
                 logger.warning("Rate limited on main tweet, falling back to Discord")
+                # Handle posting rate limit through bypass handler
+                x_bypass_handler.handle_rate_limit_error(e, 'post')
                 x_success = False
 
             except Exception as e:
@@ -824,7 +836,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
                         await asyncio.sleep(5)  # Free tier compliant delay (12 posts max per hour)
 
-                    except tweepy.TooManyRequests:
+                    except tweepy.TooManyRequests as e:
                         logger.warning(f"Rate limited while posting {data['coin_name']}, using thread queue fallback")
 
                         # Queue remaining posts
@@ -846,8 +858,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         # Queue this post for retry
                         queue_x_post(reply_text, previous_tweet_id, priority=2)
 
-            except tweepy.TooManyRequests:
+            except tweepy.TooManyRequests as e:
                 logger.warning("Rate limited on main tweet, using full thread queue fallback")
+                # Handle posting rate limit through bypass handler
+                x_bypass_handler.handle_rate_limit_error(e, 'post')
 
                 # Queue entire thread
                 thread_posts = []

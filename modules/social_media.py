@@ -59,8 +59,9 @@ def save_social_metrics_cache(cache: Dict[str, Dict]):
 
 async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = False) -> Dict[str, any]:
     """
-    Fetch social metrics using multiple APIs: Alternative APIs, Reddit API, and sentiment analysis.
-    X API search is bypassed to avoid 429 errors - only posting functionality is preserved.
+    Fetch social metrics using multiple APIs with smart X API error handling.
+    X API search will be attempted first, with graceful fallback on errors.
+    X API posting functionality is always preserved regardless of search errors.
     """
     if skip_x_api:
         logger.info(f"Skipping ALL X API interactions for {coin_id} (Discord-only mode)")
@@ -120,15 +121,83 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     sentiment_scores = []
     sources_used = []
 
-    # BYPASS X API SEARCH ENTIRELY to avoid 429 errors
-    # X API is only preserved for posting functionality in other modules
-    logger.info(f"Bypassing X API search for {symbol} to avoid rate limits - using alternative sources")
+    # TRY X API SEARCH with smart error handling - preserve posting functionality
+    x_mentions_from_api = 0
+    x_api_success = False
     
-    # Use alternative X metrics without any X API calls
-    x_alternative_mentions = await get_x_alternative_metrics(symbol, session)
-    if x_alternative_mentions > 0:
-        total_mentions += x_alternative_mentions
-        sources_used.append(f"X_alt ({x_alternative_mentions})")
+    try:
+        from modules.x_bypass_handler import x_bypass_handler
+        
+        # Only attempt X search if bypass handler allows it
+        if not x_bypass_handler.is_search_available():
+            logger.info(f"X API search disabled by bypass handler for {symbol}")
+            raise Exception("X API search disabled")
+        
+        # Import X client for search operations only
+        from modules.api_clients import get_x_client
+        search_client = get_x_client(posting_only=False)
+        
+        if search_client:
+            # Attempt search with timeout
+            search_query = f"${symbol} OR #{symbol}"
+            
+            # Use a timeout wrapper for the search
+            try:
+                import asyncio
+                
+                def search_tweets_sync():
+                    tweets = search_client.search_recent_tweets(
+                        query=search_query,
+                        max_results=10,
+                        tweet_fields=['created_at', 'public_metrics']
+                    )
+                    return tweets
+                
+                # Run with timeout
+                tweets = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(None, search_tweets_sync),
+                    timeout=10.0  # 10 second timeout
+                )
+                
+                if tweets.data:
+                    x_mentions_from_api = len(tweets.data)
+                    total_mentions += x_mentions_from_api
+                    sources_used.append(f"X_API ({x_mentions_from_api})")
+                    x_api_success = True
+                    logger.info(f"X API search successful for {symbol}: {x_mentions_from_api} mentions")
+                    
+                    # Analyze tweet text for sentiment
+                    tweet_texts = [tweet.text for tweet in tweets.data]
+                    sentiment_scores.extend([sentiment_analyzer.polarity_scores(text)['compound'] for text in tweet_texts])
+                    
+                await asyncio.sleep(2)  # Rate limit compliance
+                
+            except asyncio.TimeoutError:
+                logger.warning(f"X API search timeout for {symbol} - using alternatives")
+                raise Exception("X API search timeout")
+                
+    except tweepy.TooManyRequests as e:
+        logger.warning(f"X API rate limited for search ({symbol}): {e}")
+        # Mark search as unavailable but DON'T affect posting
+        x_bypass_handler.handle_rate_limit_error(e, 'search')
+        x_api_success = False
+        
+    except tweepy.Forbidden as e:
+        logger.warning(f"X API forbidden for search ({symbol}): {e}")
+        x_bypass_handler.handle_rate_limit_error(e, 'search')
+        x_api_success = False
+        
+    except Exception as e:
+        logger.warning(f"X API search failed for {symbol}: {e} - using alternatives")
+        x_api_success = False
+    
+    # If X API search failed, use alternative X metrics
+    if not x_api_success:
+        logger.info(f"Using alternative X metrics for {symbol} (X API search unavailable)")
+        x_alternative_mentions = await get_x_alternative_metrics(symbol, session)
+        if x_alternative_mentions > 0:
+            total_mentions += x_alternative_mentions
+            sources_used.append(f"X_alt ({x_alternative_mentions})")
 
     # Try Reddit API for additional social data
     try:
