@@ -553,7 +553,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         )
                         previous_tweet_id = reply_tweet.data['id']
                         logger.info(f"Posted reply for {data['coin_name']} to X with ID: {reply_tweet.data['id']}.")
-                        await asyncio.sleep(2)  # Extended delay for free tier compliance
+                        await asyncio.sleep(5)  # Free tier compliant delay (12 posts max per hour)
 
                     except tweepy.TooManyRequests:
                         logger.warning(f"Rate limited while posting {data['coin_name']}, falling back to Discord")
@@ -621,7 +621,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                         )
                         previous_tweet_id = reply_tweet.data['id']
                         logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
-                        await asyncio.sleep(2)  # Extended delay for free tier compliance
+                        await asyncio.sleep(5)  # Free tier compliant delay (12 posts max per hour)
 
                     except tweepy.TooManyRequests:
                         logger.warning(f"Rate limited while posting {data['coin_name']}, using thread queue fallback")

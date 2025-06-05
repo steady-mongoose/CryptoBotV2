@@ -67,56 +67,62 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, max
         x_client = get_x_client()
         if x_client:
             symbol = symbol_map.get(coin_id, coin_id.upper())
-            
+
             # Search for recent tweets about the coin
             search_query = f"${symbol} OR #{symbol} OR {coin_id.replace('-', ' ')} crypto -is:retweet"
-            
+
             try:
                 tweets = x_client.search_recent_tweets(
                     query=search_query,
                     max_results=100,  # Maximum for free tier
                     tweet_fields=['created_at', 'text', 'public_metrics']
                 )
-                
+
                 if tweets.data:
                     mentions = len(tweets.data)
-                    
+
                     # Analyze sentiment using VADER
                     total_sentiment = 0
                     for tweet in tweets.data:
                         scores = sentiment_analyzer.polarity_scores(tweet.text)
                         total_sentiment += scores['compound']
-                    
+
                     avg_sentiment = total_sentiment / len(tweets.data)
-                    
+
                     if avg_sentiment >= 0.05:
                         sentiment = "Positive"
                     elif avg_sentiment <= -0.05:
                         sentiment = "Negative"
                     else:
                         sentiment = "Neutral"
-                    
+
                     result = {"mentions": mentions, "sentiment": sentiment}
-                    
+
                     # Cache the result
                     cache[coin_id] = {
                         "metrics": result,
                         "timestamp": time.time()
                     }
                     save_social_metrics_cache(cache)
-                    
+
                     logger.info(f"Real social metrics for {coin_id}: {mentions} mentions, {sentiment} sentiment")
                     return result
-                    
+
             except tweepy.TooManyRequests:
                 logger.warning(f"X API rate limited for {coin_id}, using fallback")
             except Exception as e:
                 logger.warning(f"X API error for {coin_id}: {e}, using fallback")
-                
+
     except Exception as e:
         logger.warning(f"Failed to initialize X client for social metrics: {e}")
 
-    # Fallback to intelligent simulation based on real market data
+    # Try to get real social data from alternative sources first
+    real_data = await try_alternative_social_sources(coin_id, session)
+    if real_data:
+        logger.info(f"Using real social data for {coin_id}: {real_data}")
+        return real_data
+
+    # Generate realistic fallback data based on coin popularity (last resort)
     coin_popularity = {
         "ripple": {"base_mentions": 150, "sentiment_bias": 0.1},
         "hedera-hashgraph": {"base_mentions": 80, "sentiment_bias": 0.05},
@@ -129,17 +135,17 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, max
     }
 
     coin_data = coin_popularity.get(coin_id, {"base_mentions": 50, "sentiment_bias": 0.0})
-    
+
     # Add some randomness to make it look realistic
     import random
     random.seed(int(time.time()) // 3600)  # Change every hour
-    
+
     # Generate mentions (±30% variation)
     mentions = int(coin_data["base_mentions"] * (0.7 + 0.6 * random.random()))
-    
+
     # Generate sentiment based on bias
     sentiment_score = coin_data["sentiment_bias"] + (random.random() - 0.5) * 0.3
-    
+
     if sentiment_score >= 0.05:
         sentiment = "Positive"
     elif sentiment_score <= -0.05:
@@ -148,13 +154,13 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, max
         sentiment = "Neutral"
 
     result = {"mentions": mentions, "sentiment": sentiment}
-    
+
     # Cache the result
     cache[coin_id] = {
         "metrics": result,
         "timestamp": time.time()
     }
     save_social_metrics_cache(cache)
-    
+
     logger.info(f"Social metrics for {coin_id} (fallback): {mentions} mentions, {sentiment} sentiment")
     return result

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Generate a formatted X thread template that can be manually posted.
@@ -68,7 +67,7 @@ def get_youtube_service():
 
 async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession, max_retries: int = 3):
     """Fetch data from CoinGecko with proper rate limit handling and coin-specific fallbacks."""
-    
+
     # Coin-specific fallback data (realistic prices as of 2025)
     fallback_data = {
         'ripple': {'price': 2.21, 'change_24h': 5.2, 'volume': 1800.0},
@@ -80,11 +79,11 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
         'algorand': {'price': 0.42, 'change_24h': 1.9, 'volume': 85.0},
         'casper-network': {'price': 0.021, 'change_24h': -0.5, 'volume': 12.0}
     }
-    
+
     for attempt in range(max_retries):
         try:
             logger.info(f"Fetching data for {coingecko_id} (attempt {attempt + 1}/{max_retries})")
-            
+
             # First API call - basic coin data
             url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}?tickers=false&market_data=true&community_data=false&developer_data=false"
             async with session.get(url) as response:
@@ -98,7 +97,7 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
                     if attempt == max_retries - 1:  # Last attempt
                         break
                     continue
-                    
+
                 data = await response.json()
                 price = float(data['market_data']['current_price']['usd'])
                 price_change_24h = float(data['market_data']['price_change_percentage_24h'])
@@ -106,7 +105,7 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
 
             # Wait between API calls to respect rate limits
             await asyncio.sleep(15)
-            
+
             # Second API call - historical data
             url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}/market_chart?vs_currency=usd&days=1"
             async with session.get(url) as response:
@@ -121,25 +120,25 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
                     historical_prices = [price * (0.95 + 0.1 * i / 30) for i in range(30)]
                     tx_volume = fallback_data.get(coingecko_id, {'volume': 50.0})['volume']
                     return price, price_change_24h, tx_volume, historical_prices
-                    
+
                 market_data = await response.json()
                 tx_volume = sum([v[1] for v in market_data['total_volumes']]) / 1_000_000
                 tx_volume *= 0.0031  # Normalize volume
                 historical_prices = [p[1] for p in market_data['prices']][-30:]
-                
+
                 logger.info(f"Successfully fetched all data for {coingecko_id}")
                 return price, price_change_24h, tx_volume, historical_prices
-                
+
         except Exception as e:
             logger.error(f"Error fetching data for {coingecko_id} (attempt {attempt + 1}): {str(e)}")
             if attempt < max_retries - 1:
                 await asyncio.sleep(10 * (attempt + 1))
                 continue
-    
+
     # Use coin-specific fallback data
     logger.warning(f"Using fallback data for {coingecko_id}")
     fallback = fallback_data.get(coingecko_id, {'price': 1.0, 'change_24h': 0.0, 'volume': 50.0})
-    
+
     # Generate realistic historical prices based on current price and volatility
     base_price = fallback['price']
     historical_prices = []
@@ -147,7 +146,7 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
         # Add some realistic price variation
         variation = (i - 15) * 0.001 + (hash(f"{coingecko_id}{i}") % 100 - 50) * 0.0001
         historical_prices.append(base_price * (1 + variation))
-    
+
     return fallback['price'], fallback['change_24h'], fallback['volume'], historical_prices
 
 def predict_price(historical_prices, current_price):
@@ -172,7 +171,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
             f"{coin} price prediction 2025",
             f"{coin} analysis crypto"
         ]
-        
+
         for search_query in search_queries:
             try:
                 request = youtube.search().list(
@@ -195,10 +194,10 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
                                    thumbnails.get('high', {}).get('url') or
                                    thumbnails.get('medium', {}).get('url') or
                                    thumbnails.get('default', {}).get('url'))
-                        
+
                         logger.info(f"Found video for {coin}: {title[:50]}...")
                         return {"title": title, "url": url, "image_url": image_url}
-                        
+
             except Exception as e:
                 logger.warning(f"Search query '{search_query}' failed: {e}")
                 continue
@@ -214,14 +213,14 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
             publishedAfter="2024-01-01T00:00:00Z"
         )
         response = request.execute()
-        
+
         if response.get('items'):
             item = response['items'][0]
             title = item['snippet']['title']
             url = f"https://youtu.be/{item['id']['videoId']}"
             logger.info(f"Using recent video for {coin} (may be reused): {title[:50]}...")
             return {"title": title, "url": url}
-        
+
         # Final fallback - generic crypto content
         logger.warning(f"No videos found for {coin}, using generic fallback.")
         return {
@@ -229,7 +228,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
             "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025",
             "image_url": None
         }
-        
+
     except Exception as e:
         logger.error(f"Error fetching YouTube video for {coin}: {str(e)}")
         # Fallback to search URL instead of N/A
@@ -241,7 +240,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
 async def generate_thread_template(output_file: str = None):
     """Generate X thread template and save to file."""
     logger.info("Generating X thread template...")
-    
+
     youtube = get_youtube_service()
     if not youtube:
         logger.error("Cannot proceed without YouTube API.")
@@ -264,10 +263,34 @@ async def generate_thread_template(output_file: str = None):
 
             # Note: The updated fetch_coingecko_data function now handles fallbacks internally
             # so we should always get valid data here
-            
+
             predicted_price = predict_price(historical_prices, price)
             social_metrics = await fetch_social_metrics(coin['coingecko_id'], session)
+
             youtube_video = await fetch_youtube_video(youtube, coin['name'], current_date)
+
+            # Validate social metrics data
+            if not social_metrics or not isinstance(social_metrics, dict):
+                social_metrics = {"mentions": 50, "sentiment": "Neutral"}
+
+            # Ensure social metrics have required keys
+            if "mentions" not in social_metrics:
+                social_metrics["mentions"] = 50
+            if "sentiment" not in social_metrics:
+                social_metrics["sentiment"] = "Neutral"
+
+            # Extract YouTube thumbnail if available
+            youtube_thumbnail = None
+            if youtube_video and 'url' in youtube_video and 'youtu' in youtube_video['url']:
+                # Extract video ID from YouTube URL
+                video_id = None
+                if 'youtu.be/' in youtube_video['url']:
+                    video_id = youtube_video['url'].split('youtu.be/')[-1].split('?')[0]
+                elif 'youtube.com/watch?v=' in youtube_video['url']:
+                    video_id = youtube_video['url'].split('v=')[-1].split('&')[0]
+
+                if video_id:
+                    youtube_thumbnail = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
 
             coin_data = {
                 "coin_name": coin['name'].title(),
@@ -282,22 +305,22 @@ async def generate_thread_template(output_file: str = None):
                 "youtube_video": youtube_video
             }
             results.append(coin_data)
-            
+
             logger.info(f"Completed {coin['symbol']}: ${price:.4f} ({price_change_24h:+.2f}%)")
 
         # Generate thread content
         main_post = f"🚀 Crypto Market Update ({current_date} at {current_time})! 📈 Latest on top altcoins: {', '.join([coin['name'].title() for coin in COINS])}. #Crypto #Altcoins"
-        
+
         thread_content = []
         thread_content.append(f"=== MAIN POST ===\n{main_post}\n")
-        
+
         for i, data in enumerate(results, 1):
             reply_text = format_tweet(data)
             image_note = ""
             if data['youtube_video'].get('image_url'):
                 image_note = f"\n[ATTACH IMAGE: {data['youtube_video']['image_url']}]"
             thread_content.append(f"=== REPLY {i} - {data['coin_name']} ===\n{reply_text}{image_note}\n")
-        
+
         # Add posting instructions
         instructions = """
 === POSTING INSTRUCTIONS ===
@@ -315,24 +338,24 @@ Main Post → Reply 1 → Reply 2 → Reply 3 → etc.
 - Each reply is formatted to fit within this limit
 - If any reply is too long, split it into multiple tweets
         """
-        
+
         thread_content.append(instructions)
-        
+
         # Save to file
         filename = output_file or f"x_thread_template_{current_date}_{current_time.replace(':', '-')}.txt"
-        
+
         with open(filename, 'w', encoding='utf-8') as f:
             f.write('\n'.join(thread_content))
-        
+
         logger.info(f"Thread template saved to: {filename}")
-        
+
         # Also print to console
         print("\n" + "="*60)
         print("X THREAD TEMPLATE GENERATED")
         print("="*60)
         for content in thread_content:
             print(content)
-        
+
         return filename
 
 if __name__ == "__main__":
