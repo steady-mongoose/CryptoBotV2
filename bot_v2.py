@@ -386,10 +386,15 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
 
-    x_client = get_x_client()
-    if not x_client:
-        logger.error("Cannot proceed without X API client.")
-        return
+    # Only initialize X client if we're not in Discord-only mode
+    x_client = None
+    if not test_discord:
+        x_client = get_x_client()
+        if not x_client:
+            logger.error("Cannot proceed without X API client.")
+            return
+    else:
+        logger.info("Discord-only mode: Skipping X client initialization")
 
     youtube = get_youtube_service()
     if not youtube:

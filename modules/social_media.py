@@ -54,7 +54,22 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     Fetch social metrics using multiple APIs: X API v2, Reddit API, and sentiment analysis.
     """
     if skip_x_api:
-        logger.info(f"Skipping X API for social metrics (Discord-only mode) for {coin_id}")
+        logger.info(f"Skipping ALL X API interactions for {coin_id} (Discord-only mode)")
+        # Return cached data if available, otherwise return fallback data
+        cache = load_social_metrics_cache()
+        if coin_id in cache:
+            cached_time = datetime.fromisoformat(cache[coin_id]["timestamp"])
+            if datetime.now() - cached_time < timedelta(hours=24):  # Use older cache for Discord-only
+                logger.info(f"Using cached social metrics for {coin_id}")
+                return cache[coin_id]["data"]
+        
+        # Return fallback social metrics without any API calls
+        return {
+            "mentions": 15,  # Conservative baseline
+            "sentiment": "Neutral",
+            "sources": ["fallback"],
+            "confidence": False
+        }
     
     cache = load_social_metrics_cache()
 

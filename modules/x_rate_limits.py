@@ -19,6 +19,9 @@ class XRateLimitChecker:
         try:
             if not self.client:
                 self.client = get_x_client()
+                if not self.client:
+                    logger.warning("X client not available for rate limit checking")
+                    return {}
 
             # Test basic connectivity and authentication
             me = self.client.get_me()
