@@ -261,6 +261,30 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
                 logger.info(f"Successfully fetched all data for {coingecko_id}")
                 return price, price_change_24h, tx_volume, historical_prices
 
+    try:
+        # Fetch transaction volume and historical data
+        url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}/market_chart?vs_currency=usd&days=1"
+        async with session.get(url) as response:
+                if response.status == 429:  # Rate limited on second call
+                    logger.warning(f"Rate limited on historical data for {coingecko_id}")
+                    # Use current price for historical data simulation
+                    historical_prices = [price * (0.95 + 0.1 * i / 30) for i in range(30)]
+                    tx_volume = fallback_data.get(coingecko_id, {'volume': 50.0})['volume']
+                    return price, price_change_24h, tx_volume, historical_prices
+                elif response.status != 200:
+                    logger.warning(f"Failed to fetch historical data for {coingecko_id} (status: {response.status})")
+                    historical_prices = [price * (0.95 + 0.1 * i / 30) for i in range(30)]
+                    tx_volume = fallback_data.get(coingecko_id, {'volume': 50.0})['volume']
+                    return price, price_change_24h, tx_volume, historical_prices
+
+                market_data = await response.json()
+                tx_volume = sum([v[1] for v in market_data['total_volumes']]) / 1_000_000  # Convert to millions
+                tx_volume *= 0.0031  # Normalize to approximate Currency Gator's values
+                historical_prices = [p[1] for p in market_data['prices']][-30:]  # Last 30 price points
+
+                logger.info(f"Successfully fetched all data for {coingecko_id}")
+                return price, price_change_24h, tx_volume, historical_prices
+
     except Exception as e:
         logger.error(f"Error fetching data for {coingecko_id} (attempt {attempt + 1}): {str(e)}")
         if attempt < max_retries - 1:
