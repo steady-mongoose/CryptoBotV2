@@ -49,7 +49,7 @@ def save_social_metrics_cache(cache: Dict[str, Dict]):
     except Exception as e:
         logger.error(f"Error saving social metrics cache: {e}")
 
-async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.ClientSession) -> Dict[str, any]:
+async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = False) -> Dict[str, any]:
     """
     Fetch social metrics using multiple APIs: X API v2, Reddit API, and sentiment analysis.
     """
@@ -69,32 +69,35 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     sentiment_scores = []
     sources_used = []
 
-    # Try X API v2 for recent mentions
-    x_client = get_x_client()
-    if x_client:
-        try:
-            search_query = f"${symbol} OR #{symbol} -is:retweet lang:en"
-            logger.debug(f"Searching X for: {search_query}")
+    # Try X API v2 for recent mentions (skip if Discord-only mode)
+    if not skip_x_api:
+        x_client = get_x_client()
+        if x_client:
+            try:
+                search_query = f"${symbol} OR #{symbol} -is:retweet lang:en"
+                logger.debug(f"Searching X for: {search_query}")
 
-            tweets = x_client.search_recent_tweets(
-                query=search_query,
-                max_results=20,  # Free tier limit
-                tweet_fields=['created_at', 'public_metrics']
-            )
+                tweets = x_client.search_recent_tweets(
+                    query=search_query,
+                    max_results=20,  # Free tier limit
+                    tweet_fields=['created_at', 'public_metrics']
+                )
 
-            if tweets.data:
-                x_mentions = len(tweets.data)
-                total_mentions += x_mentions
-                # Collect tweet text for sentiment
-                tweet_texts = [tweet.text for tweet in tweets.data]
-                sentiment_scores.extend([sentiment_analyzer.polarity_scores(text)['compound'] for text in tweet_texts])
-                sources_used.append(f"X ({x_mentions})")
-                logger.info(f"X API: {x_mentions} mentions for {symbol}")
+                if tweets.data:
+                    x_mentions = len(tweets.data)
+                    total_mentions += x_mentions
+                    # Collect tweet text for sentiment
+                    tweet_texts = [tweet.text for tweet in tweets.data]
+                    sentiment_scores.extend([sentiment_analyzer.polarity_scores(text)['compound'] for text in tweet_texts])
+                    sources_used.append(f"X ({x_mentions})")
+                    logger.info(f"X API: {x_mentions} mentions for {symbol}")
 
-        except tweepy.TooManyRequests:
-            logger.warning(f"X API rate limit exceeded for {symbol}")
-        except Exception as e:
-            logger.error(f"Error fetching X data for {symbol}: {str(e)}")
+            except tweepy.TooManyRequests:
+                logger.warning(f"X API rate limit exceeded for {symbol}")
+            except Exception as e:
+                logger.error(f"Error fetching X data for {symbol}: {str(e)}")
+    else:
+        logger.info(f"Skipping X API calls for {symbol} (Discord-only mode)")
 
     # Try Reddit API for additional social data
     try:
@@ -182,6 +185,6 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     return result
 
 # Maintain backward compatibility
-async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession) -> Dict[str, any]:
+async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = False) -> Dict[str, any]:
     """Wrapper function for backward compatibility"""
-    return await fetch_social_metrics_multi_source(coin_id, session)
+    return await fetch_social_metrics_multi_source(coin_id, session, skip_x_api)
