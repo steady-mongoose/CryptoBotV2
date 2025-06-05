@@ -4,7 +4,7 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Daily Bot (Free Tier)"
+runButton = "Generate Manual Template Only"
 
 [[workflows.workflow]]
 name = "Test Discord"
@@ -231,6 +231,23 @@ args = "echo \"🔄 Starting simultaneous posting to X and Discord with manual t
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python bot_v2.py --simultaneous"
+
+[[workflows.workflow]]
+name = "Generate Manual Template Only"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📝 Generating manual X thread template (no automated posting)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python generate_thread_template.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Template generated! Check the output file for manual posting.\""
 
 [deployment]
 deploymentTarget = "gce"

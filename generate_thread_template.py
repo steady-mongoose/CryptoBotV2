@@ -189,8 +189,15 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
                     if not db.has_video_been_used(video_id):
                         title = item['snippet']['title']
                         url = f"https://youtu.be/{video_id}"
+                        # Get thumbnail image
+                        thumbnails = item['snippet'].get('thumbnails', {})
+                        image_url = (thumbnails.get('maxres', {}).get('url') or 
+                                   thumbnails.get('high', {}).get('url') or
+                                   thumbnails.get('medium', {}).get('url') or
+                                   thumbnails.get('default', {}).get('url'))
+                        
                         logger.info(f"Found video for {coin}: {title[:50]}...")
-                        return {"title": title, "url": url}
+                        return {"title": title, "url": url, "image_url": image_url}
                         
             except Exception as e:
                 logger.warning(f"Search query '{search_query}' failed: {e}")
@@ -219,7 +226,8 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
         logger.warning(f"No videos found for {coin}, using generic fallback.")
         return {
             "title": f"Latest {coin.title()} Crypto Analysis", 
-            "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025"
+            "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025",
+            "image_url": None
         }
         
     except Exception as e:
@@ -285,7 +293,10 @@ async def generate_thread_template(output_file: str = None):
         
         for i, data in enumerate(results, 1):
             reply_text = format_tweet(data)
-            thread_content.append(f"=== REPLY {i} - {data['coin_name']} ===\n{reply_text}\n")
+            image_note = ""
+            if data['youtube_video'].get('image_url'):
+                image_note = f"\n[ATTACH IMAGE: {data['youtube_video']['image_url']}]"
+            thread_content.append(f"=== REPLY {i} - {data['coin_name']} ===\n{reply_text}{image_note}\n")
         
         # Add posting instructions
         instructions = """

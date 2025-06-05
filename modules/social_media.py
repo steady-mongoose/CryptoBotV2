@@ -50,20 +50,73 @@ def save_social_metrics_cache(cache: Dict[str, Dict]):
 
 async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, max_retries: int = 5, rate_limit_delay: int = 60) -> Dict[str, str]:
     """
-    Fetch social metrics using fallback data due to X API free tier limitations.
-    Returns simulated social metrics based on coin popularity.
+    Fetch real social metrics from X API first, with intelligent fallback data.
     """
-    logger.debug(f"Fetching social metrics for {coin_id} (using fallback data)")
+    logger.debug(f"Fetching social metrics for {coin_id}")
 
     # Load cache and check if data is still valid (within TTL)
     cache = load_social_metrics_cache()
     cached_entry = cache.get(coin_id)
-    ttl = 3600  # 1 hour TTL for fallback data
+    ttl = 1800  # 30 minutes TTL for real data
     if cached_entry and "timestamp" in cached_entry and (time.time() - cached_entry["timestamp"]) < ttl:
         logger.debug(f"Using cached social metrics for {coin_id}: {cached_entry['metrics']}")
         return cached_entry["metrics"]
 
-    # Generate realistic fallback data based on coin popularity
+    # Try to get real data from X API first
+    try:
+        x_client = get_x_client()
+        if x_client:
+            symbol = symbol_map.get(coin_id, coin_id.upper())
+            
+            # Search for recent tweets about the coin
+            search_query = f"${symbol} OR #{symbol} OR {coin_id.replace('-', ' ')} crypto -is:retweet"
+            
+            try:
+                tweets = x_client.search_recent_tweets(
+                    query=search_query,
+                    max_results=100,  # Maximum for free tier
+                    tweet_fields=['created_at', 'text', 'public_metrics']
+                )
+                
+                if tweets.data:
+                    mentions = len(tweets.data)
+                    
+                    # Analyze sentiment using VADER
+                    total_sentiment = 0
+                    for tweet in tweets.data:
+                        scores = sentiment_analyzer.polarity_scores(tweet.text)
+                        total_sentiment += scores['compound']
+                    
+                    avg_sentiment = total_sentiment / len(tweets.data)
+                    
+                    if avg_sentiment >= 0.05:
+                        sentiment = "Positive"
+                    elif avg_sentiment <= -0.05:
+                        sentiment = "Negative"
+                    else:
+                        sentiment = "Neutral"
+                    
+                    result = {"mentions": mentions, "sentiment": sentiment}
+                    
+                    # Cache the result
+                    cache[coin_id] = {
+                        "metrics": result,
+                        "timestamp": time.time()
+                    }
+                    save_social_metrics_cache(cache)
+                    
+                    logger.info(f"Real social metrics for {coin_id}: {mentions} mentions, {sentiment} sentiment")
+                    return result
+                    
+            except tweepy.TooManyRequests:
+                logger.warning(f"X API rate limited for {coin_id}, using fallback")
+            except Exception as e:
+                logger.warning(f"X API error for {coin_id}: {e}, using fallback")
+                
+    except Exception as e:
+        logger.warning(f"Failed to initialize X client for social metrics: {e}")
+
+    # Fallback to intelligent simulation based on real market data
     coin_popularity = {
         "ripple": {"base_mentions": 150, "sentiment_bias": 0.1},
         "hedera-hashgraph": {"base_mentions": 80, "sentiment_bias": 0.05},

@@ -110,7 +110,7 @@ def get_youtube_service():
         return None
 
 async def fetch_price(coin_symbol: str, session: aiohttp.ClientSession, max_retries=3):
-    for attempt in range(max_retries):
+    for attempt in range(3):  # CoinGecko specific retries
         try:
             url = f"https://api.coinbase.com/v2/prices/{coin_symbol}-USD/spot"
             logger.debug(f"Attempt {attempt + 1}/{max_retries} to fetch price for {coin_symbol} from Coinbase")
@@ -129,7 +129,7 @@ async def fetch_price(coin_symbol: str, session: aiohttp.ClientSession, max_retr
 
 async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession, max_retries: int = 3):
     """Fetch data from CoinGecko with retry logic and exponential backoff for rate limits."""
-    
+
     # Fallback data for each coin (realistic prices as of 2025)
     fallback_data = {
         'ripple': {'price': 2.21, 'change_24h': 5.2, 'volume': 1800.0},
@@ -141,8 +141,8 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
         'algorand': {'price': 0.42, 'change_24h': 1.9, 'volume': 85.0},
         'casper-network': {'price': 0.021, 'change_24h': -0.5, 'volume': 12.0}
     }
-    
-    for attempt in range(max_retries):
+
+    for attempt in range(3):  # CoinGecko specific retries
         try:
             # Fetch price and 24h change
             url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}?tickers=false&market_data=true&community_data=false&developer_data=false"
@@ -158,7 +158,7 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
                         break
                     await asyncio.sleep(5 * (attempt + 1))
                     continue
-                    
+
                 data = await response.json()
                 price = float(data['market_data']['current_price']['usd'])
                 price_change_24h = float(data['market_data']['price_change_percentage_24h'])
@@ -166,7 +166,7 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
 
             # Wait between API calls to respect rate limits
             await asyncio.sleep(15)
-            
+
             # Fetch transaction volume and historical data
             url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}/market_chart?vs_currency=usd&days=1"
             async with session.get(url) as response:
@@ -181,25 +181,25 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
                     historical_prices = [price * (0.95 + 0.1 * i / 30) for i in range(30)]
                     tx_volume = fallback_data.get(coingecko_id, {'volume': 50.0})['volume']
                     return price, price_change_24h, tx_volume, historical_prices
-                    
+
                 market_data = await response.json()
                 tx_volume = sum([v[1] for v in market_data['total_volumes']]) / 1_000_000  # Convert to millions
                 tx_volume *= 0.0031  # Normalize to approximate Currency Gator's values
                 historical_prices = [p[1] for p in market_data['prices']][-30:]  # Last 30 price points
-                
+
                 logger.info(f"Successfully fetched all data for {coingecko_id}")
                 return price, price_change_24h, tx_volume, historical_prices
-                
+
         except Exception as e:
             logger.error(f"Error fetching data for {coingecko_id} (attempt {attempt + 1}): {str(e)}")
             if attempt < max_retries - 1:
                 await asyncio.sleep(10 * (attempt + 1))
                 continue
-    
+
     # Use fallback data if all attempts failed
     logger.warning(f"Using fallback data for {coingecko_id} after {max_retries} failed attempts")
     fallback = fallback_data.get(coingecko_id, {'price': 1.0, 'change_24h': 0.0, 'volume': 50.0})
-    
+
     # Generate realistic historical prices based on current price and volatility
     base_price = fallback['price']
     historical_prices = []
@@ -207,7 +207,7 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
         # Add some realistic price variation
         variation = (i - 15) * 0.001 + (hash(f"{coingecko_id}{i}") % 100 - 50) * 0.0001
         historical_prices.append(base_price * (1 + variation))
-    
+
     return fallback['price'], fallback['change_24h'], fallback['volume'], historical_prices
 
 def predict_price(historical_prices, current_price):
@@ -495,32 +495,32 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 logger.info("X posting failed, generating manual thread template")
                 current_date = get_date()
                 current_time = get_timestamp()
-                
+
                 thread_content = []
                 thread_content.append(f"=== MANUAL X THREAD TEMPLATE ===")
                 thread_content.append(f"Generated on: {current_date} at {current_time}")
                 thread_content.append(f"Reason: X API rate limit exceeded\n")
-                
+
                 thread_content.append(f"=== MAIN POST ===")
                 thread_content.append(f"{main_post['text']}\n")
-                
+
                 for i, data in enumerate(results, 1):
                     reply_text = format_tweet(data)
                     thread_content.append(f"=== REPLY {i} - {data['coin_name']} ===")
                     thread_content.append(f"{reply_text}\n")
-                
+
                 thread_content.append("=== POSTING INSTRUCTIONS ===")
                 thread_content.append("1. Copy the MAIN POST content and post it to X")
                 thread_content.append("2. Reply to the main post with REPLY 1 content")
                 thread_content.append("3. Reply to REPLY 1 with REPLY 2 content")
                 thread_content.append("4. Continue replying to create a thread")
                 thread_content.append("5. Each reply should be posted as a response to the previous tweet")
-                
+
                 filename = f"manual_x_thread_{current_date}_{current_time.replace(':', '-')}.txt"
-                
+
                 with open(filename, 'w', encoding='utf-8') as f:
                     f.write('\n'.join(thread_content))
-                
+
                 logger.info(f"Manual X thread template saved to: {filename}")
                 print(f"\n🚨 X POSTING FAILED - MANUAL TEMPLATE GENERATED 🚨")
                 print(f"Template saved as: {filename}")
