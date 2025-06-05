@@ -24,7 +24,13 @@ def main():
         print(f"   • Rate limited: {'🚫' if status['rate_limited'] else '✅'}")
 
         if status['rate_limit_reset']:
-            print(f"   • Rate limit resets: {status['rate_limit_reset']}")
+            from datetime import datetime
+            reset_time = datetime.fromisoformat(status['rate_limit_reset'])
+            remaining = (reset_time - datetime.now()).total_seconds() / 60
+            if remaining > 0:
+                print(f"   • Rate limit resets in: {remaining:.1f} minutes")
+            else:
+                print(f"   • Rate limit has expired, should reset soon")
 
         print("\n" + "=" * 40)
 
@@ -32,6 +38,9 @@ def main():
             print("📝 Posts are queued and will be posted automatically")
             if status['rate_limited']:
                 print("⏳ Waiting for rate limit to reset...")
+                print("💡 Posts will automatically process when limit resets")
+            elif not status['worker_running']:
+                print("⚠️  Worker not running - queue may need restart")
             else:
                 print("🚀 Queue is being processed")
         else:
