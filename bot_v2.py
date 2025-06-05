@@ -418,7 +418,8 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             predicted_price = predict_price(historical_prices, price)
 
             # Fetch social metrics (skip X API if in Discord-only mode)
-            social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=test_discord)
+            skip_x_for_social = test_discord or dual_post or simultaneous_post
+            social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=skip_x_for_social)
 
             # Fetch YouTube video
             youtube_video = await fetch_youtube_video(youtube, coin['name'], current_date)

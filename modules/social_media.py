@@ -71,7 +71,12 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
 
     # Try X API v2 for recent mentions (skip if Discord-only mode)
     if not skip_x_api:
-        x_client = get_x_client()
+        try:
+            x_client = get_x_client()
+        except Exception as e:
+            logger.warning(f"Failed to initialize X client: {e}")
+            x_client = None
+        
         if x_client:
             try:
                 search_query = f"${symbol} OR #{symbol} -is:retweet lang:en"
