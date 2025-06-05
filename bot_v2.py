@@ -458,23 +458,22 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 logger.error("DISCORD_WEBHOOK_URL not set. Cannot post to Discord.")
                 return
 
-            async with aiohttp.ClientSession() as discord_session:
-                # Post main update
-                async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
-                    if response.status == 204:
-                        logger.info("Successfully posted main update to Discord. Status code: 204")
-                    else:
-                        logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
+            # Post main update
+            async with session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
+                if response.status == 204:
+                    logger.info("Successfully posted main update to Discord. Status code: 204")
+                else:
+                    logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
 
-                # Post coin updates
-                for data in results:
-                    reply_text = format_tweet(data)
-                    async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
-                        if response.status == 204:
-                            logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
-                        else:
-                            logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
-                    await asyncio.sleep(0.5)
+            # Post coin updates
+            for data in results:
+                reply_text = format_tweet(data)
+                async with session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
+                    if response.status == 204:
+                        logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
+                    else:
+                        logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
+                await asyncio.sleep(0.5)
 
         # Handle thread mode posting
         if thread_mode and not test_discord:
@@ -532,23 +531,22 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
 
             # Always post to Discord first (guaranteed to work)
             if DISCORD_WEBHOOK_URL:
-                async with aiohttp.ClientSession() as discord_session:
-                    # Post main update to Discord
-                    async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
-                        if response.status == 204:
-                            logger.info("Successfully posted main update to Discord. Status code: 204")
-                        else:
-                            logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
+                # Post main update to Discord
+                async with session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
+                    if response.status == 204:
+                        logger.info("Successfully posted main update to Discord. Status code: 204")
+                    else:
+                        logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
 
-                    # Post coin updates to Discord
-                    for data in results:
-                        reply_text = format_tweet(data)
-                        async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
-                            if response.status == 204:
-                                logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
-                            else:
-                                logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
-                        await asyncio.sleep(0.5)
+                # Post coin updates to Discord
+                for data in results:
+                    reply_text = format_tweet(data)
+                    async with session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
+                        if response.status == 204:
+                            logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
+                        else:
+                            logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
+                    await asyncio.sleep(0.5)
             else:
                 logger.error("DISCORD_WEBHOOK_URL not set. Cannot post to Discord.")
 
@@ -676,23 +674,22 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             if not x_success:
                 logger.info("X posting failed, posting to Discord instead")
                 if DISCORD_WEBHOOK_URL:
-                    async with aiohttp.ClientSession() as discord_session:
-                        # Post main update
-                        async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
-                            if response.status == 204:
-                                logger.info("Successfully posted main update to Discord. Status code: 204")
-                            else:
-                                logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
+                    # Post main update
+                    async with session.post(DISCORD_WEBHOOK_URL, json={"content": main_post["text"]}) as response:
+                        if response.status == 204:
+                            logger.info("Successfully posted main update to Discord. Status code: 204")
+                        else:
+                            logger.error(f"Failed to post main update to Discord. Status code: {response.status}")
 
-                        # Post coin updates
-                        for data in results:
-                            reply_text = format_tweet(data)
-                            async with discord_session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
-                                if response.status == 204:
-                                    logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
-                                else:
-                                    logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
-                            await asyncio.sleep(0.5)
+                    # Post coin updates
+                    for data in results:
+                        reply_text = format_tweet(data)
+                        async with session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
+                            if response.status == 204:
+                                logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
+                            else:
+                                logger.error(f"Failed to post {data['coin_name']} update to Discord. Status code: {response.status}")
+                        await asyncio.sleep(0.5)
                 else:
                     logger.error("DISCORD_WEBHOOK_URL not set. Cannot fallback to Discord.")
             else:
