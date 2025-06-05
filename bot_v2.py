@@ -420,8 +420,8 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                             "source": "YouTube"
                         }
             except HttpError as e:
-                if "quotaExceeded" in str(e) or "quota" in str(e).lower():
-                    logger.warning(f"YouTube API quota exceeded for {coin}, switching to Rumble")
+                if "quotaExceeded" in str(e) or "quota" in str(e).lower() or "429" in str(e):
+                    logger.warning(f"YouTube API quota/rate exceeded for {coin}, switching to Rumble")
                     if session:
                         return await fetch_rumble_video(coin, session)
                     else:
@@ -914,20 +914,40 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     'coin_name': data['coin_name']
                 })
 
-            queue_x_thread(thread_posts, main_post['text'])
-            logger.info(f"Queued complete thread with {len(thread_posts)} posts to avoid rate limits")
+            # Queue the thread with error handling
+            try:
+                queue_x_thread(thread_posts, main_post['text'])
+                logger.info(f"✅ Successfully queued complete thread with {len(thread_posts)} posts")
+            except Exception as e:
+                logger.error(f"Failed to queue thread: {e}")
+                logger.error("Falling back to individual post queueing...")
+                
+                # Fallback: queue individual posts
+                try:
+                    queue_x_post(main_post['text'])
+                    for data in results:
+                        queue_x_post(format_tweet(data))
+                    logger.info("✅ Successfully queued individual posts as fallback")
+                except Exception as fallback_error:
+                    logger.error(f"Fallback queueing also failed: {fallback_error}")
 
             # Show queue status
-            status = get_x_queue_status()
-            logger.info(f"X Queue Status: {status['post_queue_size']} posts, {status['thread_queue_size']} threads queued")
+            try:
+                status = get_x_queue_status()
+                logger.info(f"X Queue Status: {status['post_queue_size']} posts, {status['thread_queue_size']} threads queued")
+            except Exception as e:
+                logger.warning(f"Could not get queue status: {e}")
             
             # Wait a moment for worker to start processing
             import time
             time.sleep(3)
             
             # Show updated status
-            final_status = get_x_queue_status()
-            logger.info(f"Final Queue Status: Worker running: {final_status['worker_running']}, Posts: {final_status['post_queue_size']}, Threads: {final_status['thread_queue_size']}")
+            try:
+                final_status = get_x_queue_status()
+                logger.info(f"Final Queue Status: Worker running: {final_status['worker_running']}, Posts: {final_status['post_queue_size']}, Threads: {final_status['thread_queue_size']}")
+            except Exception as e:
+                logger.warning(f"Could not get final queue status: {e}")
 
         logger.info("CryptoBotV2 run completed successfully.")
 

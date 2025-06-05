@@ -6,6 +6,7 @@ channel = "stable-24_05"
 packages = ["glibcLocales"]
 
 [workflows]
+runButton = "Ultra Safe X Post Test"
 
 [[workflows.workflow]]
 name = "Generate Manual Template Only"
@@ -134,6 +135,47 @@ args = "python bot_v2.py --queue-only"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "echo \"✅ Posts queued safely - check queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Ultra Safe X Post Test"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing ultra-safe X posting workflow...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ This mode bypasses ALL rate limit checks\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Uses Rumble fallback for YouTube rate limits\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Queues posts immediately to avoid direct API calls\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Test completed! Checking queue status:\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

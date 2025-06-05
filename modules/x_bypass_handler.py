@@ -37,6 +37,44 @@ class XAPIBypassHandler:
         Args:
             error: The rate limit error
             operation: The operation that caused the error ('search' or 'post')
+            
+        Returns:
+            bool: True if operation can be retried, False otherwise
+        """
+        import logging
+        logger = logging.getLogger('XBypassHandler')
+        
+        if operation == 'search':
+            self.search_disabled = True
+            logger.warning(f"X API search disabled due to rate limit: {error}")
+            return False  # Cannot retry search operations
+        elif operation == 'post':
+            logger.warning(f"X API posting rate limited: {error} - Will retry via queue")
+            return True  # Can retry posting via queue system
+        else:
+            logger.warning(f"Unknown operation rate limited: {operation}")
+            return False
+
+    def is_search_available(self) -> bool:
+        """Check if search functionality is available."""
+        return not self.search_disabled
+
+    def is_posting_available(self) -> bool:
+        """Posting is always available through queue system."""
+        return True
+
+    def log_status(self):
+        """Log current bypass status."""
+        import logging
+        logger = logging.getLogger('XBypassHandler')
+        
+        logger.info("X API Bypass Handler Status:")
+        logger.info(f"  - Search operations: {'DISABLED' if self.search_disabled else 'ENABLED'}")
+        logger.info(f"  - Posting operations: ENABLED (always preserved)")
+        logger.info(f"  - Social metrics: {'Alternative APIs only' if self.search_disabled else 'X API + alternatives'}")
+
+# Global instance
+x_bypass_handler = XAPIBypassHandler()
 
         Returns:
             bool: True if operation can be retried, False if should be skipped
