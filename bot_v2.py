@@ -56,11 +56,14 @@ def get_date():
 
 def format_tweet(data):
     change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
+    top_project_text = f"{data['top_project']}"
+    if data.get('top_project_url'):
+        top_project_text += f" - {data['top_project_url']}"
     return (
         f"{data['coin_name']} ({data['coin_symbol']}): ${data['price']:.2f} ({data['price_change_24h']:.2f}% 24h) {change_symbol}\n"
         f"Predicted: ${data['predicted_price']:.2f} (Linear regression)\n"
         f"Tx Volume: {data['tx_volume']:.2f}M\n"
-        f"Top Project: {data['top_project']}\n"
+        f"Top Project: {top_project_text}\n"
         f"{data['hashtag']}\n"
         f"Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n"
         f"Video: {data['youtube_video']['title']}... {data['youtube_video']['url']}"
@@ -79,13 +82,17 @@ def create_thread_post(results):
     for i, data in enumerate(results, 2):
         change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
 
+        top_project_text = f"{data['top_project']}"
+        if data.get('top_project_url'):
+            top_project_text += f" - {data['top_project_url']}"
+
         post_text = (
             f"{i}/{len(results) + 1} {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n\n"
             f"💰 Price: ${data['price']:.2f}\n"
             f"📊 24h Change: {data['price_change_24h']:.2f}%\n"
             f"🔮 Predicted: ${data['predicted_price']:.2f}\n"
             f"💹 Volume: {data['tx_volume']:.2f}M\n"
-            f"🏢 Top Project: {data['top_project']}\n\n"
+            f"🏢 Top Project: {top_project_text}\n\n"
             f"📱 Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n\n"
             f"🎥 Latest: {data['youtube_video']['title'][:50]}...\n{data['youtube_video']['url']}\n\n"
             f"{data['hashtag']}"
@@ -383,6 +390,95 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
             "video_id": ""
         }
 
+async def research_top_projects(coingecko_id: str, coin_symbol: str, session: aiohttp.ClientSession):
+    """
+    Conduct on-chain research to identify top projects associated with a given cryptocurrency.
+    This function simulates querying on-chain data and external APIs to discover projects
+    being built on or utilizing the specified cryptocurrency.
+
+    Args:
+        coingecko_id (str): The CoinGecko ID of the cryptocurrency.
+        coin_symbol (str): The symbol of the cryptocurrency (e.g., BTC, ETH).
+        session (aiohttp.ClientSession): The aiohttp session for making asynchronous HTTP requests.
+
+    Returns:
+        dict: A dictionary containing information about the top project found, including its name,
+              URL, description, and type (e.g., DEX, DeFi platform, wallet). If no project is found,
+              returns a dictionary with default values.
+    """
+    # Simulate on-chain data retrieval and project discovery
+    # In a real-world scenario, this would involve querying blockchain data,
+    # decentralized exchanges, and other relevant sources to identify projects
+    # interacting with the specified cryptocurrency.
+
+    # For demonstration purposes, let's define a dictionary of known projects
+    # associated with different cryptocurrencies.
+    known_projects = {
+        'ripple': {
+            'name': 'XRP Ledger',
+            'url': 'https://xrpl.org/',
+            'description': 'A decentralized cryptographic ledger powered by a network of peer-to-peer servers.',
+            'type': 'Blockchain'
+        },
+        'hedera-hashgraph': {
+            'name': 'Hashgraph Consensus Service',
+            'url': 'https://www.hedera.com/',
+            'description': 'An enterprise-grade distributed ledger for building fast, fair and secure applications.',
+            'type': 'Blockchain'
+        },
+        'stellar': {
+            'name': 'Stellar DEX',
+            'url': 'https://stellar.org/',
+            'description': 'A decentralized exchange built on the Stellar network, enabling fast and low-cost asset trading.',
+            'type': 'DEX'
+        },
+        'xinfin-network': {
+            'name': 'XinFin Network',
+            'url': 'https://xinfin.org/',
+            'description': 'A hybrid blockchain platform optimized for international trade and finance.',
+            'type': 'Blockchain'
+        },
+        'sui': {
+            'name': 'Sui Blockchain',
+            'url': 'https://sui.io/',
+            'description': 'A permissionless Layer 1 blockchain designed to enable creators and developers to build experiences that cater for the next billion users in web3.',
+            'type': 'Blockchain'
+        },
+        'ondo-finance': {
+            'name': 'Ondo Finance',
+            'url': 'https://ondo.finance/',
+            'description': 'A decentralized investment bank connecting institutional investors with DeFi.',
+            'type': 'DeFi Platform'
+        },
+        'algorand': {
+            'name': 'Algorand DeFi Ecosystem',
+            'url': 'https://www.algorand.com/',
+            'description': 'A range of decentralized finance (DeFi) applications and protocols built on the Algorand blockchain.',
+            'type': 'DeFi Ecosystem'
+        },
+        'casper-network': {
+            'name': 'CasperSwap',
+            'url': 'https://casperswap.io/',
+            'description': 'A decentralized exchange (DEX) built on the Casper Network blockchain.',
+            'type': 'DEX'
+        }
+    }
+
+    # Check if the cryptocurrency is in the list of known projects
+    if coingecko_id in known_projects:
+        top_project = known_projects[coingecko_id]
+        logger.info(f"Top project found for {coin_symbol}: {top_project['name']}")
+    else:
+        top_project = {}
+        logger.warning(f"No top project found for {coin_symbol}. Using default values.")
+
+    # Add the top project to the result dictionary
+    result = {
+        'top_project': top_project
+    }
+
+    return result
+
 async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False, simultaneous_post: bool = False):
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
@@ -423,25 +519,33 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # Predict price
             predicted_price = predict_price(historical_prices, price)
 
-            # Fetch social metrics (skip X API if in Discord-only mode)
-            skip_x_for_social = test_discord or dual_post or simultaneous_post
-            social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=skip_x_for_social)
+            # Fetch social metrics
+            social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=test_discord or dual_post or simultaneous_post)
 
-            # Fetch YouTube video
-            youtube_video = await fetch_youtube_video(youtube, coin['name'], current_date)
+            # Research top on-chain projects
+            project_research = await research_top_projects(coin['coingecko_id'], coin['symbol'], session)
+            top_project_info = project_research.get('top_project', {})
 
+            logger.info(f"✓ Collected data for {coin['name']}")
+
+            # Store data for the thread
             coin_data = {
-                "coin_name": coin['name'].title(),
-                "coin_symbol": coin['symbol'],
-                "price": price,
-                "price_change_24h": price_change_24h,
-                "predicted_price": predicted_price,
-                "tx_volume": tx_volume,
-                "top_project": coin['top_project'],
-                "hashtag": coin['hashtag'],
-                "social_metrics": social_metrics,
-                "youtube_video": youtube_video
+                'coin_name': coin['name'],
+                'coin_symbol': coin['symbol'],
+                'price': price,
+                'price_change_24h': price_change_24h,
+                'predicted_price': predicted_price,
+                'tx_volume': tx_volume,
+                'top_project': top_project_info.get('name', coin['top_project']),
+                'top_project_url': top_project_info.get('url', ''),
+                'top_project_description': top_project_info.get('description', ''),
+                'top_project_type': top_project_info.get('type', 'Exchange'),
+                'hashtag': coin['hashtag'],
+                'social_metrics': social_metrics,
+                'youtube_video': await fetch_youtube_video(youtube, coin['name'], current_date),
+                'project_research': project_research
             }
+
             results.append(coin_data)
 
         # Prepare main post (different for thread mode)

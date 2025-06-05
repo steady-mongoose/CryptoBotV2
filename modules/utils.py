@@ -17,12 +17,27 @@ def format_tweet(data: dict) -> str:
         # Determine trend emoji based on price change
         trend = "📈" if data["price_change_24h"] >= 0 else "📉"
 
+        # Format project information with link if available
+        project_text = data['top_project']
+        if data.get('top_project_url'):
+            project_text = f"{data['top_project']}: {data['top_project_url']}"
+        
+        # Add project type indicator
+        if data.get('top_project_type'):
+            project_emoji = {
+                'DeFi Protocol': '🏦',
+                'Development Project': '⚡',
+                'dApp': '📱',
+                'Ecosystem': '🌐'
+            }.get(data['top_project_type'], '🔗')
+            project_text = f"{project_emoji} {project_text}"
+
         # Format the tweet
         tweet = (
             f"{data['coin_name'].lower()} ({data['coin_symbol']}): ${data['price']:.2f} ({data['price_change_24h']:.2f}% 24h) {trend}\n"
             f"Predicted: ${data['predicted_price']:.2f} (Linear regression)\n"
             f"Tx Volume: {data['tx_volume']:.2f}M\n"
-            f"Top Project: {data['top_project']}\n"
+            f"Top Project: {project_text}\n"
             f"{data['hashtag']}\n"
             f"Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n"
             f"Video: {data['youtube_video']['title']}... {data['youtube_video']['url']}"
@@ -30,4 +45,4 @@ def format_tweet(data: dict) -> str:
         return tweet
     except Exception as e:
         logger.error(f"Error formatting tweet for {data.get('coin_name', 'Unknown')}: {e}")
-        return ""
+        return f"Error formatting tweet for {data.get('coin_name', 'Unknown')}"urn ""
