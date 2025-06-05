@@ -41,8 +41,6 @@ def main():
     except Exception as e:
         print(f"❌ Error checking queue status: {e}")
 
-if __name__ == "__main__":
-    main()
 #!/usr/bin/env python3
 
 import logging

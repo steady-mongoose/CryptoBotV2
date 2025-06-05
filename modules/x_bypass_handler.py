@@ -5,6 +5,10 @@ from typing import Optional
 
 logger = logging.getLogger('CryptoBot')
 
+import logging
+
+logger = logging.getLogger('CryptoBot')
+
 class XAPIBypassHandler:
     """
     Handles X API rate limit bypass by separating posting from search functionality.
@@ -26,6 +30,11 @@ class XAPIBypassHandler:
         """Return True if search is available, False if disabled due to errors."""
         return not self.search_disabled
     
+    def force_disable_search(self):
+        """Permanently disable search functionality to prevent rate limits."""
+        self.search_disabled = True
+        logger.info("X API search functionality permanently disabled to prevent rate limits")
+    
     def handle_rate_limit_error(self, error, operation: str) -> bool:
         """
         Handle rate limit errors by disabling search operations but preserving posting.
@@ -42,6 +51,13 @@ class XAPIBypassHandler:
             self.search_disabled = True
             return False  # Don't retry search, use alternatives
         elif operation == 'post':
+            logger.warning(f"X API posting rate limited: {error} - Will retry via queue")
+            return True  # Can retry posting via queue system
+        
+        return False
+
+# Global instance
+x_bypass_handler = XAPIBypassHandler()
             logger.warning(f"X API posting rate limited: {error} - Will retry later")
             return True  # Retry posting after delay
         else:

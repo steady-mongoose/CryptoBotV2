@@ -14,6 +14,7 @@ from modules.social_media import fetch_social_metrics
 from modules.binance_us import binance_us_api
 from modules.database import Database
 from modules.x_thread_queue import start_x_queue, stop_x_queue, queue_x_thread, queue_x_post, get_x_queue_status
+from modules.x_bypass_handler import x_bypass_handler
 
 # Configure logging
 logging.basicConfig(
@@ -522,7 +523,6 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             predicted_price = predict_price(historical_prices, price)
 
             # X API bypass handler - search permanently disabled
-            from modules.x_bypass_handler import x_bypass_handler
             x_bypass_handler.force_disable_search()  # Ensure search stays disabled
 
             # Fetch social metrics
