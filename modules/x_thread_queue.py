@@ -78,20 +78,29 @@ class XThreadQueue:
                 if not self.client:
                     # Initialize posting-only client to avoid rate limits
                     logger.debug("Initializing X client for queue worker...")
-                    self.client = get_x_client(posting_only=True)
-                    if not self.client:
-                        logger.error("Failed to initialize X posting client - missing credentials or API error")
-                        logger.error("Please check X API credentials in Secrets: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
-                        time.sleep(60)
-                        continue
-                    logger.info("✅ X queue worker initialized with POSTING-ONLY client")
-                    
-                    # Test the client with a simple API call
                     try:
-                        # Just verify client works without making actual posts
-                        logger.debug("X client initialized and ready for posting")
+                        self.client = get_x_client(posting_only=True)
+                        if not self.client:
+                            logger.error("Failed to initialize X posting client - missing credentials or API error")
+                            logger.error("Please check X API credentials in Secrets:")
+                            logger.error("  - X_CONSUMER_KEY")
+                            logger.error("  - X_CONSUMER_SECRET") 
+                            logger.error("  - X_ACCESS_TOKEN")
+                            logger.error("  - X_ACCESS_TOKEN_SECRET")
+                            time.sleep(60)
+                            continue
+                        logger.info("✅ X queue worker initialized with POSTING-ONLY client")
+                        
+                        # Test the client by checking user info (minimal API call)
+                        try:
+                            user_info = self.client.get_me()
+                            logger.info(f"✅ X client verified for user: @{user_info.data.username}")
+                        except Exception as e:
+                            logger.warning(f"X client verification failed: {e}")
+                            # Don't fail completely, just log warning
+                            
                     except Exception as e:
-                        logger.error(f"X client test failed: {e}")
+                        logger.error(f"Error initializing X client: {e}")
                         self.client = None
                         time.sleep(30)
                         continue

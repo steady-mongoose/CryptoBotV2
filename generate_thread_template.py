@@ -7,14 +7,25 @@ import argparse
 import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import aiohttp
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from googleapiclient.discovery import build
-from modules.api_clients import get_youtube_api_key
-from modules.social_media import fetch_social_metrics
-from modules.database import Database
+from googleapiclient.errors import HttpError
+import tweepy
+
+# Import modules with error handling
+try:
+    from modules.api_clients import get_x_client, get_youtube_api_key
+    from modules.social_media import fetch_social_metrics
+    from modules.binance_us import binance_us_api
+    from modules.database import Database
+    from modules.x_thread_queue import start_x_queue, stop_x_queue, queue_x_thread, queue_x_post, get_x_queue_status
+    from modules.x_bypass_handler import x_bypass_handler
+except ImportError as e:
+    logging.error(f"Failed to import required modules: {e}")
+    raise
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -43,11 +54,14 @@ def get_date():
 
 def format_tweet(data):
     change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
+    top_project_text = f"{data['top_project']}"
+    if data.get('top_project_url'):
+        top_project_text += f" - {data['top_project_url']}"
     return (
         f"{data['coin_name']} ({data['coin_symbol']}): ${data['price']:.2f} ({data['price_change_24h']:.2f}% 24h) {change_symbol}\n"
         f"Predicted: ${data['predicted_price']:.2f} (Linear regression)\n"
         f"Tx Volume: {data['tx_volume']:.2f}M\n"
-        f"Top Project: {data['top_project']}\n"
+        f"Top Project: {top_project_text}\n"
         f"{data['hashtag']}\n"
         f"Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n"
         f"Video: {data['youtube_video']['title']}... {data['youtube_video']['url']}"
@@ -359,15 +373,116 @@ Main Post → Reply 1 → Reply 2 → Reply 3 → etc.
 
         return filename
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate X thread template for manual posting")
-    parser.add_argument("--output", "-o", help="Output filename (optional)")
-    args = parser.parse_args()
+def create_thread_post(results):
+    """Create a thread-style post for X with multiple tweets."""
+    current_date = get_date()
+    current_time = get_timestamp()
 
-    try:
-        filename = asyncio.run(generate_thread_template(args.output))
-        print(f"\n✅ Thread template ready! Saved as: {filename}")
-    except Exception as e:
-        logger.error(f"Failed to generate template: {str(e)}")
-    finally:
-        db.close()
+    # Main thread starter
+    main_post = f"🧵 THREAD: Crypto Market Deep Dive ({current_date} at {current_time})\n\nAnalysis of top altcoins with predictions, social sentiment, and project updates 👇\n\n#CryptoThread #Altcoins 1/{len(results) + 1}"
+
+    # Individual thread posts
+    thread_posts = []
+    for i, data in enumerate(results, 2):
+        change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
+
+        top_project_text = f"{data['top_project']}"
+        if data.get('top_project_url'):
+            top_project_text += f" - {data['top_project_url']}"
+
+        post_text = (
+            f"{i}/{len(results) + 1} {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n\n"
+            f"💰 Price: ${data['price']:.2f}\n"
+            f"📊 24h Change: {data['price_change_24h']:.2f}%\n"
+            f"🔮 Predicted: ${data['predicted_price']:.2f}\n"
+            f"💹 Volume: {data['tx_volume']:.2f}M\n"
+            f"🏢 Top Project: {top_project_text}\n\n"
+            f"📱 Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n\n"
+            f"🎥 Latest: {data['youtube_video']['title'][:50]}...\n{data['youtube_video']['url']}\n\n"
+            f"{data['hashtag']}"
+        )
+
+        thread_posts.append({
+            'text': post_text,
+            'coin_name': data['coin_name']
+        })
+
+    return main_post, thread_posts
+
+def generate_manual_template():
+    """Generate a manual X thread template without API calls."""
+    current_date = get_date()
+    current_time = get_timestamp()
+
+    # Sample data for template generation
+    sample_coins = [
+        {'name': 'ripple', 'symbol': 'XRP', 'hashtag': '#XRP', 'top_project': 'Binance'},
+        {'name': 'hedera hashgraph', 'symbol': 'HBAR', 'hashtag': '#HBAR', 'top_project': 'Binance CEX'},
+        {'name': 'stellar', 'symbol': 'XLM', 'hashtag': '#XLM', 'top_project': 'Binance CEX'},
+        {'name': 'sui', 'symbol': 'SUI', 'hashtag': '#SUI', 'top_project': 'Binance'},
+    ]
+
+    # Generate sample data
+    sample_results = []
+    for coin in sample_coins:
+        sample_data = {
+            'coin_name': coin['name'],
+            'coin_symbol': coin['symbol'],
+            'price': 1.50,  # Sample price
+            'price_change_24h': 5.2,  # Sample change
+            'predicted_price': 1.58,  # Sample prediction
+            'tx_volume': 100.0,  # Sample volume
+            'top_project': coin['top_project'],
+            'top_project_url': '',
+            'hashtag': coin['hashtag'],
+            'social_metrics': {'mentions': 150, 'sentiment': 'Positive'},
+            'youtube_video': {'title': f'Latest {coin["name"]} Analysis', 'url': f'https://youtube.com/search?q={coin["name"]}+crypto'}
+        }
+        sample_results.append(sample_data)
+
+    # Create thread
+    main_post_text, thread_posts = create_thread_post(sample_results)
+
+    # Generate template content
+    thread_content = []
+    thread_content.append(f"=== MANUAL X THREAD TEMPLATE ===")
+    thread_content.append(f"Generated on: {current_date} at {current_time}")
+    thread_content.append(f"NOTE: This is a TEMPLATE with sample data\n")
+
+    thread_content.append(f"=== MAIN POST ===")
+    thread_content.append(f"{main_post_text}\n")
+
+    for i, post_data in enumerate(thread_posts, 1):
+        thread_content.append(f"=== REPLY {i} - {post_data['coin_name']} ===")
+        thread_content.append(f"{post_data['text']}\n")
+
+    thread_content.append("=== POSTING INSTRUCTIONS ===")
+    thread_content.append("1. Copy the MAIN POST content and post it to X")
+    thread_content.append("2. Reply to the main post with REPLY 1 content")
+    thread_content.append("3. Reply to REPLY 1 with REPLY 2 content")
+    thread_content.append("4. Continue replying to create a thread")
+    thread_content.append("5. Each reply should be posted as a response to the previous tweet")
+    thread_content.append("6. Replace sample data with real market data before posting")
+
+    filename = f"x_thread_template_{current_date}_{current_time.replace(':', '-')}.txt"
+
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(thread_content))
+
+    print(f"✅ Manual X thread template generated: {filename}")
+    print(f"📝 Template contains sample data - replace with real data before posting")
+    return filename
+
+if __name__ == "__main__":
+    #parser = argparse.ArgumentParser(description="Generate X thread template for manual posting")
+    #parser.add_argument("--output", "-o", help="Output filename (optional)")
+    #args = parser.parse_args()
+
+    #try:
+    #    filename = asyncio.run(generate_thread_template(args.output))
+    #    print(f"\n✅ Thread template ready! Saved as: {filename}")
+    #except Exception as e:
+    #    logger.error(f"Failed to generate template: {str(e)}")
+    #finally:
+    #    db.close()
+    generate_manual_template()

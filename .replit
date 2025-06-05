@@ -5,12 +5,10 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "X Post Only (Ultra Safe)"
 
 [[workflows.workflow]]
 name = "Generate Manual Template Only"
-author = 43339402
-mode = "sequential"
+author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -26,8 +24,7 @@ args = "echo \"✅ Template generated! Check the output file for manual posting.
 
 [[workflows.workflow]]
 name = "Run Production Bot"
-author = 43339402
-mode = "sequential"
+author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -43,8 +40,7 @@ args = "python bot_v2.py"
 
 [[workflows.workflow]]
 name = "Post to Discord Only"
-author = 43339402
-mode = "sequential"
+author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -60,8 +56,7 @@ args = "echo \"✅ Discord posting completed!\""
 
 [[workflows.workflow]]
 name = "X Queue Only (Safe)"
-author = 43339402
-mode = "sequential"
+author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -81,8 +76,7 @@ args = "echo \"✅ Posts queued for background processing\""
 
 [[workflows.workflow]]
 name = "Test X Queue Safe"
-author = 43339402
-mode = "sequential"
+author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -106,8 +100,7 @@ args = "python check_queue_status.py"
 
 [[workflows.workflow]]
 name = "X Post Only (Ultra Safe)"
-author = 43339402
-mode = "sequential"
+author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -144,3 +137,16 @@ args = "echo \"✅ Posts queued safely - check queue status:\""
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python check_queue_status.py"
+
+[deployment]
+run = ["sh", "-c", "python generate_thread_template.py"]
+build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
+ignorePorts = true
+
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081

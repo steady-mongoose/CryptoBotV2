@@ -22,36 +22,57 @@ X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
 X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
 X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 
-def get_x_client(posting_only: bool = False) -> tweepy.Client:
-    """Get authenticated X API client."""
+def get_x_client(posting_only=False):
+    """
+    Initialize and return X (Twitter) API client with proper error handling.
+
+    Args:
+        posting_only (bool): If True, client configured for posting only to minimize rate limit exposure
+    """
+    x_consumer_key = os.getenv('X_CONSUMER_KEY')
+    x_consumer_secret = os.getenv('X_CONSUMER_SECRET')
+    x_access_token = os.getenv('X_ACCESS_TOKEN')
+    x_access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET')
+
+    # Check for missing credentials
+    missing_creds = []
+    if not x_consumer_key:
+        missing_creds.append('X_CONSUMER_KEY')
+    if not x_consumer_secret:
+        missing_creds.append('X_CONSUMER_SECRET')
+    if not x_access_token:
+        missing_creds.append('X_ACCESS_TOKEN')
+    if not x_access_token_secret:
+        missing_creds.append('X_ACCESS_TOKEN_SECRET')
+
+    if missing_creds:
+        logger.error(f"Missing X API credentials: {', '.join(missing_creds)}")
+        logger.error("Please add these secrets in the Secrets tool:")
+        for cred in missing_creds:
+            logger.error(f"  - {cred}")
+        return None
+
     try:
-        # Get X API credentials from environment
-        consumer_key = os.getenv('X_CONSUMER_KEY')
-        consumer_secret = os.getenv('X_CONSUMER_SECRET')
-        access_token = os.getenv('X_ACCESS_TOKEN')
-        access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET')
-
-        if not all([consumer_key, consumer_secret, access_token, access_token_secret]):
-            logger.error("Missing X API credentials in environment variables")
-            return None
-
-        # Create X API client
         client = tweepy.Client(
-            consumer_key=consumer_key,
-            consumer_secret=consumer_secret,
-            access_token=access_token,
-            access_token_secret=access_token_secret,
-            wait_on_rate_limit=False  # Don't wait to avoid blocking
+            consumer_key=x_consumer_key,
+            consumer_secret=x_consumer_secret,
+            access_token=x_access_token,
+            access_token_secret=x_access_token_secret,
+            wait_on_rate_limit=False  # Don't wait on rate limits for posting client
         )
 
         if posting_only:
-            logger.info("X API client initialized for POSTING ONLY - search functionality bypassed")
+            logger.info("X API client initialized for POSTING ONLY (search features disabled)")
         else:
             logger.info("X API client initialized successfully")
-        return client
 
+        return client
     except Exception as e:
-        logger.error(f"Failed to initialize X API client: {str(e)}")
+        logger.error(f"Failed to create X API client: {str(e)}")
+        logger.error("This could be due to:")
+        logger.error("  - Invalid API credentials")
+        logger.error("  - Network connectivity issues") 
+        logger.error("  - X API service issues")
         return None
 
 def get_coinmarketcap_api_key() -> str:
