@@ -591,45 +591,9 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # Start the queue worker
             start_x_queue()
 
-            try:
-                # Post main thread starter
-                main_tweet = x_client.create_tweet(text=main_post['text'])
-                logger.info(f"Posted main thread tweet with ID: {main_tweet.data['id']}.")
-
-                previous_tweet_id = main_tweet.data['id']
-                for i, post_data in enumerate(thread_posts):
-                    try:
-                        reply_tweet = x_client.create_tweet(
-                            text=post_data['text'],
-                            in_reply_to_tweet_id=previous_tweet_id
-                        )
-                        previous_tweet_id = reply_tweet.data['id']
-                        logger.info(f"Posted thread post {i+1}/{len(thread_posts)} for {post_data['coin_name']} with ID: {reply_tweet.data['id']}.")
-                        await asyncio.sleep(1)  # Longer delay for thread posts
-
-                    except tweepy.TooManyRequests:
-                        logger.warning(f"Rate limited during thread posting, queuing remaining posts")
-
-                        # Queue remaining thread posts
-                        remaining_posts = thread_posts[i:]
-                        queue_x_thread(remaining_posts, f"🧵 Continuing thread... (Rate limit reached)")
-
-                        logger.info(f"Queued {len(remaining_posts)} remaining thread posts")
-                        break
-
-                    except Exception as e:
-                        logger.error(f"Error posting thread for {post_data['coin_name']}: {e}")
-                        # Queue this post for retry
-                        queue_x_post(post_data['text'], previous_tweet_id, priority=2)
-
-            except tweepy.TooManyRequests:
-                logger.warning("Rate limited on main thread tweet, using queue fallback")
-                queue_x_thread(thread_posts, main_post['text'])
-                logger.info(f"Queued complete thread with {len(thread_posts)} posts due to rate limits")
-
-            except Exception as e:
-                logger.error(f"Error with main thread tweet: {e}")
-                queue_x_post(main_post['text'], priority=1)
+            logger.info(
+                f"Queued complete thread with {len(thread_posts)} posts to avoid rate limits"
+            )
 
         # Handle simultaneous posting mode (X + Discord simultaneously, manual template on X failure)
         elif simultaneous_post and not test_discord:
@@ -812,72 +776,27 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             else:
                 logger.info("Successfully posted to X, no Discord fallback needed")
 
-        elif not test_discord and not dual_post:
-            # Post to X using thread queue system
-            logger.debug("Starting X posting with thread queue fallback")
+        elif queue_only or (not test_discord and not dual_post):
+            # Post to X using queue system immediately (no direct posting to avoid rate limits)
+            mode_desc = "Queue-only mode" if queue_only else "Smart queue mode"
+            logger.info(f"Starting X posting with immediate queue system - {mode_desc} (avoiding rate limits)")
 
             # Start the queue worker
             start_x_queue()
 
-            try:
-                # Attempt direct posting first
-                main_tweet = x_client.create_tweet(text=main_post['text'])
-                logger.info(f"Posted main tweet with ID: {main_tweet.data['id']}.")
+            # SKIP direct posting attempts - queue everything immediately
+            logger.info("Queueing all posts to avoid rate limit errors on main workflow")
 
-                previous_tweet_id = main_tweet.data['id']
-                for data in results:
-                    reply_text = format_tweet(data)
-                    try:
-                        reply_tweet = x_client.create_tweet(
-                            text=reply_text,
-                            in_reply_to_tweet_id=previous_tweet_id
-                        )
-                        previous_tweet_id = reply_tweet.data['id']
-                        logger.info(f"Posted reply for {data['coin_name']} with ID: {reply_tweet.data['id']}.")
-                        await asyncio.sleep(5)  # Free tier compliant delay (12 posts max per hour)
+            # Queue entire thread immediately
+            thread_posts = []
+            for data in results:
+                thread_posts.append({
+                    'text': format_tweet(data),
+                    'coin_name': data['coin_name']
+                })
 
-                    except tweepy.TooManyRequests as e:
-                        logger.warning(f"Rate limited while posting {data['coin_name']}, using thread queue fallback")
-
-                        # Queue remaining posts
-                        remaining_posts = []
-                        for remaining_data in results[results.index(data):]:
-                            remaining_posts.append({
-                                'text': format_tweet(remaining_data),
-                                'coin_name': remaining_data['coin_name']
-                            })
-
-                        # Queue the thread
-                        queue_x_thread(remaining_posts, f"📊 Continuing thread... (Rate limit reached)")
-
-                        logger.info(f"Queued {len(remaining_posts)} remaining posts for later posting")
-                        break
-
-                    except Exception as e:
-                        logger.error(f"Error posting {data['coin_name']}: {e}")
-                        # Queue this post for retry
-                        queue_x_post(reply_text, previous_tweet_id, priority=2)
-
-            except tweepy.TooManyRequests as e:
-                logger.warning("Rate limited on main tweet, using full thread queue fallback")
-                # Handle posting rate limit through bypass handler
-                x_bypass_handler.handle_rate_limit_error(e, 'post')
-
-                # Queue entire thread
-                thread_posts = []
-                for data in results:
-                    thread_posts.append({
-                        'text': format_tweet(data),
-                        'coin_name': data['coin_name']
-                    })
-
-                queue_x_thread(thread_posts, main_post['text'])
-                logger.info(f"Queued complete thread with {len(thread_posts)} posts due to rate limits")
-
-            except Exception as e:
-                logger.error(f"Error with main tweet: {e}")
-                # Queue main post for retry
-                queue_x_post(main_post['text'], priority=1)
+            queue_x_thread(thread_posts, main_post['text'])
+            logger.info(f"Queued complete thread with {len(thread_posts)} posts to avoid rate limits")
 
             # Show queue status
             status = get_x_queue_status()
@@ -890,14 +809,23 @@ if __name__ == "__main__":
     logger.debug("Script execution started")
 
     parser = argparse.ArgumentParser(description="CryptoBotV2 - Post daily crypto updates to X or Discord")
-    parser.add_argument("--test-discord", action="store_true", help="Test mode: post to Discord instead of X")
-    parser.add_argument("--dual-post", action="store_true", help="Dual post mode: try X first, fallback to Discord if rate limited")
-    parser.add_argument("--thread", action="store_true", help="Thread mode: post as a threaded tweet series to X")
-    parser.add_argument("--simultaneous", action="store_true", help="Simultaneous mode: post to both X and Discord, generate manual template on X failure")
+    parser.add_argument('--test-discord', action='store_true', 
+                        help='Test Discord webhook posting only (skip X API)')
+    parser.add_argument('--dual-post', action='store_true',
+                        help='Post to X first, then Discord as fallback')
+    parser.add_argument('--simultaneous-post', action='store_true',
+                        help='Post to both X and Discord simultaneously, manual template on X failure')
+    parser.add_argument('--queue-only', action='store_true',
+                        help='Use X queue system only (no direct posting to avoid rate limits)')
     args = parser.parse_args()
 
+    test_discord = args.test_discord
+    dual_post = args.dual_post
+    simultaneous_post = args.simultaneous_post
+    queue_only = args.queue_only
+
     try:
-        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post, thread_mode=args.thread, simultaneous_post=args.simultaneous))
+        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post, thread_mode=args.thread, simultaneous_post=args.simultaneous_post))
     except Exception as e:
         logger.error(f"Script failed with error: {str(e)}")
         raise

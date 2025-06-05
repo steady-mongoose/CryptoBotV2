@@ -122,8 +122,8 @@ class XThreadQueue:
                     previous_tweet_id = reply_tweet.data['id']
                     logger.info(f"Posted thread reply {i+1}/{len(thread_data['posts'])}: {reply_tweet.data['id']}")
                     
-                    # Extended wait between posts for free tier
-                    time.sleep(5)
+                    # Extended wait between posts for free tier (increased for safety)
+                    time.sleep(10)  # Increased delay to prevent rate limits
                     
                 except tweepy.TooManyRequests:
                     logger.warning("Rate limited during thread posting, requeueing remaining posts")
@@ -189,8 +189,8 @@ class XThreadQueue:
         
     def _handle_rate_limit(self):
         """Handle rate limit by setting reset time."""
-        # Set rate limit reset time to 30 minutes for free tier safety
-        self.rate_limit_reset_time = datetime.now() + timedelta(minutes=30)
+        # Set rate limit reset time to 60 minutes for free tier safety (increased)
+        self.rate_limit_reset_time = datetime.now() + timedelta(minutes=60)
         logger.warning(f"Rate limited, will retry after {self.rate_limit_reset_time}")
         
     def get_queue_status(self) -> Dict:
