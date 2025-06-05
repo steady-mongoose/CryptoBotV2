@@ -53,6 +53,9 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     """
     Fetch social metrics using multiple APIs: X API v2, Reddit API, and sentiment analysis.
     """
+    if skip_x_api:
+        logger.info(f"Skipping X API for social metrics (Discord-only mode) for {coin_id}")
+    
     cache = load_social_metrics_cache()
 
     # Check if we have recent cached data (less than 2 hours old for more frequent updates)
@@ -71,8 +74,10 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
 
     # Try X API v2 for recent mentions (skip if Discord-only mode)
     if not skip_x_api:
+        x_client = None
         try:
             x_client = get_x_client()
+            logger.debug(f"X client initialized for {symbol}")
         except Exception as e:
             logger.warning(f"Failed to initialize X client: {e}")
             x_client = None
