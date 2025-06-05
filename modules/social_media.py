@@ -185,8 +185,3 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
 async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession) -> Dict[str, any]:
     """Wrapper function for backward compatibility"""
     return await fetch_social_metrics_multi_source(coin_id, session)
-```
-
-```tool_code
-The code now incorporates multiple APIs (X, Reddit, CoinGecko) for enhanced social metric analysis, including sentiment analysis and mention counts, with caching and backward compatibility.
-</replit_final_file>
