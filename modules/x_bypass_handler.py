@@ -13,7 +13,7 @@ class XAPIBypassHandler:
     
     def __init__(self):
         self.posting_client = None
-        self.search_disabled = True  # Start with search DISABLED to prevent rate limits
+        self.search_disabled = True  # PERMANENTLY DISABLED to prevent rate limits
         
     def get_posting_client(self):
         """Get X client configured for posting only."""
@@ -53,9 +53,15 @@ class XAPIBypassHandler:
         return not self.search_disabled
     
     def enable_search(self):
-        """Manually enable search operations (use with caution)."""
+        """Manually enable search operations (DANGER: may cause rate limits)."""
+        logger.warning("⚠️  ENABLING X API SEARCH - This may cause rate limits!")
         self.search_disabled = False
         logger.info("X API search operations manually ENABLED")
+    
+    def force_disable_search(self):
+        """Force disable search operations permanently."""
+        self.search_disabled = True
+        logger.info("X API search operations FORCE DISABLED")
     
     def log_bypass_status(self):
         """Log the current bypass status."""

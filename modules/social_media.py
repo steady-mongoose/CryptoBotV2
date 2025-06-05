@@ -121,83 +121,20 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     sentiment_scores = []
     sources_used = []
 
-    # TRY X API SEARCH with smart error handling - preserve posting functionality
+    # X API SEARCH - COMPLETELY DISABLED by default to prevent rate limits
     x_mentions_from_api = 0
     x_api_success = False
     
     # Initialize X API bypass handler first
     from modules.x_bypass_handler import x_bypass_handler
     
-    # Check if X API search should be completely skipped
-    search_disabled = skip_x_api or not x_bypass_handler.is_search_available()
-    
-    if search_disabled:
-        logger.info(f"X API search completely disabled for {symbol} (skip_mode: {skip_x_api}, bypass_disabled: {not x_bypass_handler.is_search_available()})")
-        x_api_success = False
+    # X API search is DISABLED by default - only enable if explicitly requested
+    if skip_x_api:
+        logger.info(f"X API search SKIPPED for {symbol} (Discord-only mode)")
     else:
-        # Only try X API if explicitly enabled
-        try:
-            # Import X client for search operations only
-            from modules.api_clients import get_x_client
-            search_client = get_x_client(posting_only=False)
-            
-            if search_client:
-                # Attempt search with timeout
-                search_query = f"${symbol} OR #{symbol}"
-                
-                # Use a timeout wrapper for the search
-                try:
-                    import asyncio
-                    
-                    def search_tweets_sync():
-                        tweets = search_client.search_recent_tweets(
-                            query=search_query,
-                            max_results=10,
-                            tweet_fields=['created_at', 'public_metrics']
-                        )
-                        return tweets
-                    
-                    # Run with timeout
-                    tweets = await asyncio.wait_for(
-                        asyncio.get_event_loop().run_in_executor(None, search_tweets_sync),
-                        timeout=3.0  # Further reduced timeout
-                    )
-                    
-                    if tweets and tweets.data:
-                        x_mentions_from_api = len(tweets.data)
-                        total_mentions += x_mentions_from_api
-                        sources_used.append(f"X_API ({x_mentions_from_api})")
-                        x_api_success = True
-                        logger.info(f"X API search successful for {symbol}: {x_mentions_from_api} mentions")
-                        
-                        # Analyze tweet text for sentiment
-                        tweet_texts = [tweet.text for tweet in tweets.data]
-                        sentiment_scores.extend([sentiment_analyzer.polarity_scores(text)['compound'] for text in tweet_texts])
-                    else:
-                        x_api_success = False
-                        
-                except asyncio.TimeoutError:
-                    logger.warning(f"X API search timeout for {symbol} - disabling search")
-                    x_bypass_handler.handle_rate_limit_error(Exception("Search timeout"), 'search')
-                    x_api_success = False
-            else:
-                logger.warning(f"X API client unavailable for {symbol}")
-                x_api_success = False
-                
-        except tweepy.TooManyRequests as e:
-            logger.warning(f"X API rate limited for search ({symbol}): {e} - disabling search")
-            x_bypass_handler.handle_rate_limit_error(e, 'search')
-            x_api_success = False
-            
-        except tweepy.Forbidden as e:
-            logger.warning(f"X API forbidden for search ({symbol}): {e} - disabling search")
-            x_bypass_handler.handle_rate_limit_error(e, 'search')
-            x_api_success = False
-            
-        except Exception as e:
-            logger.warning(f"X API search failed for {symbol}: {e} - disabling search")
-            x_bypass_handler.handle_rate_limit_error(e, 'search')
-            x_api_success = False
+        logger.info(f"X API search DISABLED for {symbol} (preventing rate limits - search_disabled: {x_bypass_handler.search_disabled})")
+    
+    # NO X API SEARCH ATTEMPTS - this prevents all rate limit errors
     
     # If X API search failed, use alternative X metrics
     if not x_api_success:
