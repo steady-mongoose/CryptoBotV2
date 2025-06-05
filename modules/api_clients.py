@@ -22,8 +22,13 @@ X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
 X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
 X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 
-def get_x_client() -> tweepy.Client:
-    """Initialize and return the X API client using Tweepy with Twitter API v2 and rate limit handling."""
+def get_x_client(posting_only: bool = False) -> tweepy.Client:
+    """
+    Initialize and return the X API client using Tweepy with Twitter API v2 and rate limit handling.
+    
+    Args:
+        posting_only: If True, only initialize for posting (no search/read operations)
+    """
     try:
         # Log the presence of credentials (without revealing their values)
         logger.debug(f"X API Credentials - Consumer Key set: {bool(X_API_KEY)}, "
@@ -35,15 +40,22 @@ def get_x_client() -> tweepy.Client:
         if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET, X_BEARER_TOKEN]):
             raise ValueError("Missing one or more X API credentials (X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET, X_BEARER_TOKEN)")
 
+        # Configure client with conservative rate limit handling for posting-only mode
+        wait_on_rate_limit = True if not posting_only else False
+        
         client = tweepy.Client(
             bearer_token=X_BEARER_TOKEN,
             consumer_key=X_API_KEY,
             consumer_secret=X_API_SECRET,
             access_token=X_ACCESS_TOKEN,
             access_token_secret=X_ACCESS_TOKEN_SECRET,
-            wait_on_rate_limit=True  # Enable automatic rate limit handling
+            wait_on_rate_limit=wait_on_rate_limit
         )
-        logger.debug("X API client initialized successfully with rate limit handling enabled.")
+        
+        if posting_only:
+            logger.debug("X API client initialized for POSTING ONLY (bypassing search to avoid 429 errors)")
+        else:
+            logger.debug("X API client initialized with full functionality and rate limit handling enabled.")
 
         # Test the client with a simple API call to verify authentication
         try:
@@ -55,6 +67,13 @@ def get_x_client() -> tweepy.Client:
         except tweepy.Forbidden as e:
             logger.error(f"Failed to authenticate with X API: Forbidden - {e}. Check if the app or account is restricted.")
             return None
+        except tweepy.TooManyRequests as e:
+            if posting_only:
+                logger.warning(f"Rate limited during auth test - client still usable for posting: {e}")
+                return client  # Return client anyway for posting
+            else:
+                logger.error(f"Rate limited during authentication: {e}")
+                return None
         except tweepy.TweepyException as e:
             logger.error(f"Failed to authenticate with X API: {e}")
             return None

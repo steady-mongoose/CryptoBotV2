@@ -75,11 +75,11 @@ class XThreadQueue:
                     time.sleep(60)  # Wait 1 minute before checking again
                     continue
                     
-                # Initialize client if needed
+                # Initialize client if needed (posting-only to avoid rate limit conflicts)
                 if not self.client:
-                    self.client = get_x_client()
+                    self.client = get_x_client(posting_only=True)
                     if not self.client:
-                        logger.error("Failed to initialize X client, retrying in 60 seconds")
+                        logger.error("Failed to initialize X posting client, retrying in 60 seconds")
                         time.sleep(60)
                         continue
                 

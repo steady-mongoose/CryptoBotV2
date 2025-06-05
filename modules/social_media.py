@@ -59,7 +59,8 @@ def save_social_metrics_cache(cache: Dict[str, Dict]):
 
 async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = False) -> Dict[str, any]:
     """
-    Fetch social metrics using multiple APIs: X API v2, Reddit API, and sentiment analysis.
+    Fetch social metrics using multiple APIs: Alternative APIs, Reddit API, and sentiment analysis.
+    X API search is bypassed to avoid 429 errors - only posting functionality is preserved.
     """
     if skip_x_api:
         logger.info(f"Skipping ALL X API interactions for {coin_id} (Discord-only mode)")
@@ -119,60 +120,15 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     sentiment_scores = []
     sources_used = []
 
-    # Try X API v2 for recent mentions (skip if Discord-only mode)
-    if not skip_x_api:
-        x_client = None
-        try:
-            x_client = get_x_client()
-            logger.debug(f"X client initialized for {symbol}")
-        except Exception as e:
-            logger.warning(f"Failed to initialize X client: {e}")
-            x_client = None
-        
-        if x_client:
-            try:
-                # Check if we can use search API or if we need alternative approach
-                search_query = f"${symbol} OR #{symbol} -is:retweet lang:en"
-                logger.debug(f"Attempting X search for: {search_query}")
-
-                tweets = x_client.search_recent_tweets(
-                    query=search_query,
-                    max_results=10,  # Reduced for free tier
-                    tweet_fields=['created_at', 'public_metrics']
-                )
-
-                if tweets.data:
-                    x_mentions = len(tweets.data)
-                    total_mentions += x_mentions
-                    # Collect tweet text for sentiment
-                    tweet_texts = [tweet.text for tweet in tweets.data]
-                    sentiment_scores.extend([sentiment_analyzer.polarity_scores(text)['compound'] for text in tweet_texts])
-                    sources_used.append(f"X_API ({x_mentions})")
-                    logger.info(f"X API search successful: {x_mentions} mentions for {symbol}")
-
-            except tweepy.TooManyRequests:
-                logger.warning(f"X API rate limit exceeded for {symbol} - using alternative metrics")
-                # Use alternative X metrics without search
-                x_alternative_mentions = await get_x_alternative_metrics(symbol, session)
-                if x_alternative_mentions > 0:
-                    total_mentions += x_alternative_mentions
-                    sources_used.append(f"X_alt ({x_alternative_mentions})")
-            except tweepy.Forbidden:
-                logger.warning(f"X API search forbidden for {symbol} (likely free tier) - using alternatives")
-                # Use alternative X metrics without search
-                x_alternative_mentions = await get_x_alternative_metrics(symbol, session)
-                if x_alternative_mentions > 0:
-                    total_mentions += x_alternative_mentions
-                    sources_used.append(f"X_alt ({x_alternative_mentions})")
-            except Exception as e:
-                logger.error(f"Error fetching X data for {symbol}: {str(e)} - using alternatives")
-                # Use alternative X metrics without search
-                x_alternative_mentions = await get_x_alternative_metrics(symbol, session)
-                if x_alternative_mentions > 0:
-                    total_mentions += x_alternative_mentions
-                    sources_used.append(f"X_alt ({x_alternative_mentions})")
-    else:
-        logger.info(f"Skipping X API calls for {symbol} (Discord-only mode)")
+    # BYPASS X API SEARCH ENTIRELY to avoid 429 errors
+    # X API is only preserved for posting functionality in other modules
+    logger.info(f"Bypassing X API search for {symbol} to avoid rate limits - using alternative sources")
+    
+    # Use alternative X metrics without any X API calls
+    x_alternative_mentions = await get_x_alternative_metrics(symbol, session)
+    if x_alternative_mentions > 0:
+        total_mentions += x_alternative_mentions
+        sources_used.append(f"X_alt ({x_alternative_mentions})")
 
     # Try Reddit API for additional social data
     try:
