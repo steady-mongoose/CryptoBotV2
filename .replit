@@ -23,6 +23,23 @@ args = "python generate_thread_template.py"
 task = "shell.exec"
 args = "echo \"✅ Template generated! Check the output file for manual posting.\""
 
+[[workflows.workflow]]
+name = "Run Production Bot"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Running production crypto bot with multi-source data...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"Using Binance US, Coinbase, CoinGecko, X API, and Reddit for dynamic data\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py"
+
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
