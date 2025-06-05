@@ -237,8 +237,9 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
     # Always try to get volume data (even with rate limiting)
     await asyncio.sleep(5)  # Brief pause between API calls
 
-            # Fetch transaction volume and historical data
-            url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}/market_chart?vs_currency=usd&days=1"
+    try:
+        # Fetch transaction volume and historical data
+        url = f"https://api.coingecko.com/api/v3/coins/{coingecko_id}/market_chart?vs_currency=usd&days=1"
             async with session.get(url) as response:
                 if response.status == 429:  # Rate limited on second call
                     logger.warning(f"Rate limited on historical data for {coingecko_id}")
