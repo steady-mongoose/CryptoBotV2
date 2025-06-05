@@ -893,10 +893,27 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             logger.info(f"Starting X posting with immediate queue system - {mode_desc} (avoiding rate limits)")
 
             # Verify X client can be initialized before starting queue
+            logger.info("🔑 Verifying X API credentials...")
             test_client = get_x_client(posting_only=True)
             if not test_client:
-                logger.error("Cannot start X posting - X API client initialization failed")
-                logger.error("Please check your X API credentials in Secrets")
+                logger.error("❌ CRITICAL ERROR: Cannot start X posting - X API client initialization failed")
+                logger.error("🔑 Missing or invalid X API credentials. Please check Secrets for:")
+                logger.error("  - X_CONSUMER_KEY")
+                logger.error("  - X_CONSUMER_SECRET") 
+                logger.error("  - X_ACCESS_TOKEN")
+                logger.error("  - X_ACCESS_TOKEN_SECRET")
+                logger.error("💡 Use the Secrets tool to add these credentials")
+                return
+            else:
+                logger.info("✅ X API credentials verified successfully")
+                
+            # Test authentication
+            try:
+                user_info = test_client.get_me()
+                logger.info(f"✅ Authenticated as X user: @{user_info.data.username}")
+            except Exception as auth_error:
+                logger.error(f"❌ X API authentication test failed: {auth_error}")
+                logger.error("🔑 Please verify your X API credentials are correct")
                 return
 
             # Start the queue worker

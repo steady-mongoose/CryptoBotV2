@@ -81,13 +81,15 @@ class XThreadQueue:
                     try:
                         self.client = get_x_client(posting_only=True)
                         if not self.client:
-                            logger.error("Failed to initialize X posting client - missing credentials or API error")
-                            logger.error("Please check X API credentials in Secrets:")
+                            logger.error("❌ CRITICAL: Failed to initialize X posting client")
+                            logger.error("🔑 Missing or invalid X API credentials in Secrets:")
                             logger.error("  - X_CONSUMER_KEY")
                             logger.error("  - X_CONSUMER_SECRET") 
                             logger.error("  - X_ACCESS_TOKEN")
                             logger.error("  - X_ACCESS_TOKEN_SECRET")
-                            time.sleep(60)
+                            logger.error("🚨 X posting will not work until credentials are fixed")
+                            logger.error("⏸️  Queue worker will retry in 2 minutes...")
+                            time.sleep(120)  # Wait longer for credential fixes
                             continue
                         logger.info("✅ X queue worker initialized with POSTING-ONLY client")
                         
