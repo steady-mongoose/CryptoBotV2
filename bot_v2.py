@@ -112,46 +112,46 @@ def get_youtube_service():
 
 async def fetch_price_multi_source(coin_symbol: str, session: aiohttp.ClientSession, max_retries=3):
     """Fetch price from multiple sources: Binance US, Coinbase, CoinGecko"""
-    
+
     # Map symbols for different exchanges
     binance_symbol_map = {
         'XRP': 'XRPUSD', 'HBAR': 'HBARUSD', 'XLM': 'XLMUSD', 
         'SUI': 'SUIUSD', 'ONDO': 'ONDOUSD', 'ALGO': 'ALGOUSD'
     }
-    
+
     sources = [
         ('Binance US', f"https://api.binance.us/api/v3/ticker/price?symbol={binance_symbol_map.get(coin_symbol, coin_symbol + 'USD')}"),
         ('Coinbase', f"https://api.coinbase.com/v2/prices/{coin_symbol}-USD/spot"),
         ('CoinGecko', None)  # Will use existing CoinGecko logic
     ]
-    
+
     for source_name, url in sources:
         if source_name == 'CoinGecko':
             continue  # Skip for now, handled separately
-            
+
         for attempt in range(max_retries):
             try:
                 logger.debug(f"Fetching {coin_symbol} price from {source_name} (attempt {attempt + 1})")
-                
+
                 async with session.get(url) as response:
                     if response.status == 200:
                         data = await response.json()
-                        
+
                         if source_name == 'Binance US':
                             price = float(data['price'])
                         elif source_name == 'Coinbase':
                             price = float(data['data']['amount'])
-                        
+
                         logger.info(f"Successfully fetched {coin_symbol} price from {source_name}: ${price:.4f}")
                         return price, source_name
                     else:
                         logger.warning(f"Failed to fetch {coin_symbol} from {source_name} (status: {response.status})")
-                        
+
             except Exception as e:
                 logger.error(f"Error fetching {coin_symbol} from {source_name}: {str(e)}")
-                
+
             await asyncio.sleep(1)
-    
+
     logger.warning(f"All price sources failed for {coin_symbol}")
     return None, None
 
@@ -164,9 +164,9 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
         'xinfin-network': 'XDC', 'sui': 'SUI', 'ondo-finance': 'ONDO',
         'algorand': 'ALGO', 'casper-network': 'CSPR'
     }
-    
+
     coin_symbol = coin_symbol_map.get(coingecko_id, 'BTC')
-    
+
     # Fallback data (now more conservative, will be overridden by real data)
     fallback_data = {
         'ripple': {'price': 2.21, 'change_24h': 5.2, 'volume': 1800.0},
@@ -178,10 +178,10 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
         'algorand': {'price': 0.42, 'change_24h': 1.9, 'volume': 85.0},
         'casper-network': {'price': 0.021, 'change_24h': -0.5, 'volume': 12.0}
     }
-    
+
     # Try to get real-time price from multiple sources first
     real_time_price, price_source = await fetch_price_multi_source(coin_symbol, session)
-    
+
     price = None
     price_change_24h = None
 
@@ -197,7 +197,7 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
                     continue
                 elif response.status == 200:
                     data = await response.json()
-                    
+
                     # Use CoinGecko price if we don't have real-time price, otherwise use real-time
                     if real_time_price is None:
                         price = float(data['market_data']['current_price']['usd'])
@@ -205,7 +205,7 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
                     else:
                         price = real_time_price
                         logger.info(f"Using {price_source} price for {coingecko_id}: ${price:.4f}")
-                    
+
                     price_change_24h = float(data['market_data']['price_change_percentage_24h'])
                     break
                 else:
@@ -261,11 +261,11 @@ async def fetch_coingecko_data(coingecko_id: str, session: aiohttp.ClientSession
                 logger.info(f"Successfully fetched all data for {coingecko_id}")
                 return price, price_change_24h, tx_volume, historical_prices
 
-        except Exception as e:
-            logger.error(f"Error fetching data for {coingecko_id} (attempt {attempt + 1}): {str(e)}")
-            if attempt < max_retries - 1:
-                await asyncio.sleep(10 * (attempt + 1))
-                continue
+    except Exception as e:
+        logger.error(f"Error fetching data for {coingecko_id} (attempt {attempt + 1}): {str(e)}")
+        if attempt < max_retries - 1:
+            await asyncio.sleep(10 * (attempt + 1))
+            continue
 
     # Use fallback data if all attempts failed
     logger.warning(f"Using fallback data for {coingecko_id} after {max_retries} failed attempts")
@@ -326,7 +326,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
                     thumbnail_url = item['snippet']['thumbnails'].get('high', {}).get('url', 
                                   item['snippet']['thumbnails'].get('medium', {}).get('url', 
                                   item['snippet']['thumbnails'].get('default', {}).get('url', '')))
-                    
+
                     db.add_used_video(coin, video_id, current_date)
                     logger.info(f"Fetched YouTube video for {coin}: {title}")
                     return {
@@ -637,7 +637,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
 
                 previous_tweet_id = main_tweet.data['id']
                 for data in results:
-                    reply_text = format_tweet(data)
+                    reply_text= format_tweet(data)
                     try:
                         reply_tweet = x_client.create_tweet(
                             text=reply_text,
