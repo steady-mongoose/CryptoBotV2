@@ -13,7 +13,7 @@ class XAPIBypassHandler:
     
     def __init__(self):
         self.posting_client = None
-        self.search_disabled = False  # Start with search enabled, disable only on errors
+        self.search_disabled = True  # Start with search DISABLED to prevent rate limits
         
     def get_posting_client(self):
         """Get X client configured for posting only."""
@@ -52,10 +52,15 @@ class XAPIBypassHandler:
         """Check if search functionality should be used."""
         return not self.search_disabled
     
+    def enable_search(self):
+        """Manually enable search operations (use with caution)."""
+        self.search_disabled = False
+        logger.info("X API search operations manually ENABLED")
+    
     def log_bypass_status(self):
         """Log the current bypass status."""
         logger.info("X API Smart Bypass Status:")
-        search_status = "DISABLED (due to errors)" if self.search_disabled else "ENABLED"
+        search_status = "DISABLED (preventing rate limits)" if self.search_disabled else "ENABLED"
         logger.info(f"  - Search operations: {search_status}")
         logger.info(f"  - Posting operations: ENABLED (always preserved)")
         logger.info(f"  - Social metrics: {'Alternative APIs only' if self.search_disabled else 'X API + alternatives'}")
