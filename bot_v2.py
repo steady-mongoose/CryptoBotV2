@@ -313,7 +313,73 @@ def predict_price(historical_prices, current_price):
         logger.error(f"Error predicting price: {str(e)}")
         return current_price * 1.005
 
-async def fetch_youtube_video(youtube, coin: str, current_date: str):
+async def fetch_rumble_video(coin: str, session: aiohttp.ClientSession):
+    """Fetch video from Rumble as YouTube alternative."""
+    try:
+        # Rumble search queries
+        search_queries = [
+            f"{coin} crypto 2025",
+            f"{coin} cryptocurrency news", 
+            f"{coin} price prediction",
+            f"{coin} analysis"
+        ]
+        
+        for search_query in search_queries:
+            # Use Rumble search URL (web scraping approach)
+            search_url = f"https://rumble.com/search/video?q={search_query.replace(' ', '+')}"
+            
+            try:
+                async with session.get(search_url, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        
+                        # Simple regex to find Rumble video links
+                        import re
+                        video_pattern = r'href="(/v[^"]+)"[^>]*>([^<]+)</a>'
+                        matches = re.findall(video_pattern, html)
+                        
+                        if matches:
+                            video_path, title = matches[0]
+                            video_url = f"https://rumble.com{video_path}"
+                            
+                            logger.info(f"Found Rumble video for {coin}: {title[:50]}...")
+                            return {
+                                "title": title.strip(),
+                                "url": video_url,
+                                "thumbnail_url": "",
+                                "video_id": video_path.split('/')[-1],
+                                "source": "Rumble"
+                            }
+                        
+                await asyncio.sleep(2)  # Respect rate limits
+                        
+            except Exception as e:
+                logger.error(f"Error searching Rumble for {search_query}: {e}")
+                continue
+        
+        # Fallback to generic Rumble search
+        logger.warning(f"No specific videos found on Rumble for {coin}")
+        return {
+            "title": f"{coin.title()} Crypto Content on Rumble",
+            "url": f"https://rumble.com/search/video?q={coin.replace(' ', '+')}+crypto",
+            "thumbnail_url": "",
+            "video_id": "",
+            "source": "Rumble"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching Rumble video for {coin}: {e}")
+        return {
+            "title": f"{coin.title()} Crypto Updates",
+            "url": f"https://rumble.com/search/video?q={coin.replace(' ', '+')}+crypto",
+            "thumbnail_url": "",
+            "video_id": "",
+            "source": "Rumble"
+        }
+
+async def fetch_youtube_video(youtube, coin: str, current_date: str, session: aiohttp.ClientSession = None):
     try:
         # Try multiple search queries for better results
         search_queries = [
@@ -324,77 +390,110 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
         ]
 
         for search_query in search_queries:
+            try:
+                request = youtube.search().list(
+                    part="snippet",
+                    q=search_query,
+                    type="video",
+                    maxResults=10,  # Increased for better selection
+                    publishedAfter="2024-01-01T00:00:00Z"  # Only recent videos
+                )
+                response = request.execute()
+
+                for item in response.get('items', []):
+                    video_id = item['id']['videoId']
+                    if not db.has_video_been_used(video_id):
+                        title = item['snippet']['title']
+                        url = f"https://youtu.be/{video_id}"
+                        # Get video thumbnail for image posting
+                        thumbnail_url = item['snippet']['thumbnails'].get('high', {}).get('url', 
+                                      item['snippet']['thumbnails'].get('medium', {}).get('url', 
+                                      item['snippet']['thumbnails'].get('default', {}).get('url', '')))
+
+                        db.add_used_video(coin, video_id, current_date)
+                        logger.info(f"Fetched YouTube video for {coin}: {title}")
+                        return {
+                            "title": title, 
+                            "url": url,
+                            "thumbnail_url": thumbnail_url,
+                            "video_id": video_id,
+                            "source": "YouTube"
+                        }
+            except HttpError as e:
+                if "quotaExceeded" in str(e) or "quota" in str(e).lower():
+                    logger.warning(f"YouTube API quota exceeded for {coin}, switching to Rumble")
+                    if session:
+                        return await fetch_rumble_video(coin, session)
+                    else:
+                        logger.error("No session available for Rumble fallback")
+                        break
+                else:
+                    logger.error(f"YouTube API error for query '{search_query}': {e}")
+                    continue
+
+        # If no unused videos found, try one more YouTube attempt
+        try:
+            logger.warning(f"No unused YouTube videos found for {coin}, trying most recent video.")
+            final_query = f"{coin} crypto 2025"
             request = youtube.search().list(
                 part="snippet",
-                q=search_query,
+                q=final_query,
                 type="video",
-                maxResults=10,  # Increased for better selection
-                publishedAfter="2024-01-01T00:00:00Z"  # Only recent videos
+                maxResults=1,
+                publishedAfter="2024-01-01T00:00:00Z"
             )
             response = request.execute()
 
-            for item in response.get('items', []):
-                video_id = item['id']['videoId']
-                if not db.has_video_been_used(video_id):
-                    title = item['snippet']['title']
-                    url = f"https://youtu.be/{video_id}"
-                    # Get video thumbnail for image posting
-                    thumbnail_url = item['snippet']['thumbnails'].get('high', {}).get('url', 
-                                  item['snippet']['thumbnails'].get('medium', {}).get('url', 
-                                  item['snippet']['thumbnails'].get('default', {}).get('url', '')))
+            if response.get('items'):
+                item = response['items'][0]
+                title = item['snippet']['title']
+                url = f"https://youtu.be/{item['id']['videoId']}"
+                thumbnail_url = item['snippet']['thumbnails'].get('high', {}).get('url', 
+                              item['snippet']['thumbnails'].get('medium', {}).get('url', ''))
+                logger.info(f"Using recent video for {coin} (may be reused): {title}")
+                return {
+                    "title": title, 
+                    "url": url,
+                    "thumbnail_url": thumbnail_url,
+                    "video_id": item['id']['videoId'],
+                    "source": "YouTube"
+                }
+        except HttpError as e:
+            if "quotaExceeded" in str(e) or "quota" in str(e).lower():
+                logger.warning(f"YouTube API quota exceeded on final attempt for {coin}, using Rumble")
+                if session:
+                    return await fetch_rumble_video(coin, session)
 
-                    db.add_used_video(coin, video_id, current_date)
-                    logger.info(f"Fetched YouTube video for {coin}: {title}")
-                    return {
-                        "title": title, 
-                        "url": url,
-                        "thumbnail_url": thumbnail_url,
-                        "video_id": video_id
-                    }
-
-        # If no unused videos found, use the most recent one anyway but don't mark as used
-        logger.warning(f"No unused YouTube videos found for {coin}, using most recent video.")
-        final_query = f"{coin} crypto 2025"
-        request = youtube.search().list(
-            part="snippet",
-            q=final_query,
-            type="video",
-            maxResults=1,
-            publishedAfter="2024-01-01T00:00:00Z"
-        )
-        response = request.execute()
-
-        if response.get('items'):
-            item = response['items'][0]
-            title = item['snippet']['title']
-            url = f"https://youtu.be/{item['id']['videoId']}"
-            thumbnail_url = item['snippet']['thumbnails'].get('high', {}).get('url', 
-                          item['snippet']['thumbnails'].get('medium', {}).get('url', ''))
-            logger.info(f"Using recent video for {coin} (may be reused): {title}")
+        # Final fallback - generic crypto content or Rumble if session available
+        if session:
+            logger.info(f"All YouTube attempts failed for {coin}, using Rumble fallback")
+            return await fetch_rumble_video(coin, session)
+        else:
+            logger.warning(f"No videos found for {coin}, using generic YouTube fallback.")
             return {
-                "title": title, 
-                "url": url,
-                "thumbnail_url": thumbnail_url,
-                "video_id": item['id']['videoId']
+                "title": f"Latest {coin.title()} Crypto Analysis", 
+                "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025",
+                "thumbnail_url": "",
+                "video_id": "",
+                "source": "YouTube"
             }
 
-        # Final fallback - generic crypto content
-        logger.warning(f"No videos found for {coin}, using generic fallback.")
-        return {
-            "title": f"Latest {coin.title()} Crypto Analysis", 
-            "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025",
-            "thumbnail_url": "",
-            "video_id": ""
-        }
-
     except HttpError as e:
-        logger.error(f"Error fetching YouTube video for {coin}: {str(e)}")
+        logger.error(f"YouTube API error for {coin}: {str(e)}")
+        
+        # Check if it's a quota/rate limit error
+        if "quotaExceeded" in str(e) or "quota" in str(e).lower() or "429" in str(e):
+            logger.warning(f"YouTube rate limited for {coin}, falling back to Rumble")
+            if session:
+                return await fetch_rumble_video(coin, session)
+        
         # Fallback to search URL instead of N/A
         return {
             "title": f"{coin.title()} Crypto Updates", 
             "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto",
             "thumbnail_url": "",
-            "video_id": ""
+            "video_id": "",
+            "source": "YouTube"
         }
 
 async def research_top_projects(coingecko_id: str, coin_symbol: str, session: aiohttp.ClientSession):
@@ -558,7 +657,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 'top_project_type': top_project_info.get('type', 'Exchange'),
                 'hashtag': coin['hashtag'],
                 'social_metrics': social_metrics,
-                'youtube_video': await fetch_youtube_video(youtube, coin['name'], current_date),
+                'youtube_video': await fetch_youtube_video(youtube, coin['name'], current_date, session),
                 'project_research': project_research
             }
 
