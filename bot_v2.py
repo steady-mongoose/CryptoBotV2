@@ -9,12 +9,18 @@ from sklearn.linear_model import LinearRegression
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import tweepy
-from modules.api_clients import get_x_client, get_youtube_api_key
-from modules.social_media import fetch_social_metrics
-from modules.binance_us import binance_us_api
-from modules.database import Database
-from modules.x_thread_queue import start_x_queue, stop_x_queue, queue_x_thread, queue_x_post, get_x_queue_status
-from modules.x_bypass_handler import x_bypass_handler
+
+# Import modules with error handling
+try:
+    from modules.api_clients import get_x_client, get_youtube_api_key
+    from modules.social_media import fetch_social_metrics
+    from modules.binance_us import binance_us_api
+    from modules.database import Database
+    from modules.x_thread_queue import start_x_queue, stop_x_queue, queue_x_thread, queue_x_post, get_x_queue_status
+    from modules.x_bypass_handler import x_bypass_handler
+except ImportError as e:
+    logging.error(f"Failed to import required modules: {e}")
+    raise
 
 # Configure logging
 logging.basicConfig(
@@ -487,12 +493,16 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
     # Only initialize X client if we're not in Discord-only mode
     x_client = None
     if not test_discord:
-        # Initialize client for POSTING ONLY to bypass rate limit issues
-        x_client = get_x_client(posting_only=True)
-        if not x_client:
-            logger.error("Cannot proceed without X API client.")
+        try:
+            # Initialize client for POSTING ONLY to bypass rate limit issues
+            x_client = get_x_client(posting_only=True)
+            if not x_client:
+                logger.error("Cannot proceed without X API client.")
+                return
+            logger.info("X API client initialized for POSTING ONLY - bypassing all search/rate check features")
+        except Exception as e:
+            logger.error(f"Failed to initialize X API client: {e}")
             return
-        logger.info("X API client initialized for POSTING ONLY - bypassing all search/rate check features")
     else:
         logger.info("Discord-only mode: Skipping X client initialization")
 
