@@ -61,6 +61,8 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
             timestamp = cache[coin_id]["timestamp"]
             if isinstance(timestamp, str):
                 cached_time = datetime.fromisoformat(timestamp)
+            elif isinstance(timestamp, float):
+                cached_time = datetime.fromtimestamp(timestamp)
             else:
                 # If timestamp is already a datetime object, use it directly
                 cached_time = timestamp
@@ -84,6 +86,8 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
         timestamp = cache[coin_id]["timestamp"]
         if isinstance(timestamp, str):
             cached_time = datetime.fromisoformat(timestamp)
+        elif isinstance(timestamp, float):
+            cached_time = datetime.fromtimestamp(timestamp)
         else:
             # If timestamp is already a datetime object, use it directly
             cached_time = timestamp
