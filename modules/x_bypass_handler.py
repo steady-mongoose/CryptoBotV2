@@ -26,7 +26,7 @@ class XAPIBypassHandler:
         """Return True if search is available, False if disabled due to errors."""
         return not self.search_disabled
     
-    def handle_rate_limit_error(self, error: tweepy.TooManyRequests, operation: str) -> bool:
+    def handle_rate_limit_error(self, error, operation: str) -> bool:
         """
         Handle rate limit errors by disabling search operations but preserving posting.
         

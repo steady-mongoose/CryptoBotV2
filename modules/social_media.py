@@ -128,53 +128,56 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     try:
         from modules.x_bypass_handler import x_bypass_handler
         
-        # Only attempt X search if bypass handler allows it
-        if not x_bypass_handler.is_search_available():
-            logger.info(f"X API search disabled by bypass handler for {symbol}")
-            raise Exception("X API search disabled")
-        
-        # Import X client for search operations only
-        from modules.api_clients import get_x_client
-        search_client = get_x_client(posting_only=False)
-        
-        if search_client:
-            # Attempt search with timeout
-            search_query = f"${symbol} OR #{symbol}"
+        # Only attempt X search if bypass handler allows it AND we're not in skip mode
+        if not x_bypass_handler.is_search_available() or skip_x_api:
+            logger.info(f"X API search disabled for {symbol} (bypass: {not x_bypass_handler.is_search_available()}, skip: {skip_x_api})")
+            x_api_success = False
+        else:
+            # Import X client for search operations only
+            from modules.api_clients import get_x_client
+            search_client = get_x_client(posting_only=False)
             
-            # Use a timeout wrapper for the search
-            try:
-                import asyncio
+            if search_client:
+                # Attempt search with timeout
+                search_query = f"${symbol} OR #{symbol}"
                 
-                def search_tweets_sync():
-                    tweets = search_client.search_recent_tweets(
-                        query=search_query,
-                        max_results=10,
-                        tweet_fields=['created_at', 'public_metrics']
+                # Use a timeout wrapper for the search
+                try:
+                    import asyncio
+                    
+                    def search_tweets_sync():
+                        tweets = search_client.search_recent_tweets(
+                            query=search_query,
+                            max_results=10,
+                            tweet_fields=['created_at', 'public_metrics']
+                        )
+                        return tweets
+                    
+                    # Run with timeout
+                    tweets = await asyncio.wait_for(
+                        asyncio.get_event_loop().run_in_executor(None, search_tweets_sync),
+                        timeout=5.0  # Reduced timeout to 5 seconds
                     )
-                    return tweets
-                
-                # Run with timeout
-                tweets = await asyncio.wait_for(
-                    asyncio.get_event_loop().run_in_executor(None, search_tweets_sync),
-                    timeout=10.0  # 10 second timeout
-                )
-                
-                if tweets.data:
-                    x_mentions_from_api = len(tweets.data)
-                    total_mentions += x_mentions_from_api
-                    sources_used.append(f"X_API ({x_mentions_from_api})")
-                    x_api_success = True
-                    logger.info(f"X API search successful for {symbol}: {x_mentions_from_api} mentions")
                     
-                    # Analyze tweet text for sentiment
-                    tweet_texts = [tweet.text for tweet in tweets.data]
-                    sentiment_scores.extend([sentiment_analyzer.polarity_scores(text)['compound'] for text in tweet_texts])
+                    if tweets.data:
+                        x_mentions_from_api = len(tweets.data)
+                        total_mentions += x_mentions_from_api
+                        sources_used.append(f"X_API ({x_mentions_from_api})")
+                        x_api_success = True
+                        logger.info(f"X API search successful for {symbol}: {x_mentions_from_api} mentions")
+                        
+                        # Analyze tweet text for sentiment
+                        tweet_texts = [tweet.text for tweet in tweets.data]
+                        sentiment_scores.extend([sentiment_analyzer.polarity_scores(text)['compound'] for text in tweet_texts])
+                        
+                    await asyncio.sleep(1)  # Reduced rate limit delay
                     
-                await asyncio.sleep(2)  # Rate limit compliance
-                
-            except asyncio.TimeoutError:
-                logger.warning(f"X API search timeout for {symbol} - using alternatives")
-                raise Exception("X API search timeout")
+                except asyncio.TimeoutError:
+                    logger.warning(f"X API search timeout for {symbol} - using alternatives")
+                    x_bypass_handler.handle_rate_limit_error(Exception("Timeout"), 'search')
+                    x_api_success = False
+            else:
+                x_api_success = False
                 
     except tweepy.TooManyRequests as e:
         logger.warning(f"X API rate limited for search ({symbol}): {e}")
@@ -189,6 +192,7 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
         
     except Exception as e:
         logger.warning(f"X API search failed for {symbol}: {e} - using alternatives")
+        x_bypass_handler.handle_rate_limit_error(e, 'search')
         x_api_success = False
     
     # If X API search failed, use alternative X metrics
