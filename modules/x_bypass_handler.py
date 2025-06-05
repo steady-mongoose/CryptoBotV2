@@ -49,7 +49,7 @@ class XAPIBypassHandler:
             logger.warning(f"X API posting rate limited: {error} - Will retry via queue")
             return True  # Can retry posting via queue system
         else:
-            logger.warning(f"X API rate limited for {operation}: {error}")
+            logger.warning(f"Unknown operation rate limited: {operation}")
             return False
 
     def is_search_available(self) -> bool:
@@ -70,5 +70,5 @@ class XAPIBypassHandler:
         logger.info(f"  - Posting operations: ENABLED (always preserved)")
         logger.info(f"  - Social metrics: {'Alternative APIs only' if self.search_disabled else 'X API + alternatives'}")
 
-# Global bypass handler instance
+# Global instance
 x_bypass_handler = XAPIBypassHandler()
