@@ -43,3 +43,44 @@ def main():
 
 if __name__ == "__main__":
     main()
+#!/usr/bin/env python3
+
+import logging
+from modules.x_thread_queue import get_x_queue_status
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('QueueChecker')
+
+def main():
+    """Check the current status of the X posting queue."""
+    print("🔍 Checking X posting queue status...")
+    
+    try:
+        status = get_x_queue_status()
+        
+        print(f"📊 Queue Status:")
+        print(f"   Posts in queue: {status['post_queue_size']}")
+        print(f"   Threads in queue: {status['thread_queue_size']}")
+        print(f"   Worker running: {status['worker_running']}")
+        print(f"   Rate limited: {status['rate_limited']}")
+        
+        if status['rate_limit_reset']:
+            print(f"   Rate limit reset: {status['rate_limit_reset']}")
+        
+        if status['post_queue_size'] > 0 or status['thread_queue_size'] > 0:
+            print("✅ Posts are queued for processing")
+        else:
+            print("ℹ️  No posts currently in queue")
+            
+        if status['worker_running']:
+            print("✅ Background worker is processing posts")
+        else:
+            print("⚠️  Background worker is not running")
+            
+    except Exception as e:
+        logger.error(f"Error checking queue status: {e}")
+        print("❌ Failed to check queue status")
+
+if __name__ == "__main__":
+    main()

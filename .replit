@@ -78,6 +78,31 @@ args = "python bot_v2.py --queue-only"
 task = "shell.exec"
 args = "echo \"✅ Posts queued for background processing\""
 
+[[workflows.workflow]]
+name = "Test X Queue Safe"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing X queue system (SAFE - no direct posting)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"This will queue posts for background processing to avoid rate limits\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Test completed - check queue status\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]

@@ -479,7 +479,7 @@ async def research_top_projects(coingecko_id: str, coin_symbol: str, session: ai
 
     return result
 
-async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False, simultaneous_post: bool = False):
+async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False, simultaneous_post: bool = False, queue_only: bool = False):
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
 
@@ -776,7 +776,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             else:
                 logger.info("Successfully posted to X, no Discord fallback needed")
 
-        elif queue_only or (not test_discord and not dual_post):
+        elif queue_only or (not test_discord and not dual_post and not simultaneous_post and not thread_mode):
             # Post to X using queue system immediately (no direct posting to avoid rate limits)
             mode_desc = "Queue-only mode" if queue_only else "Smart queue mode"
             logger.info(f"Starting X posting with immediate queue system - {mode_desc} (avoiding rate limits)")
@@ -817,15 +817,18 @@ if __name__ == "__main__":
                         help='Post to both X and Discord simultaneously, manual template on X failure')
     parser.add_argument('--queue-only', action='store_true',
                         help='Use X queue system only (no direct posting to avoid rate limits)')
+    parser.add_argument('--thread-mode', action='store_true',
+                        help='Post as a connected thread on X')
     args = parser.parse_args()
 
     test_discord = args.test_discord
     dual_post = args.dual_post
     simultaneous_post = args.simultaneous_post
     queue_only = args.queue_only
+    thread_mode = args.thread_mode
 
     try:
-        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post, thread_mode=args.thread, simultaneous_post=args.simultaneous_post))
+        asyncio.run(main_bot_run(test_discord=args.test_discord, dual_post=args.dual_post, thread_mode=args.thread_mode, simultaneous_post=args.simultaneous_post, queue_only=args.queue_only))
     except Exception as e:
         logger.error(f"Script failed with error: {str(e)}")
         raise
