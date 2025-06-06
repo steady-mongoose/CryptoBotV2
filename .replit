@@ -463,6 +463,43 @@ args = "echo \"📊 Content quality summary:\""
 task = "shell.exec"
 args = "python check_queue_status.py"
 
+[[workflows.workflow]]
+name = "Test Direct X Posting"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Testing DIRECT X posting (bypassing queue system)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  This will attempt immediate posting to X API\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Features: Price + Social + YouTube + Research (same as Discord)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  May hit rate limits on free tier\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --direct-x-post"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Results summary above - check for rate limit errors\""
+
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]

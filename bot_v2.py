@@ -1060,6 +1060,109 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             else:
                 logger.info("Successfully posted to X, no Discord fallback needed")
 
+        elif args.direct_x_post and not test_discord:
+            # DIRECT X POSTING MODE - Mirror Discord features exactly
+            logger.info("🚀 DIRECT X POSTING MODE - Mirroring Discord features")
+            logger.info("⚠️  Bypassing queue system for immediate posting test")
+            
+            try:
+                # Validate X client can post
+                if not x_client:
+                    logger.error("❌ X client not available - cannot post directly")
+                    logger.error("Check your X API credentials in Secrets:")
+                    logger.error("  - X_CONSUMER_KEY")
+                    logger.error("  - X_CONSUMER_SECRET")
+                    logger.error("  - X_ACCESS_TOKEN") 
+                    logger.error("  - X_ACCESS_TOKEN_SECRET")
+                    return
+                
+                # Test authentication first
+                try:
+                    user_info = x_client.get_me()
+                    logger.info(f"✅ X client authenticated for: @{user_info.data.username}")
+                except Exception as e:
+                    logger.error(f"❌ X authentication failed: {e}")
+                    logger.error("Your X API credentials may be invalid or expired")
+                    return
+                
+                # Post main tweet (mirrors Discord main post)
+                logger.info("📤 Posting main tweet to X...")
+                try:
+                    main_tweet = x_client.create_tweet(text=main_post['text'])
+                    main_tweet_id = main_tweet.data['id']
+                    logger.info(f"✅ Posted main tweet: {main_tweet_id}")
+                    print(f"🐦 Main tweet posted! ID: {main_tweet_id}")
+                    
+                    # Small delay before replies
+                    await asyncio.sleep(3)
+                    
+                except tweepy.TooManyRequests as e:
+                    logger.error(f"❌ RATE LIMITED on main tweet: {e}")
+                    logger.error("Your X account has hit the posting rate limit")
+                    logger.error("Free tier limit: 1,500 tweets/month (~50/day)")
+                    return
+                except tweepy.Forbidden as e:
+                    logger.error(f"❌ FORBIDDEN to post main tweet: {e}")
+                    logger.error("Your X account may be restricted or suspended")
+                    return
+                except Exception as e:
+                    logger.error(f"❌ Failed to post main tweet: {e}")
+                    return
+                
+                # Post individual coin replies (mirrors Discord coin posts)
+                previous_tweet_id = main_tweet_id
+                posted_coins = 0
+                
+                for i, data in enumerate(results):
+                    try:
+                        reply_text = format_tweet(data)
+                        logger.info(f"📤 Posting {data['coin_name']} reply ({i+1}/{len(results)})...")
+                        
+                        reply_tweet = x_client.create_tweet(
+                            text=reply_text,
+                            in_reply_to_tweet_id=previous_tweet_id
+                        )
+                        
+                        previous_tweet_id = reply_tweet.data['id']
+                        posted_coins += 1
+                        
+                        logger.info(f"✅ Posted {data['coin_name']} reply: {reply_tweet.data['id']}")
+                        print(f"🐦 {data['coin_name']} posted! ID: {reply_tweet.data['id']}")
+                        
+                        # Delay between posts to respect rate limits
+                        if i < len(results) - 1:  # Don't wait after last post
+                            await asyncio.sleep(5)  # 5 second delay
+                            
+                    except tweepy.TooManyRequests as e:
+                        logger.error(f"❌ RATE LIMITED on {data['coin_name']}: {e}")
+                        logger.error(f"Successfully posted {posted_coins}/{len(results)} coins before rate limit")
+                        logger.error("Free tier posting limit reached")
+                        break
+                    except tweepy.Forbidden as e:
+                        logger.error(f"❌ FORBIDDEN to post {data['coin_name']}: {e}")
+                        break
+                    except Exception as e:
+                        logger.error(f"❌ Failed to post {data['coin_name']}: {e}")
+                        continue
+                
+                # Final summary
+                if posted_coins == len(results):
+                    logger.info(f"🎉 SUCCESS: Posted all {posted_coins} coins to X!")
+                    logger.info("✅ X now has COMPLETE feature parity with Discord")
+                    print(f"\n🎉 COMPLETE SUCCESS!")
+                    print(f"📊 Posted: {posted_coins}/{len(results)} coins")
+                    print(f"🐦 Thread link: https://x.com/user/status/{main_tweet_id}")
+                else:
+                    logger.warning(f"⚠️  PARTIAL SUCCESS: Posted {posted_coins}/{len(results)} coins")
+                    logger.warning("Rate limits prevented complete posting")
+                    print(f"\n⚠️  Partial Success - Rate Limited")
+                    print(f"📊 Posted: {posted_coins}/{len(results)} coins")
+                    
+            except Exception as e:
+                logger.error(f"❌ CRITICAL ERROR in direct X posting: {e}")
+                logger.error("Direct posting failed - this is why queue system exists")
+                return
+
         elif queue_only or (not test_discord and not dual_post and not simultaneous_post and not thread_mode):
             # Post to X using queue system ONLY (absolutely no direct posting)
             mode_desc = "Queue-only mode" if queue_only else "Smart queue mode"
@@ -1135,6 +1238,8 @@ if __name__ == "__main__":
                         help='Use X queue system only (no direct posting to avoid rate limits)')
     parser.add_argument('--thread-mode', action='store_true',
                         help='Post as a connected thread on X')
+    parser.add_argument('--direct-x-post', action='store_true',
+                        help='Post directly to X (bypass queue) to test immediate posting')
     args = parser.parse_args()
 
     test_discord = args.test_discord
