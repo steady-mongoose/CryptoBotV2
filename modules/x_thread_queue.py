@@ -20,6 +20,7 @@ class XThreadQueue:
         self.is_running = False
         self.client = None
         self.rate_limit_reset_time = None
+        self.active_account = 1  # Start with account 1
 
     def start_worker(self):
         """Start the background worker thread."""
@@ -55,14 +56,14 @@ class XThreadQueue:
         """Queue an entire thread for posting with relaxed duplicate prevention."""
         import hashlib
         import os
-        
+
         # Generate content hash for duplicate detection
         content_hash = hashlib.md5(main_post_text.encode()).hexdigest()[:8]
         current_time = datetime.now()
-        
+
         # Create persistent state file for duplicate tracking
         state_file = "last_thread_state.txt"
-        
+
         # RELAXED duplicate checking - only block obvious spam
         if os.path.exists(state_file):
             try:
@@ -72,9 +73,9 @@ class XThreadQueue:
                         last_hash = last_data[0]
                         last_time_str = last_data[1]
                         last_time = datetime.fromisoformat(last_time_str)
-                        
+
                         time_diff = (current_time - last_time).total_seconds() / 60  # minutes
-                        
+
                         # Only block if EXACT same content within 10 minutes (much more relaxed)
                         if last_hash == content_hash and time_diff < 10:
                             logger.warning(f"🚫 EXACT DUPLICATE: Same content posted {time_diff:.1f} minutes ago")
@@ -82,20 +83,20 @@ class XThreadQueue:
                             return False
                         else:
                             logger.info(f"✅ Content okay: {time_diff:.1f} minutes since last post")
-                            
+
             except Exception as e:
                 logger.debug(f"Could not read state file: {e}")
-        
+
         # Always allow queuing unless it's obvious spam
         logger.info(f"✅ Queuing thread - duplicate check passed")
-        
+
         # Save current posting state for future reference only
         try:
             with open(state_file, 'w') as f:
                 f.write(f"{content_hash}|{current_time.isoformat()}")
         except Exception as e:
             logger.warning(f"Could not save state file: {e}")
-            
+
         thread_data = {
             'main_post': main_post_text,
             'posts': posts,
@@ -111,7 +112,7 @@ class XThreadQueue:
     def _worker(self):
         """Background worker that processes the posting queues."""
         logger.debug("X posting worker started")
-        
+
         # Check for auto-resume flag
         auto_resume = False
         try:
@@ -141,7 +142,7 @@ class XThreadQueue:
                     # Initialize posting-only client to avoid rate limits
                     logger.debug("Initializing X client for queue worker...")
                     try:
-                        self.client = get_x_client(posting_only=True)
+                        self.client = get_x_client(posting_only=True, account_number=self.active_account)
                         if not self.client:
                             logger.error("❌ CRITICAL: Failed to initialize X posting client")
                             logger.error("🔑 Missing or invalid X API credentials in Secrets:")
@@ -153,8 +154,8 @@ class XThreadQueue:
                             logger.error("⏸️  Queue worker will retry in 2 minutes...")
                             time.sleep(120)  # Wait longer for credential fixes
                             continue
-                        logger.info("✅ X queue worker initialized with POSTING-ONLY client")
-                        
+                        logger.info(f"✅ X queue worker initialized with POSTING-ONLY client (Account {self.active_account})")
+
                         # Test the client by checking user info (minimal API call)
                         try:
                             user_info = self.client.get_me()
@@ -162,7 +163,7 @@ class XThreadQueue:
                         except Exception as e:
                             logger.warning(f"X client verification failed: {e}")
                             # Don't fail completely, just log warning
-                            
+
                     except Exception as e:
                         logger.error(f"Error initializing X client: {e}")
                         self.client = None
@@ -213,8 +214,25 @@ class XThreadQueue:
                     time.sleep(12)  # Increased delay to prevent rate limits
 
                 except tweepy.TooManyRequests as e:
-                    logger.warning(f"Rate limited during thread posting at reply {i+1}")
-                    self._handle_rate_limit()
+                    logger.warning(f"Account {self.active_account} rate limited: {e}")
+
+                    # Try switching to other account
+                    new_account = 2 if self.active_account == 1 else 1
+                    logger.info(f"Attempting to switch to account {new_account}...")
+
+                    from modules.api_clients import get_x_client
+                    backup_client = get_x_client(posting_only=True, account_number=new_account)
+
+                    if backup_client:
+                        self.client = backup_client
+                        self.active_account = new_account
+                        logger.info(f"✅ Switched to account {new_account}")
+                        continue  # Retry with new account
+                    else:
+                        logger.warning("Failover account also unavailable, waiting...")
+                        self.rate_limit_reset_time = datetime.now() + timedelta(minutes=15)
+                        time.sleep(60)
+
                     # Mark thread as partially completed and stop
                     logger.info(f"Thread partially posted: {i} of {len(thread_data['posts'])} replies completed")
                     break

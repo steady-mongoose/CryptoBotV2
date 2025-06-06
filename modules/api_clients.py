@@ -22,58 +22,66 @@ X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
 X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
 X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 
-def get_x_client(posting_only=False):
-    """
-    Initialize and return X (Twitter) API client with proper error handling.
-
-    Args:
-        posting_only (bool): If True, client configured for posting only to minimize rate limit exposure
-    """
-    x_consumer_key = os.getenv('X_CONSUMER_KEY')
-    x_consumer_secret = os.getenv('X_CONSUMER_SECRET')
-    x_access_token = os.getenv('X_ACCESS_TOKEN')
-    x_access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET')
-
-    # Check for missing credentials
-    missing_creds = []
-    if not x_consumer_key:
-        missing_creds.append('X_CONSUMER_KEY')
-    if not x_consumer_secret:
-        missing_creds.append('X_CONSUMER_SECRET')
-    if not x_access_token:
-        missing_creds.append('X_ACCESS_TOKEN')
-    if not x_access_token_secret:
-        missing_creds.append('X_ACCESS_TOKEN_SECRET')
-
-    if missing_creds:
-        logger.error(f"Missing X API credentials: {', '.join(missing_creds)}")
-        logger.error("Please add these secrets in the Secrets tool:")
-        for cred in missing_creds:
-            logger.error(f"  - {cred}")
-        return None
-
+def get_x_client(posting_only: bool = False, account_number: int = 1):
+    """Get X API client with failover account support."""
     try:
+        # Primary account (account 1)
+        if account_number == 1:
+            consumer_key = os.getenv('X_CONSUMER_KEY')
+            consumer_secret = os.getenv('X_CONSUMER_SECRET')
+            access_token = os.getenv('X_ACCESS_TOKEN')
+            access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET')
+        # Failover account (account 2)
+        elif account_number == 2:
+            consumer_key = os.getenv('X_CONSUMER_KEY_2')
+            consumer_secret = os.getenv('X_CONSUMER_SECRET_2')
+            access_token = os.getenv('X_ACCESS_TOKEN_2')
+            access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET_2')
+        else:
+            logger.error(f"Invalid account number: {account_number}")
+            return None
+
+        if not all([consumer_key, consumer_secret, access_token, access_token_secret]):
+            logger.error(f"Missing X API credentials for account {account_number}")
+            return None
+
         client = tweepy.Client(
-            consumer_key=x_consumer_key,
-            consumer_secret=x_consumer_secret,
-            access_token=x_access_token,
-            access_token_secret=x_access_token_secret,
-            wait_on_rate_limit=False  # Don't wait on rate limits for posting client
+            consumer_key=consumer_key,
+            consumer_secret=consumer_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret,
+            wait_on_rate_limit=True
         )
 
-        if posting_only:
-            logger.info("X API client initialized for POSTING ONLY (search features disabled)")
-        else:
-            logger.info("X API client initialized successfully")
+        # Test the client
+        try:
+            user_info = client.get_me()
+            logger.info(f"X API client {account_number} initialized for @{user_info.data.username}")
+            return client
+        except Exception as e:
+            logger.error(f"X API client {account_number} authentication failed: {e}")
+            return None
 
-        return client
     except Exception as e:
-        logger.error(f"Failed to create X API client: {str(e)}")
-        logger.error("This could be due to:")
-        logger.error("  - Invalid API credentials")
-        logger.error("  - Network connectivity issues") 
-        logger.error("  - X API service issues")
+        logger.error(f"Failed to create X client {account_number}: {e}")
         return None
+
+def get_x_client_with_failover(posting_only: bool = False):
+    """Get X API client with automatic failover between accounts."""
+    # Try primary account first
+    client = get_x_client(posting_only, account_number=1)
+    if client:
+        return client, 1
+
+    logger.warning("Primary X account failed, trying failover account...")
+
+    # Try failover account
+    client = get_x_client(posting_only, account_number=2)
+    if client:
+        return client, 2
+
+    logger.error("Both X accounts failed")
+    return None, None
 
 def get_coinmarketcap_api_key() -> str:
     """Return the CoinMarketCap API key."""
