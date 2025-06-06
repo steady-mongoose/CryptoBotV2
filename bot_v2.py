@@ -615,8 +615,30 @@ async def research_top_projects(coingecko_id: str, coin_symbol: str, session: ai
     return result
 
 async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False, simultaneous_post: bool = False, queue_only: bool = False):
+    import fcntl
+    import tempfile
+    import time
+    
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
+    
+    # Create process lock to prevent duplicate runs
+    lock_file = None
+    if not test_discord:
+        try:
+            lock_file_path = os.path.join(tempfile.gettempdir(), 'crypto_bot.lock')
+            lock_file = open(lock_file_path, 'w')
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_file.write(f"Bot started at {datetime.now().isoformat()}\nPID: {os.getpid()}")
+            lock_file.flush()
+            logger.info("✅ Process lock acquired - no duplicate bot instances")
+        except (OSError, IOError) as e:
+            logger.error("🚫 DUPLICATE BOT DETECTED: Another instance is already running")
+            logger.error("This prevents duplicate posts and rate limit issues")
+            logger.error("Wait for the other instance to complete or restart the queue")
+            if lock_file:
+                lock_file.close()
+            return
     
     # Check for existing queue activity to prevent duplicates
     if not test_discord:
@@ -626,6 +648,8 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 logger.warning(f"🚫 DUPLICATE PREVENTION: Queue not empty ({status['thread_queue_size']} threads, {status['post_queue_size']} posts)")
                 logger.warning("This suggests another bot instance is running or posts are already queued")
                 logger.warning("Stopping to prevent duplicate posts")
+                if lock_file:
+                    lock_file.close()
                 return
         except Exception as e:
             logger.debug(f"Could not check queue status: {e}")
@@ -983,6 +1007,15 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 logger.info("🚀 Posts will process immediately")
 
         logger.info("CryptoBotV2 run completed successfully.")
+        
+        # Clean up process lock
+        if lock_file and not test_discord:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                lock_file.close()
+                logger.debug("Process lock released")
+            except Exception as e:
+                logger.debug(f"Error releasing lock: {e}")
 
 if __name__ == "__main__":
     start_time = datetime.now()

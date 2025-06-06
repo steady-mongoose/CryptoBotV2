@@ -52,22 +52,68 @@ class XThreadQueue:
         logger.debug(f"Queued X post: {text[:50]}...")
 
     def queue_thread(self, posts: List[Dict], main_post_text: str):
-        """Queue an entire thread for posting with duplicate prevention."""
+        """Queue an entire thread for posting with enhanced duplicate prevention."""
+        import hashlib
+        import os
+        
+        # Generate content hash for duplicate detection
+        content_hash = hashlib.md5(main_post_text.encode()).hexdigest()[:8]
+        current_time = datetime.now()
+        
+        # Create persistent state file for duplicate tracking
+        state_file = "last_thread_state.txt"
+        
         # Check if we already have threads queued to prevent duplicates
         current_size = self.thread_queue.qsize()
         if current_size > 0:
             logger.warning(f"🚫 Thread queue not empty ({current_size} threads), preventing duplicate")
             logger.warning("This may indicate a duplicate run - checking for existing content")
             return False
+        
+        # Check for recent identical posts (within 30 minutes)
+        if os.path.exists(state_file):
+            try:
+                with open(state_file, 'r') as f:
+                    last_data = f.read().strip().split('|')
+                    if len(last_data) >= 2:
+                        last_hash = last_data[0]
+                        last_time_str = last_data[1]
+                        last_time = datetime.fromisoformat(last_time_str)
+                        
+                        time_diff = (current_time - last_time).total_seconds() / 60  # minutes
+                        
+                        if last_hash == content_hash and time_diff < 30:
+                            logger.warning(f"🚫 DUPLICATE DETECTED: Same content posted {time_diff:.1f} minutes ago")
+                            logger.warning(f"Previous: {last_time_str}")
+                            logger.warning(f"Current:  {current_time.isoformat()}")
+                            logger.warning("Blocking duplicate thread to prevent spam")
+                            return False
+                        
+                        if time_diff < 5:  # Any post within 5 minutes is suspicious
+                            logger.warning(f"🚫 RAPID POSTING DETECTED: Last post was {time_diff:.1f} minutes ago")
+                            logger.warning("Blocking to prevent rate limit issues")
+                            return False
+                            
+            except Exception as e:
+                logger.debug(f"Could not read state file: {e}")
+        
+        # Save current posting state
+        try:
+            with open(state_file, 'w') as f:
+                f.write(f"{content_hash}|{current_time.isoformat()}")
+        except Exception as e:
+            logger.warning(f"Could not save state file: {e}")
             
         thread_data = {
             'main_post': main_post_text,
             'posts': posts,
-            'timestamp': datetime.now(),
-            'retry_count': 0
+            'timestamp': current_time,
+            'retry_count': 0,
+            'content_hash': content_hash
         }
         self.thread_queue.put(thread_data)
-        logger.info(f"✅ Queued X thread with {len(posts)} posts (queue size now: {self.thread_queue.qsize()})")
+        logger.info(f"✅ Queued X thread with {len(posts)} posts (hash: {content_hash})")
+        logger.info(f"Queue size now: {self.thread_queue.qsize()}")
         return True
 
     def _worker(self):
