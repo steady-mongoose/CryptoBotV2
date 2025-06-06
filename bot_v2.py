@@ -743,17 +743,15 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 lock_file.close()
             return
     
-    # Check for existing queue activity to prevent duplicates
+    # Relaxed queue check - only warn about large queues but don't block
     if not test_discord:
         try:
             status = get_x_queue_status()
-            if status['thread_queue_size'] > 0 or status['post_queue_size'] > 0:
-                logger.warning(f"🚫 DUPLICATE PREVENTION: Queue not empty ({status['thread_queue_size']} threads, {status['post_queue_size']} posts)")
-                logger.warning("This suggests another bot instance is running or posts are already queued")
-                logger.warning("Stopping to prevent duplicate posts")
-                if lock_file:
-                    lock_file.close()
-                return
+            if status['thread_queue_size'] > 5 or status['post_queue_size'] > 20:
+                logger.warning(f"⚠️  Large queue detected ({status['thread_queue_size']} threads, {status['post_queue_size']} posts)")
+                logger.warning("This may indicate a backlog, but continuing...")
+            else:
+                logger.info(f"✅ Queue check passed: {status['thread_queue_size']} threads, {status['post_queue_size']} posts")
         except Exception as e:
             logger.debug(f"Could not check queue status: {e}")
             # Continue if queue check fails

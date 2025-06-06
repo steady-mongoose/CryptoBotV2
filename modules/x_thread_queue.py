@@ -52,7 +52,7 @@ class XThreadQueue:
         logger.debug(f"Queued X post: {text[:50]}...")
 
     def queue_thread(self, posts: List[Dict], main_post_text: str):
-        """Queue an entire thread for posting with enhanced duplicate prevention."""
+        """Queue an entire thread for posting with relaxed duplicate prevention."""
         import hashlib
         import os
         
@@ -63,14 +63,7 @@ class XThreadQueue:
         # Create persistent state file for duplicate tracking
         state_file = "last_thread_state.txt"
         
-        # Check if we already have threads queued to prevent duplicates
-        current_size = self.thread_queue.qsize()
-        if current_size > 0:
-            logger.warning(f"🚫 Thread queue not empty ({current_size} threads), preventing duplicate")
-            logger.warning("This may indicate a duplicate run - checking for existing content")
-            return False
-        
-        # Check for recent identical posts (within 30 minutes)
+        # RELAXED duplicate checking - only block obvious spam
         if os.path.exists(state_file):
             try:
                 with open(state_file, 'r') as f:
@@ -82,22 +75,21 @@ class XThreadQueue:
                         
                         time_diff = (current_time - last_time).total_seconds() / 60  # minutes
                         
-                        if last_hash == content_hash and time_diff < 30:
-                            logger.warning(f"🚫 DUPLICATE DETECTED: Same content posted {time_diff:.1f} minutes ago")
-                            logger.warning(f"Previous: {last_time_str}")
-                            logger.warning(f"Current:  {current_time.isoformat()}")
-                            logger.warning("Blocking duplicate thread to prevent spam")
+                        # Only block if EXACT same content within 10 minutes (much more relaxed)
+                        if last_hash == content_hash and time_diff < 10:
+                            logger.warning(f"🚫 EXACT DUPLICATE: Same content posted {time_diff:.1f} minutes ago")
+                            logger.warning("This appears to be genuine spam - blocking")
                             return False
-                        
-                        if time_diff < 5:  # Any post within 5 minutes is suspicious
-                            logger.warning(f"🚫 RAPID POSTING DETECTED: Last post was {time_diff:.1f} minutes ago")
-                            logger.warning("Blocking to prevent rate limit issues")
-                            return False
+                        else:
+                            logger.info(f"✅ Content okay: {time_diff:.1f} minutes since last post")
                             
             except Exception as e:
                 logger.debug(f"Could not read state file: {e}")
         
-        # Save current posting state
+        # Always allow queuing unless it's obvious spam
+        logger.info(f"✅ Queuing thread - duplicate check passed")
+        
+        # Save current posting state for future reference only
         try:
             with open(state_file, 'w') as f:
                 f.write(f"{content_hash}|{current_time.isoformat()}")
