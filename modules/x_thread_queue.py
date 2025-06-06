@@ -52,7 +52,14 @@ class XThreadQueue:
         logger.debug(f"Queued X post: {text[:50]}...")
 
     def queue_thread(self, posts: List[Dict], main_post_text: str):
-        """Queue an entire thread for posting."""
+        """Queue an entire thread for posting with duplicate prevention."""
+        # Check if we already have threads queued to prevent duplicates
+        current_size = self.thread_queue.qsize()
+        if current_size > 0:
+            logger.warning(f"🚫 Thread queue not empty ({current_size} threads), preventing duplicate")
+            logger.warning("This may indicate a duplicate run - checking for existing content")
+            return False
+            
         thread_data = {
             'main_post': main_post_text,
             'posts': posts,
@@ -60,7 +67,8 @@ class XThreadQueue:
             'retry_count': 0
         }
         self.thread_queue.put(thread_data)
-        logger.info(f"Queued X thread with {len(posts)} posts")
+        logger.info(f"✅ Queued X thread with {len(posts)} posts (queue size now: {self.thread_queue.qsize()})")
+        return True
 
     def _worker(self):
         """Background worker that processes the posting queues."""
@@ -135,14 +143,15 @@ class XThreadQueue:
         """Process a complete thread from the queue."""
         try:
             thread_data = self.thread_queue.get_nowait()
+            logger.info(f"🧵 Processing thread with {len(thread_data['posts'])} posts")
 
             # Post main tweet
             main_tweet = self.client.create_tweet(text=thread_data['main_post'])
-            logger.info(f"Posted main thread tweet: {main_tweet.data['id']}")
+            logger.info(f"✅ Posted main thread tweet: {main_tweet.data['id']}")
 
             previous_tweet_id = main_tweet.data['id']
 
-            # Post replies
+            # Post replies with enhanced error handling
             for i, post_data in enumerate(thread_data['posts']):
                 try:
                     reply_tweet = self.client.create_tweet(
@@ -150,32 +159,35 @@ class XThreadQueue:
                         in_reply_to_tweet_id=previous_tweet_id
                     )
                     previous_tweet_id = reply_tweet.data['id']
-                    logger.info(f"Posted thread reply {i+1}/{len(thread_data['posts'])}: {reply_tweet.data['id']}")
+                    logger.info(f"✅ Posted thread reply {i+1}/{len(thread_data['posts'])}: {reply_tweet.data['id']}")
 
-                    # Extended wait between posts for free tier (increased for safety)
-                    time.sleep(10)  # Increased delay to prevent rate limits
+                    # Extended wait between posts for free tier safety
+                    time.sleep(12)  # Increased delay to prevent rate limits
 
-                except tweepy.TooManyRequests:
-                    logger.warning("Rate limited during thread posting, requeueing remaining posts")
-                    # Requeue remaining posts as individual posts
-                    for remaining_post in thread_data['posts'][i:]:
-                        self.queue_post(
-                            remaining_post['text'],
-                            previous_tweet_id,
-                            priority=2
-                        )
+                except tweepy.TooManyRequests as e:
+                    logger.warning(f"Rate limited during thread posting at reply {i+1}")
+                    self._handle_rate_limit()
+                    # Mark thread as partially completed and stop
+                    logger.info(f"Thread partially posted: {i} of {len(thread_data['posts'])} replies completed")
                     break
 
                 except Exception as e:
                     logger.error(f"Error posting thread reply {i+1}: {e}")
+                    # Continue with next post instead of failing entire thread
                     continue
 
             self.thread_queue.task_done()
+            logger.info("🧵 Thread processing completed")
 
         except queue.Empty:
             pass
         except Exception as e:
             logger.error(f"Error processing thread queue: {e}")
+            # Ensure task is marked done even on error
+            try:
+                self.thread_queue.task_done()
+            except:
+                pass
 
     def _process_post_queue(self):
         """Process individual posts from the queue."""

@@ -314,66 +314,88 @@ def predict_price(historical_prices, current_price):
         return current_price * 1.005
 
 async def fetch_rumble_video(coin: str, session: aiohttp.ClientSession):
-    """Fetch video from Rumble as YouTube alternative."""
+    """Fetch video from Rumble as YouTube alternative with enhanced error handling."""
     try:
-        # Rumble search queries
+        # Enhanced Rumble search queries
         search_queries = [
-            f"{coin} crypto 2025",
-            f"{coin} cryptocurrency news", 
-            f"{coin} price prediction",
-            f"{coin} analysis"
+            f"{coin} crypto news 2025",
+            f"{coin} cryptocurrency update",
+            f"{coin} price analysis", 
+            f"{coin} blockchain news"
         ]
         
         for search_query in search_queries:
-            # Use Rumble search URL (web scraping approach)
-            search_url = f"https://rumble.com/search/video?q={search_query.replace(' ', '+')}"
-            
             try:
-                async with session.get(search_url, headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                }) as response:
+                # Use Rumble search URL with better formatting
+                search_url = f"https://rumble.com/search/video?q={search_query.replace(' ', '+')}"
+                
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Connection': 'keep-alive',
+                }
+                
+                async with session.get(search_url, headers=headers, timeout=10) as response:
                     if response.status == 200:
                         html = await response.text()
                         
-                        # Simple regex to find Rumble video links
+                        # Enhanced regex patterns for Rumble videos
                         import re
-                        video_pattern = r'href="(/v[^"]+)"[^>]*>([^<]+)</a>'
-                        matches = re.findall(video_pattern, html)
+                        patterns = [
+                            r'href="(/v[^"]+)"[^>]*title="([^"]+)"',
+                            r'href="(/v[^"]+)"[^>]*>([^<]{10,80})</a>',
+                            r'<a[^>]*href="(/v[^"]+)"[^>]*>([^<]+)</a>'
+                        ]
                         
-                        if matches:
-                            video_path, title = matches[0]
-                            video_url = f"https://rumble.com{video_path}"
-                            
-                            logger.info(f"Found Rumble video for {coin}: {title[:50]}...")
-                            return {
-                                "title": title.strip(),
-                                "url": video_url,
-                                "thumbnail_url": "",
-                                "video_id": video_path.split('/')[-1],
-                                "source": "Rumble"
-                            }
+                        for pattern in patterns:
+                            matches = re.findall(pattern, html, re.IGNORECASE)
+                            if matches:
+                                video_path, title = matches[0]
+                                # Clean up title
+                                title = re.sub(r'<[^>]+>', '', title).strip()
+                                if len(title) > 5:  # Valid title
+                                    video_url = f"https://rumble.com{video_path}"
+                                    logger.info(f"✅ Found Rumble video for {coin}: {title[:50]}...")
+                                    return {
+                                        "title": title,
+                                        "url": video_url,
+                                        "thumbnail_url": "",
+                                        "video_id": video_path.split('/')[-1],
+                                        "source": "Rumble"
+                                    }
+                    
+                    elif response.status == 429:
+                        logger.warning(f"Rumble rate limited, trying next query")
+                        await asyncio.sleep(5)
+                        continue
                         
                 await asyncio.sleep(2)  # Respect rate limits
                         
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout searching Rumble for {search_query}")
+                continue
             except Exception as e:
                 logger.error(f"Error searching Rumble for {search_query}: {e}")
                 continue
         
-        # Fallback to generic Rumble search
-        logger.warning(f"No specific videos found on Rumble for {coin}")
+        # Enhanced fallback with specific crypto content
+        logger.info(f"Using general Rumble crypto search for {coin}")
         return {
-            "title": f"{coin.title()} Crypto Content on Rumble",
-            "url": f"https://rumble.com/search/video?q={coin.replace(' ', '+')}+crypto",
+            "title": f"Latest {coin.title()} Crypto Analysis & News",
+            "url": f"https://rumble.com/search/video?q={coin.replace(' ', '+')}+crypto+2025",
             "thumbnail_url": "",
             "video_id": "",
             "source": "Rumble"
         }
         
     except Exception as e:
-        logger.error(f"Error fetching Rumble video for {coin}: {e}")
+        logger.error(f"Critical error fetching Rumble video for {coin}: {e}")
+        # Absolute fallback
         return {
-            "title": f"{coin.title()} Crypto Updates",
-            "url": f"https://rumble.com/search/video?q={coin.replace(' ', '+')}+crypto",
+            "title": f"{coin.title()} - Crypto Market Updates",
+            "url": f"https://rumble.com/search/video?q=crypto+market+analysis",
             "thumbnail_url": "",
             "video_id": "",
             "source": "Rumble"
@@ -381,10 +403,20 @@ async def fetch_rumble_video(coin: str, session: aiohttp.ClientSession):
 
 async def fetch_youtube_video(youtube, coin: str, current_date: str, session: aiohttp.ClientSession = None):
     try:
-        # Try multiple search queries for better results
+        # ALWAYS try Rumble first to avoid YouTube quota issues
+        if session:
+            logger.info(f"Trying Rumble first for {coin} to avoid YouTube quota limits")
+            rumble_result = await fetch_rumble_video(coin, session)
+            if rumble_result and rumble_result.get('title') != f"{coin.title()} Crypto Content on Rumble":
+                logger.info(f"Using Rumble video for {coin}: {rumble_result['title'][:50]}...")
+                return rumble_result
+            else:
+                logger.info(f"Rumble didn't find specific content for {coin}, trying YouTube")
+        
+        # Try YouTube as backup
         search_queries = [
             f"{coin} crypto 2025",
-            f"{coin} cryptocurrency news",
+            f"{coin} cryptocurrency news", 
             f"{coin} price prediction 2025",
             f"{coin} analysis crypto"
         ]
@@ -395,8 +427,8 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                     part="snippet",
                     q=search_query,
                     type="video",
-                    maxResults=10,  # Increased for better selection
-                    publishedAfter="2024-01-01T00:00:00Z"  # Only recent videos
+                    maxResults=5,  # Reduced to minimize quota usage
+                    publishedAfter="2024-01-01T00:00:00Z"
                 )
                 response = request.execute()
 
@@ -405,7 +437,6 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                     if not db.has_video_been_used(video_id):
                         title = item['snippet']['title']
                         url = f"https://youtu.be/{video_id}"
-                        # Get video thumbnail for image posting
                         thumbnail_url = item['snippet']['thumbnails'].get('high', {}).get('url', 
                                       item['snippet']['thumbnails'].get('medium', {}).get('url', 
                                       item['snippet']['thumbnails'].get('default', {}).get('url', '')))
@@ -421,12 +452,10 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                         }
             except HttpError as e:
                 if "quotaExceeded" in str(e) or "quota" in str(e).lower() or "429" in str(e):
-                    logger.warning(f"YouTube API quota/rate exceeded for {coin}, switching to Rumble")
+                    logger.warning(f"YouTube API quota exceeded for {coin}, falling back to Rumble")
                     if session:
                         return await fetch_rumble_video(coin, session)
-                    else:
-                        logger.error("No session available for Rumble fallback")
-                        break
+                    break
                 else:
                     logger.error(f"YouTube API error for query '{search_query}': {e}")
                     continue
@@ -588,6 +617,19 @@ async def research_top_projects(coingecko_id: str, coin_symbol: str, session: ai
 async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False, simultaneous_post: bool = False, queue_only: bool = False):
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
+    
+    # Check for existing queue activity to prevent duplicates
+    if not test_discord:
+        try:
+            status = get_x_queue_status()
+            if status['thread_queue_size'] > 0 or status['post_queue_size'] > 0:
+                logger.warning(f"🚫 DUPLICATE PREVENTION: Queue not empty ({status['thread_queue_size']} threads, {status['post_queue_size']} posts)")
+                logger.warning("This suggests another bot instance is running or posts are already queued")
+                logger.warning("Stopping to prevent duplicate posts")
+                return
+        except Exception as e:
+            logger.debug(f"Could not check queue status: {e}")
+            # Continue if queue check fails
 
     # Only initialize X client if we're not in Discord-only mode
     x_client = None
@@ -634,12 +676,16 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # X API bypass handler - search permanently disabled
             x_bypass_handler.force_disable_search()  # Ensure search stays disabled
 
-            # Fetch social metrics
-            social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=test_discord or dual_post or simultaneous_post)
+            # Fetch social metrics (always enable unless Discord-only mode)
+            logger.info(f"Fetching social metrics for {coin['symbol']}...")
+            social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=test_discord)
+            logger.info(f"Social metrics for {coin['symbol']}: {social_metrics['mentions']} mentions, {social_metrics['sentiment']} sentiment")
 
             # Research top on-chain projects
+            logger.info(f"Researching on-chain projects for {coin['symbol']}...")
             project_research = await research_top_projects(coin['coingecko_id'], coin['symbol'], session)
             top_project_info = project_research.get('top_project', {})
+            logger.info(f"Found top project for {coin['symbol']}: {top_project_info.get('name', coin['top_project'])}")
 
             logger.info(f"✓ Collected data for {coin['name']}")
 
@@ -888,42 +934,29 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 logger.info("Successfully posted to X, no Discord fallback needed")
 
         elif queue_only or (not test_discord and not dual_post and not simultaneous_post and not thread_mode):
-            # Post to X using queue system immediately (no direct posting to avoid rate limits)
+            # Post to X using queue system ONLY (absolutely no direct posting)
             mode_desc = "Queue-only mode" if queue_only else "Smart queue mode"
-            logger.info(f"Starting X posting with immediate queue system - {mode_desc} (avoiding rate limits)")
+            logger.info(f"Starting X posting with STRICT queue-only system - {mode_desc}")
+            logger.info("🚫 Direct API posting DISABLED to prevent duplicates")
 
-            # Verify X client can be initialized before starting queue
-            logger.info("🔑 Verifying X API credentials...")
-            test_client = get_x_client(posting_only=True)
-            if not test_client:
-                logger.error("❌ CRITICAL ERROR: Cannot start X posting - X API client initialization failed")
-                logger.error("🔑 Missing or invalid X API credentials. Please check Secrets for:")
-                logger.error("  - X_CONSUMER_KEY")
-                logger.error("  - X_CONSUMER_SECRET") 
-                logger.error("  - X_ACCESS_TOKEN")
-                logger.error("  - X_ACCESS_TOKEN_SECRET")
-                logger.error("💡 Use the Secrets tool to add these credentials")
+            # Start the queue worker FIRST
+            logger.info("🚀 Starting queue worker...")
+            start_x_queue()
+            
+            # Wait for worker to initialize
+            import time
+            time.sleep(2)
+            
+            # Verify worker is running
+            initial_status = get_x_queue_status()
+            if not initial_status['worker_running']:
+                logger.error("❌ Queue worker failed to start - cannot proceed")
                 return
             else:
-                logger.info("✅ X API credentials verified successfully")
-                
-            # Test authentication
-            try:
-                user_info = test_client.get_me()
-                logger.info(f"✅ Authenticated as X user: @{user_info.data.username}")
-            except Exception as auth_error:
-                logger.error(f"❌ X API authentication test failed: {auth_error}")
-                logger.error("🔑 Please verify your X API credentials are correct")
-                return
+                logger.info("✅ Queue worker is running")
 
-            # Start the queue worker
-            start_x_queue()
-            logger.info("X queue worker started successfully")
-
-            # SKIP direct posting attempts - queue everything immediately
-            logger.info("Queueing all posts to avoid rate limit errors on main workflow")
-
-            # Queue entire thread immediately
+            # Queue entire thread immediately (NO direct posting attempts)
+            logger.info("📝 Queueing thread posts...")
             thread_posts = []
             for data in results:
                 thread_posts.append({
@@ -931,40 +964,23 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     'coin_name': data['coin_name']
                 })
 
-            # Queue the thread with error handling
+            # Queue the thread - this is the ONLY way posts will be sent
             try:
                 queue_x_thread(thread_posts, main_post['text'])
-                logger.info(f"✅ Successfully queued complete thread with {len(thread_posts)} posts")
+                logger.info(f"✅ Successfully queued 1 thread with {len(thread_posts)} posts")
+                logger.info("🔄 Posts will be processed automatically by queue worker")
             except Exception as e:
                 logger.error(f"Failed to queue thread: {e}")
-                logger.error("Falling back to individual post queueing...")
-                
-                # Fallback: queue individual posts
-                try:
-                    queue_x_post(main_post['text'])
-                    for data in results:
-                        queue_x_post(format_tweet(data))
-                    logger.info("✅ Successfully queued individual posts as fallback")
-                except Exception as fallback_error:
-                    logger.error(f"Fallback queueing also failed: {fallback_error}")
+                return
 
-            # Show queue status
-            try:
-                status = get_x_queue_status()
-                logger.info(f"X Queue Status: {status['post_queue_size']} posts, {status['thread_queue_size']} threads queued")
-            except Exception as e:
-                logger.warning(f"Could not get queue status: {e}")
+            # Show final queue status
+            final_status = get_x_queue_status()
+            logger.info(f"📊 Final Status: Worker: {final_status['worker_running']}, Threads: {final_status['thread_queue_size']}, Posts: {final_status['post_queue_size']}")
             
-            # Wait a moment for worker to start processing
-            import time
-            time.sleep(3)
-            
-            # Show updated status
-            try:
-                final_status = get_x_queue_status()
-                logger.info(f"Final Queue Status: Worker running: {final_status['worker_running']}, Posts: {final_status['post_queue_size']}, Threads: {final_status['thread_queue_size']}")
-            except Exception as e:
-                logger.warning(f"Could not get final queue status: {e}")
+            if final_status['rate_limited']:
+                logger.info("⏳ Posts will process when rate limit resets")
+            else:
+                logger.info("🚀 Posts will process immediately")
 
         logger.info("CryptoBotV2 run completed successfully.")
 
