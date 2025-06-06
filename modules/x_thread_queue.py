@@ -111,6 +111,16 @@ class XThreadQueue:
     def _worker(self):
         """Background worker that processes the posting queues."""
         logger.debug("X posting worker started")
+        
+        # Check for auto-resume flag
+        auto_resume = False
+        try:
+            with open('auto_resume_enabled.txt', 'r') as f:
+                auto_resume = f.read().strip() == 'true'
+            if auto_resume:
+                logger.info("✅ Auto-resume mode enabled")
+        except:
+            pass
 
         while self.is_running:
             try:

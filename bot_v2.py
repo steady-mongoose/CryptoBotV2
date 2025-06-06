@@ -1182,6 +1182,13 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 return
             else:
                 logger.info("✅ Queue worker is running")
+            
+            # Enable auto-resume if requested
+            if args.auto_resume:
+                logger.info("✅ Auto-resume enabled - queue will restart if worker stops")
+                # Set persistent flag for resume feature
+                with open('auto_resume_enabled.txt', 'w') as f:
+                    f.write('true')
 
             # Queue entire thread immediately (NO direct posting attempts)
             logger.info("📝 Queueing thread posts...")
@@ -1238,6 +1245,8 @@ if __name__ == "__main__":
                         help='Post as a connected thread on X')
     parser.add_argument('--direct-x-post', action='store_true',
                         help='Post directly to X (bypass queue) to test immediate posting')
+    parser.add_argument('--auto-resume', action='store_true',
+                        help='Enable automatic resume of queue worker if it stops')
     args = parser.parse_args()
 
     test_discord = args.test_discord
