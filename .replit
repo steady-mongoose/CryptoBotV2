@@ -6,7 +6,7 @@ channel = "stable-24_05"
 packages = ["glibcLocales"]
 
 [workflows]
-runButton = "Test X Posting Safe"
+runButton = "Main Bot Run (X Free Tier Safe)"
 
 [[workflows.workflow]]
 name = "Generate Manual Template Only"
@@ -205,6 +205,51 @@ args = "echo \"\""
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "echo \"✅ Checking queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Main Bot Run (X Free Tier Safe)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Starting CryptoBot with X API Free Tier Protection...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API search: DISABLED (prevents rate limits)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API posting: QUEUE ONLY (respects free tier)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Social metrics: Alternative APIs + fallbacks\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Monthly limit: 1,500 tweets (~50/day)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking queue status and rate limits:\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
