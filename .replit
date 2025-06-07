@@ -928,6 +928,39 @@ args = "echo \"\""
 task = "shell.exec"
 args = "echo \"✅ Queue-only posting completed - maximum rate limit protection\""
 
+[[workflows.workflow]]
+name = "Run Diagnostics First"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🩺 Running comprehensive pre-flight diagnostics...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ This will test ALL systems before running the bot\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python pre_run_diagnostics.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📋 If diagnostics pass, run the main bot with:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"   python bot_v2.py --queue-only --verbose\""
+
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]

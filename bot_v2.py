@@ -1283,7 +1283,24 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    logger.debug("Script execution started")
+    
+    # Enhanced logging setup for verbose feedback
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler('bot_detailed.log')
+        ]
+    )
+    
+    print("🚀 CRYPTOBOT V2 STARTUP - VERBOSE MODE")
+    print("=" * 60)
+    print(f"⏰ Start time: {start_time}")
+    print(f"📋 Logging to: bot_detailed.log")
+    print("")
+    
+    logger.info("Script execution started with verbose logging")
 
     parser = argparse.ArgumentParser(description="CryptoBotV2 - Post daily crypto updates to X or Discord")
     parser.add_argument('--test-discord', action='store_true', 
@@ -1300,9 +1317,66 @@ if __name__ == "__main__":
                         help='Post directly to X (bypass queue) to test immediate posting')
     parser.add_argument('--auto-resume', action='store_true',
                         help='Enable automatic resume of queue worker if it stops')
+    parser.add_argument('--verbose', action='store_true',
+                        help='Enable extra verbose logging and diagnostics')
     args = parser.parse_args()
+    
+    # Enable debug logging if verbose mode
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        print("🔍 VERBOSE MODE ENABLED - Maximum detail logging")
+        print("")
 
     test_discord = args.test_discord
+    
+    # Comprehensive startup diagnostics
+    print("🔍 PRE-RUN DIAGNOSTICS")
+    print("-" * 40)
+    
+    # Check critical environment variables
+    critical_env_vars = ['DISCORD_WEBHOOK_URL', 'X_CONSUMER_KEY', 'X_CONSUMER_SECRET', 'X_ACCESS_TOKEN', 'X_ACCESS_TOKEN_SECRET']
+    missing_vars = []
+    
+    for var in critical_env_vars:
+        if not os.getenv(var):
+            missing_vars.append(var)
+            print(f"❌ MISSING: {var}")
+        else:
+            print(f"✅ SET: {var}")
+    
+    if missing_vars:
+        print(f"\n🚨 CRITICAL ERROR: Missing environment variables!")
+        print("💡 Add these to Replit Secrets:")
+        for var in missing_vars:
+            print(f"   • {var}")
+        print("\n❌ Cannot proceed without these credentials")
+        exit(1)
+    
+    print("✅ All critical environment variables present")
+    
+    # Test basic X API connection if not Discord-only mode
+    if not test_discord:
+        print("\n🔗 Testing X API connection...")
+        try:
+            from modules.api_clients import get_x_client
+            client = get_x_client(posting_only=True)
+            if client:
+                user_info = client.get_me()
+                print(f"✅ X API authenticated as: @{user_info.data.username}")
+            else:
+                print("❌ Failed to create X API client")
+                print("💡 Check your X API credentials")
+                if not args.queue_only:
+                    print("🔄 Switching to queue-only mode for safety")
+                    args.queue_only = True
+        except Exception as e:
+            print(f"❌ X API connection failed: {e}")
+            print("🔄 Forcing queue-only mode for safety")
+            args.queue_only = True
+            logger.error(f"X API connection failed, switching to queue mode: {e}")
+    
+    print("\n🚀 Starting bot execution...")
+    print("=" * 60)
     dual_post = args.dual_post
     simultaneous_post = args.simultaneous_post
     queue_only = args.queue_only
