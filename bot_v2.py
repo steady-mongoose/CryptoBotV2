@@ -721,24 +721,29 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
     import fcntl
     import tempfile
     import time
+    from modules.notification_system import notification_system
+    from modules.content_comparison import content_comparison
     
+    start_time = datetime.now()
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
     
-    # Create process lock to prevent duplicate runs
+    # Enhanced duplicate prevention
     lock_file = None
+    run_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+    
     if not test_discord:
         try:
             lock_file_path = os.path.join(tempfile.gettempdir(), 'crypto_bot.lock')
             lock_file = open(lock_file_path, 'w')
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            lock_file.write(f"Bot started at {datetime.now().isoformat()}\nPID: {os.getpid()}")
+            lock_file.write(f"Bot started at {datetime.now().isoformat()}\nPID: {os.getpid()}\nRun ID: {run_id}")
             lock_file.flush()
-            logger.info("✅ Process lock acquired - no duplicate bot instances")
+            logger.info(f"✅ Process lock acquired - Run ID: {run_id}")
         except (OSError, IOError) as e:
             logger.error("🚫 DUPLICATE BOT DETECTED: Another instance is already running")
             logger.error("This prevents duplicate posts and rate limit issues")
-            logger.error("Wait for the other instance to complete or restart the queue")
+            logger.error("Run 'python fix_duplicate_runs.py' to check and fix duplicate issues")
             if lock_file:
                 lock_file.close()
             return
@@ -785,6 +790,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
 
         # Fetch data for each coin
         results = []
+        discord_results = []  # Separate tracking for content comparison
         for coin in COINS:
             logger.info(f"Fetching data for {coin['symbol']}...")
 
@@ -833,6 +839,8 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             }
 
             results.append(coin_data)
+            # Store copy for content comparison
+            discord_results.append(coin_data.copy())
 
         # Prepare main post (different for thread mode)
         if thread_mode:
@@ -1217,6 +1225,51 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             else:
                 logger.info("🚀 Posts will process immediately")
 
+        # Content comparison and notifications
+        completion_success = True
+        errors_list = []
+        content_differences = []
+        
+        try:
+            # Compare content if posting to both platforms
+            if not test_discord and len(results) > 0:
+                content_differences = content_comparison.compare_posts(discord_results, results)
+                if content_differences:
+                    await content_comparison.analyze_why_different(discord_results, results)
+                    await notification_system.send_content_difference_alert(content_differences, session)
+            
+            # Determine platform for notification
+            if test_discord:
+                platform = 'discord'
+            elif dual_post or simultaneous_post:
+                platform = 'both'
+            else:
+                platform = 'x'
+            
+            # Get final queue status
+            final_queue_status = {}
+            try:
+                final_queue_status = get_x_queue_status()
+            except:
+                pass
+            
+            # Send completion notification
+            completion_details = {
+                'posts_count': len(results),
+                'errors': errors_list,
+                'queue_status': final_queue_status,
+                'content_differences': content_differences,
+                'rate_limited': final_queue_status.get('rate_limited', False),
+                'run_time': (datetime.now() - start_time).total_seconds()
+            }
+            
+            await notification_system.send_completion_notification(
+                platform, completion_success, completion_details, session
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in completion notifications: {e}")
+        
         logger.info("CryptoBotV2 run completed successfully.")
         
         # Clean up process lock

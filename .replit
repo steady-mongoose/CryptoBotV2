@@ -6,7 +6,7 @@ channel = "stable-24_05"
 packages = ["glibcLocales"]
 
 [workflows]
-runButton = "Post to X (Safe)"
+runButton = "X Only (Safe)"
 
 [[workflows.workflow]]
 name = "Generate Manual Template Only"
@@ -591,6 +591,93 @@ args = "echo \"✅ Posts queued safely - will process when rate limits reset\""
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Discord Only"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📱 Discord Only Mode - No X API usage\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Posts complete crypto updates to Discord webhook\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --test-discord"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Discord posting completed!\""
+
+[[workflows.workflow]]
+name = "X Only (Safe)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🐦 X Only Mode - Free Tier Safe\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Dual account failover enabled\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ YouTube → Rumble failover enabled\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Queue system prevents rate limits\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python fix_duplicate_runs.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X posting queued safely!\""
+
+[[workflows.workflow]]
+name = "Test Both Platforms"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing Both Platforms\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📱 Testing Discord...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --test-discord"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🐦 Testing X (single tweet)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_x_simple_post.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Both platforms tested!\""
 
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]

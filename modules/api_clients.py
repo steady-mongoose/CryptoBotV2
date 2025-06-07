@@ -3,6 +3,7 @@ import logging
 import tweepy
 from pycoingecko import CoinGeckoAPI
 from binance.client import Client as BinanceClient  # Import Binance client
+from googleapiclient.discovery import build
 
 logger = logging.getLogger('CryptoBot')
 
@@ -22,63 +23,88 @@ X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
 X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
 X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 
-def get_x_client(posting_only: bool = False, account_number: int = 1):
-    """Get X API client with failover account support."""
+def get_x_client(posting_only=False, account_number=1):
+    """
+    Get X API client with dual account support and posting-only mode.
+
+    Args:
+        posting_only (bool): If True, optimize for posting only to avoid rate limits
+        account_number (int): 1 for primary account, 2 for secondary account
+
+    Returns:
+        tweepy.Client or None
+    """
     try:
-        # Primary account (account 1)
+        # Select account credentials
         if account_number == 1:
+            # Primary account (verified)
             consumer_key = os.getenv('X_CONSUMER_KEY')
             consumer_secret = os.getenv('X_CONSUMER_SECRET')
             access_token = os.getenv('X_ACCESS_TOKEN')
             access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET')
-        # Failover account (account 2)
-        elif account_number == 2:
-            consumer_key = os.getenv('X_CONSUMER_KEY_2')
-            consumer_secret = os.getenv('X_CONSUMER_SECRET_2')
-            access_token = os.getenv('X_ACCESS_TOKEN_2')
-            access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET_2')
+            bearer_token = os.getenv('X_BEARER_TOKEN')
+            account_type = "Primary (Verified)"
         else:
-            logger.error(f"Invalid account number: {account_number}")
-            return None
+            # Secondary account (non-verified)
+            consumer_key = os.getenv('X2_CONSUMER_KEY')
+            consumer_secret = os.getenv('X2_CONSUMER_SECRET')
+            access_token = os.getenv('X2_ACCESS_TOKEN')
+            access_token_secret = os.getenv('X2_ACCESS_TOKEN_SECRET')
+            bearer_token = os.getenv('X2_BEARER_TOKEN')
+            account_type = "Secondary (Non-verified)"
 
         if not all([consumer_key, consumer_secret, access_token, access_token_secret]):
             logger.error(f"Missing X API credentials for account {account_number}")
+            if account_number == 2:
+                logger.error("Add these secrets for second account:")
+                logger.error("  - X2_CONSUMER_KEY")
+                logger.error("  - X2_CONSUMER_SECRET")
+                logger.error("  - X2_ACCESS_TOKEN")
+                logger.error("  - X2_ACCESS_TOKEN_SECRET")
+                logger.error("  - X2_BEARER_TOKEN (optional)")
             return None
 
-        client = tweepy.Client(
-            consumer_key=consumer_key,
-            consumer_secret=consumer_secret,
-            access_token=access_token,
-            access_token_secret=access_token_secret,
-            wait_on_rate_limit=True
-        )
+        if posting_only:
+            # Posting-only client - no bearer token to avoid search rate limits
+            client = tweepy.Client(
+                consumer_key=consumer_key,
+                consumer_secret=consumer_secret,
+                access_token=access_token,
+                access_token_secret=access_token_secret,
+                wait_on_rate_limit=False  # Don't wait, fail fast for queue system
+            )
+            logger.info(f"X {account_type} posting-only client initialized (no search capability)")
+        else:
+            # Full client with bearer token (use sparingly)
+            client = tweepy.Client(
+                bearer_token=bearer_token,
+                consumer_key=consumer_key,
+                consumer_secret=consumer_secret,
+                access_token=access_token,
+                access_token_secret=access_token_secret,
+                wait_on_rate_limit=False
+            )
+            logger.info(f"X {account_type} full client initialized")
 
-        # Test the client
-        try:
-            user_info = client.get_me()
-            logger.info(f"X API client {account_number} initialized for @{user_info.data.username}")
-            return client
-        except Exception as e:
-            logger.error(f"X API client {account_number} authentication failed: {e}")
-            return None
+        return client
 
     except Exception as e:
-        logger.error(f"Failed to create X client {account_number}: {e}")
+        logger.error(f"Error initializing X client for account {account_number}: {e}")
         return None
 
 def get_x_client_with_failover(posting_only: bool = False):
     """Get X API client with automatic failover between accounts."""
     # Try primary account first
-    client = get_x_client(posting_only, account_number=1)
+    client, account_number = get_x_client(posting_only, account_number=1), 1
     if client:
-        return client, 1
+        return client, account_number
 
     logger.warning("Primary X account failed, trying failover account...")
 
     # Try failover account
-    client = get_x_client(posting_only, account_number=2)
+    client, account_number = get_x_client(posting_only, account_number=2), 2
     if client:
-        return client, 2
+        return client, account_number
 
     logger.error("Both X accounts failed")
     return None, None
@@ -127,13 +153,9 @@ def get_cryptocompare_api_key() -> str:
     logger.debug("CryptoCompare API key retrieved successfully.")
     return key
 
-def get_youtube_api_key() -> str:
-    """Return the YouTube API key."""
-    if not YOUTUBE_API_KEY:
-        logger.warning("YouTube API key not found in environment variables.")
-        return ""
-    logger.debug("YouTube API key retrieved successfully.")
-    return YOUTUBE_API_KEY
+def get_youtube_api_key():
+    """Get YouTube API key from environment variables."""
+    return os.getenv('YOUTUBE_API_KEY')
 
 def get_coinbase_api_credentials() -> tuple:
     """Return the Coinbase API key and secret."""
@@ -167,3 +189,20 @@ def get_binance_client() -> BinanceClient:
     except Exception as e:
         logger.error(f"Failed to initialize Binance API client: {e}")
         return None
+
+def get_discord_webhook_url():
+    """Get Discord webhook URL from environment variables."""
+    return os.getenv('DISCORD_WEBHOOK_URL')
+
+def get_notification_webhook_url():
+    """Get notification webhook URL for completion notifications."""
+    return os.getenv('NOTIFICATION_WEBHOOK_URL')
+
+def get_notification_config():
+    """Get notification configuration for completion alerts."""
+    return {
+        'discord_webhook': os.getenv('NOTIFICATION_WEBHOOK_URL'),
+        'signal_number': os.getenv('SIGNAL_PHONE_NUMBER'),
+        'sms_number': os.getenv('SMS_PHONE_NUMBER'),
+        'enabled': os.getenv('NOTIFICATIONS_ENABLED', 'false').lower() == 'true'
+    }
