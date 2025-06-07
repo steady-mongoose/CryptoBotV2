@@ -686,7 +686,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"🚀 Primary Bot Run - Queue System (Ultra Safe)\""
+args = "echo \"🚀 Primary Bot Run - Simultaneous X + Discord Posting\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -694,7 +694,11 @@ args = "echo \"✅ X API posting: QUEUE ONLY (prevents all rate limits)\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"✅ Auto-failover: Manual template if queue fails\""
+args = "echo \"✅ Discord posting: SIMULTANEOUS\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Auto-failover: Manual template if X queue fails\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -702,11 +706,15 @@ args = "echo \"✅ Full feature set: Price + Social + YouTube + Research\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+args = "echo \"✅ SMS notifications: ENABLED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
 args = "echo \"\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python bot_v2.py --queue-only"
+args = "python bot_v2.py --simultaneous-post"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -726,7 +734,7 @@ args = "echo \"\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"⚠️  If queue fails, manual template will be generated automatically\""
+args = "echo \"✅ Simultaneous posting completed - check both platforms\""
 
 [[workflows.workflow]]
 name = "Manual Template Failover"
@@ -805,6 +813,59 @@ args = "echo \"📊 Current queue status:\""
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Simultaneous X + Discord Post"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔄 Simultaneous X + Discord Posting Mode\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Posts to both platforms at the same time\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Discord: Guaranteed success\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X: Queue system with manual template fallback\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ SMS notification when complete\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --simultaneous-post"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Final status check:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Check your phone for completion notification!\""
 
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]

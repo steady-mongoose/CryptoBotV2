@@ -4,6 +4,7 @@ import logging
 import os
 from datetime import datetime
 from typing import Dict, Optional
+from modules.sms_notifications import sms_notifications
 
 logger = logging.getLogger('CryptoBot')
 
@@ -14,7 +15,7 @@ class NotificationSystem:
         self.discord_webhook = os.getenv('NOTIFICATION_WEBHOOK_URL')
         self.signal_number = os.getenv('SIGNAL_PHONE_NUMBER')
         self.sms_number = os.getenv('SMS_PHONE_NUMBER')
-        self.enabled = os.getenv('NOTIFICATIONS_ENABLED', 'false').lower() == 'true'
+        self.enabled = os.getenv('NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
 
     async def send_completion_notification(self, 
                                          platform: str, 
@@ -44,12 +45,19 @@ class NotificationSystem:
         if self.discord_webhook:
             await self._send_discord_notification(message, session)
         
-        # Future: Add Signal/SMS integration
+        # Send SMS notification
+        try:
+            sms_sent = sms_notifications.send_completion_notification(platform, success, details)
+            if sms_sent:
+                logger.info("✅ SMS notification sent successfully")
+            else:
+                logger.warning("⚠️ SMS notification failed")
+        except Exception as e:
+            logger.error(f"Error sending SMS: {e}")
+        
+        # Future: Add Signal integration
         if self.signal_number:
             logger.info(f"Signal notification would be sent to {self.signal_number}")
-        
-        if self.sms_number:
-            logger.info(f"SMS notification would be sent to {self.sms_number}")
 
     def _create_notification_message(self, platform: str, success: bool, details: Dict, status_emoji: str, timestamp: str) -> str:
         """Create formatted notification message."""
