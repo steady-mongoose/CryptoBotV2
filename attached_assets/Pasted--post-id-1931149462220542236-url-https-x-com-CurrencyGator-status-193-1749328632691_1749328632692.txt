@@ -1,0 +1,204 @@
+{
+  "post": {
+    "id": "1931149462220542236",
+    "url": "https://x.com/CurrencyGator/status/1931149462220542236",
+    "metadata": {
+      "username": "CurrencyGator",
+      "handle": "@CurrencyGator",
+      "timestamp": "2025-06-07T00:41:00Z",
+      "timezone": "UTC"
+    },
+    "text": "🚀 Crypto Market Update (2025-06-07 at 00:41:25)! 📈 Latest on top altcoins: Ripple, Hedera Hashgraph, Stellar, XDC Network, Sui, Ondo, Algorand, Casper. #Crypto #Altcoins",
+    "replies": [
+      {
+        "id": "1931149463126466608",
+        "reply_to": "1931149462220542236",
+        "metadata": {
+          "username": "CurrencyGator",
+          "handle": "@CurrencyGator",
+          "timestamp": "2025-06-07T00:41:00Z",
+          "timezone": "UTC"
+        },
+        "text": "ripple (XRP): $2.16 (3.10% 24h) 📈\nPredicted: $2.18 (Linear regression)\nTx Volume: 1844.89M\nTop Project: Binance\n#XRP\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "data": {
+          "coin": "XRP",
+          "current_price": "$2.16",
+          "price_change_24h": "3.10%",
+          "predicted_price": "$2.18",
+          "prediction_method": "Linear regression",
+          "transaction_volume_24h": "1844.89M",
+          "top_project": "Binance",
+          "social_mentions": "0",
+          "social_details": "N/A",
+          "video_content": "N/A"
+        }
+      },
+      {
+        "id": "1931149472530084268",
+        "reply_to": "1931149462220542236",
+        "metadata": {
+          "username": "CurrencyGator",
+          "handle": "@CurrencyGator",
+          "timestamp": "2025-06-07T00:41:00Z",
+          "timezone": "UTC"
+        },
+        "text": "hedera hashgraph (HBAR): $0.16 (2.82% 24h) 📈\nPredicted: $0.17 (Linear regression)\nTx Volume: 0.00M\nTop Project: Binance CEX\n#HBAR\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "data": {
+          "coin": "HBAR",
+          "current_price": "$0.16",
+          "price_change_24h": "2.82%",
+          "predicted_price": "$0.17",
+          "prediction_method": "Linear regression",
+          "transaction_volume_24h": "0.00M",
+          "top_project": "Binance CEX",
+          "social_mentions": "0",
+          "social_details": "N/A",
+          "video_content": "N/A"
+        }
+      },
+      {
+        "id": "1931149481875042600",
+        "reply_to": "1931149462220542236",
+        "metadata": {
+          "username": "CurrencyGator",
+          "handle": "@CurrencyGator",
+          "timestamp": "2025-06-07T00:41:00Z",
+          "timezone": "UTC"
+        },
+        "text": "stellar (XLM): $0.26 (2.14% 24h) 📈\nPredicted: $0.27 (Linear regression)\nTx Volume: 137.57M\nTop Project: Binance CEX\n#XLM\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "data": {
+          "coin": "XLM",
+          "current_price": "$0.26",
+          "price_change_24h": "2.14%",
+          "predicted_price": "$0.27",
+          "prediction_method": "Linear regression",
+          "transaction_volume_24h": "137.57M",
+          "top_project": "Binance CEX",
+          "social_mentions": "0",
+          "social_details": "N/A",
+          "video_content": "N/A"
+        }
+      },
+      {
+        "id": "1931149491257700680",
+        "reply_to": "1931149462220542236",
+        "metadata": {
+          "username": "CurrencyGator",
+          "handle": "@CurrencyGator",
+          "timestamp": "2025-06-07T00:41:00Z",
+          "timezone": "UTC"
+        },
+        "text": "xdce crowd sale (XDC): $0.06 (2.20% 24h) 📈\nPredicted: $0.06 (Linear regression)\nTx Volume: 36.02M\nTop Project: Gate\n#XDC\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "data": {
+          "coin": "XDC",
+          "current_price": "$0.06",
+          "price_change_24h": "2.20%",
+          "predicted_price": "$0.06",
+          "prediction_method": "Linear regression",
+          "transaction_volume_24h": "36.02M",
+          "top_project": "Gate",
+          "social_mentions": "0",
+          "social_details": "N/A",
+          "video_content": "N/A"
+        }
+      },
+      {
+        "id": "1931149500585783433",
+        "reply_to": "1931149462220542236",
+        "metadata": {
+          "username": "CurrencyGator",
+          "handle": "@CurrencyGator",
+          "timestamp": "2025-06-07T00:41:00Z",
+          "timezone": "UTC"
+        },
+        "text": "sui (SUI): $3.19 (8.71% 24h) 📈\nPredicted: $3.29 (Linear regression)\nTx Volume: 938.44M\nTop Project: Binance\n#SUI\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "data": {
+          "coin": "SUI",
+          "current_price": "$3.19",
+          "price_change_24h": "8.71%",
+          "predicted_price": "$3.29",
+          "prediction_method": "Linear regression",
+          "transaction_volume_24h": "938.44M",
+          "top_project": "Binance",
+          "social_mentions": "0",
+          "social_details": "N/A",
+          "video_content": "N/A"
+        }
+      },
+      {
+        "id": "1931149509939073194",
+        "reply_to": "1931149462220542236",
+        "metadata": {
+          "username": "CurrencyGator",
+          "handle": "@CurrencyGator",
+          "timestamp": "2025-06-07T00:41:00Z",
+          "timezone": "UTC"
+        },
+        "text": "ondo finance (ONDO): $0.81 (3.92% 24h) 📈\nPredicted: $0.83 (Linear regression)\nTx Volume: 87.39M\nTop Project: Upbit\n#ONDO\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "data": {
+          "coin": "ONDO",
+          "current_price": "$0.81",
+          "price_change_24h": "3.92%",
+          "predicted_price": "$0.83",
+          "prediction_method": "Linear regression",
+          "transaction_volume_24h": "87.39M",
+          "top_project": "Upbit",
+          "social_mentions": "0",
+          "social_details": "N/A",
+          "video_content": "N/A"
+        }
+      },
+      {
+        "id": "1931149519313330398",
+        "reply_to": "1931149462220542236",
+        "metadata": {
+          "username": "CurrencyGator",
+          "handle": "@CurrencyGator",
+          "timestamp": "2025-06-07T00:41:00Z",
+          "timezone": "UTC"
+        },
+        "text": "algorand (ALGO): $0.19 (3.35% 24h) 📈\nPredicted: $0.19 (Linear regression)\nTx Volume: 52.40M\nTop Project: Binance\n#ALGO\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "data": {
+          "coin": "ALGO",
+          "current_price": "$0.19",
+          "price_change_24h": "3.35%",
+          "predicted_price": "$0.19",
+          "prediction_method": "Linear regression",
+          "transaction_volume_24h": "52.40M",
+          "top_project": "Binance",
+          "social_mentions": "0",
+          "social_details": "N/A",
+          "video_content": "N/A"
+        }
+      },
+      {
+        "id": "1931149528805085564",
+        "reply_to": "1931149462220542236",
+        "metadata": {
+          "username": "CurrencyGator",
+          "handle": "@CurrencyGator",
+          "timestamp": "2025-06-07T00:41:00Z",
+          "timezone": "UTC"
+        },
+        "text": "casper network (CSPR): $0.01 (12.90% 24h) 📈\nPredicted: $0.01 (Linear regression)\nTx Volume: 6.70M\nTop Project: Gate\n#CSPR\nSocial: 0 mentions, N/A\nVideo: N/A... N/A",
+        "data": {
+          "coin": "CSPR",
+          "current_price": "$0.01",
+          "price_change_24h": "12.90%",
+          "predicted_price": "$0.01",
+          "prediction_method": "Linear regression",
+          "transaction_volume_24h": "6.70M",
+          "top_project": "Gate",
+          "social_mentions": "0",
+          "social_details": "N/A",
+          "video_content": "N/A"
+        }
+      }
+    ]
+  },
+  "context": {
+    "current_date_time": "2025-06-07T16:35:00-04:00",
+    "source": "xAI Grok 3 Analysis",
+    "notes": "Data extracted from X posts and structured into JSON. Prices and predictions are based on the original post data as of 00:41 UTC on 2025-06-07. Transaction volumes are in millions (M)."
+  }
+}
