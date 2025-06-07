@@ -6,7 +6,7 @@ channel = "stable-24_05"
 packages = ["glibcLocales"]
 
 [workflows]
-runButton = "X Only (Safe)"
+runButton = "Main Bot Run (Queue Primary)"
 
 [[workflows.workflow]]
 name = "Generate Manual Template Only"
@@ -678,6 +678,133 @@ args = "python test_x_simple_post.py"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "echo \"✅ Both platforms tested!\""
+
+[[workflows.workflow]]
+name = "Main Bot Run (Queue Primary)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Primary Bot Run - Queue System (Ultra Safe)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API posting: QUEUE ONLY (prevents all rate limits)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Auto-failover: Manual template if queue fails\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Full feature set: Price + Social + YouTube + Research\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  If queue fails, manual template will be generated automatically\""
+
+[[workflows.workflow]]
+name = "Manual Template Failover"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📝 Manual Template Generation (Failover Mode)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  Use this if queue system fails or rate limits hit\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Generates complete thread template for manual posting\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python generate_thread_template.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Manual template generated - check output file\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"💡 Post manually to X when rate limits reset\""
+
+[[workflows.workflow]]
+name = "Resume Automated Posting"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔄 Resuming automated posting system...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Re-enabling queue worker\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Checking for pending posts\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python resume_queue_worker.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Automated posting resumed\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Current queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
 
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
