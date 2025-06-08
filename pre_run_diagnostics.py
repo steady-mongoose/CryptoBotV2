@@ -12,7 +12,7 @@ import aiohttp
 from datetime import datetime
 from modules.api_clients import get_x_client
 from modules.x_rate_limits import print_x_usage_report
-from modules.x_thread_queue import x_queue
+from modules.x_thread_queue import x_queue, get_x_queue_status
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 

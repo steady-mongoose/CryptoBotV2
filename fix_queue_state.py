@@ -55,6 +55,17 @@ def main():
     # Verify new state
     try:
         new_status = get_x_queue_status()
+        print(f"✅ New Status:")
+        print(f"   • Worker running: {'✅' if new_status['worker_running'] else '❌'}")
+        print(f"   • Rate limited: {'✅' if new_status['rate_limited'] else '❌'}")
+        
+        print("\n🎉 Queue system is now ready!")
+        
+    except Exception as e:
+        print(f"❌ Error verifying new status: {e}")
+
+if __name__ == "__main__":
+    main())
         print(f"\n✅ New Status:")
         print(f"   • Worker running: {'✅' if new_status['worker_running'] else '❌'}")
         print(f"   • Rate limited: {'🚫' if new_status['rate_limited'] else '✅'}")
