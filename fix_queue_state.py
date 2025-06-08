@@ -55,19 +55,17 @@ def main():
     # Verify new state
     try:
         new_status = get_x_queue_status()
-        print(f"📊 New Status:")
-        print(f"   • Posts queued: {new_status['post_queue_size']}")
-        print(f"   • Threads queued: {new_status['thread_queue_size']}")
+        print(f"\n✅ New Status:")
         print(f"   • Worker running: {'✅' if new_status['worker_running'] else '❌'}")
         print(f"   • Rate limited: {'🚫' if new_status['rate_limited'] else '✅'}")
         
         if new_status['worker_running']:
-            print("\n✅ Queue system fixed and running properly!")
+            print("\n🎉 Queue system is now ready!")
         else:
-            print("\n⚠️  Queue worker still not running - may need manual restart")
+            print("\n❌ Worker still not running - check X API credentials")
             
     except Exception as e:
-        print(f"❌ Error checking new status: {e}")
+        print(f"❌ Error getting new status: {e}")
 
 if __name__ == "__main__":
     main()
