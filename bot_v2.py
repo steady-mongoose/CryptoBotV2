@@ -53,7 +53,7 @@ def get_content_accuracy_ratings(coin_name: str) -> dict:
         'algorand': {'preferred_source': 'youtube', 'youtube_avg': 8.1, 'rumble_avg': 7.4},
         'casper network': {'preferred_source': 'rumble', 'youtube_avg': 7.0, 'rumble_avg': 7.9}
     }
-    
+
     return coin_ratings.get(coin_name.lower(), {
         'preferred_source': 'youtube', 
         'youtube_avg': 7.5, 
@@ -63,38 +63,38 @@ def get_content_accuracy_ratings(coin_name: str) -> dict:
 def calculate_content_accuracy_score(title: str, source: str, trusted_creators: list = None) -> float:
     """Calculate accuracy score for content based on title analysis and creator reputation."""
     base_score = 7.0  # Default score
-    
+
     # Boost for trusted creators
     if trusted_creators:
         for creator in trusted_creators:
             if creator.lower() in title.lower():
                 base_score += 1.5
                 break
-    
+
     # Keywords that typically indicate high-quality analysis
     quality_keywords = [
         'analysis', 'technical', 'expert', 'verified', 'research',
         'deep dive', 'comprehensive', 'professional', 'detailed'
     ]
-    
+
     # Keywords that might indicate lower quality
     low_quality_keywords = [
         'clickbait', 'pump', 'moon', 'lambo', 'get rich quick',
         'guaranteed', 'secret', 'insider', 'explosive'
     ]
-    
+
     title_lower = title.lower()
-    
+
     # Add points for quality indicators
     for keyword in quality_keywords:
         if keyword in title_lower:
             base_score += 0.3
-    
+
     # Subtract points for low-quality indicators
     for keyword in low_quality_keywords:
         if keyword in title_lower:
             base_score -= 0.5
-    
+
     # Source-specific adjustments
     if source == 'youtube':
         # YouTube generally has more established crypto channels
@@ -102,7 +102,7 @@ def calculate_content_accuracy_score(title: str, source: str, trusted_creators: 
     elif source == 'rumble':
         # Rumble has fewer censorship issues for crypto content
         base_score += 0.1
-    
+
     # Ensure score stays within 1-10 range
     return max(1.0, min(10.0, base_score))
 
@@ -135,19 +135,39 @@ def get_date():
     return datetime.now().strftime("%Y-%m-%d")
 
 def format_tweet(data):
+    """Format data into a Twitter-appropriate format with full Discord feature parity"""
     change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
-    top_project_text = f"{data['top_project']}"
-    if data.get('top_project_url'):
-        top_project_text += f" - {data['top_project_url']}"
-    return (
-        f"{data['coin_name']} ({data['coin_symbol']}): ${data['price']:.2f} ({data['price_change_24h']:.2f}% 24h) {change_symbol}\n"
-        f"Predicted: ${data['predicted_price']:.2f} (Linear regression)\n"
-        f"Tx Volume: {data['tx_volume']:.2f}M\n"
-        f"Top Project: {top_project_text}\n"
-        f"{data['hashtag']}\n"
-        f"Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n"
-        f"Video: {data['youtube_video']['title']}... {data['youtube_video']['url']}"
+
+    # Build top project info with URL (Discord feature parity)
+    top_project_text = data.get('project_name', data.get('top_project', 'Research Pending'))
+    if data.get('project_url'):
+        top_project_text += f" - {data['project_url']}"
+
+    # Build video info with source indicator
+    video_title = data['youtube_video']['title'][:50]
+    video_source = data['youtube_video'].get('source', 'Video')
+    if len(data['youtube_video']['title']) > 50:
+        video_title += "..."
+
+    # Build the main tweet text with all Discord features
+    tweet_text = (
+        f"2/9 {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n\n"
+        f"💰 Price: ${data['price']:.2f}\n"
+        f"📊 24h Change: {data['price_change_24h']:.2f}%\n"
+        f"🔮 Predicted: ${data['predicted_price']:.2f}\n"
+        f"💹 Volume: {data['tx_volume']:.2f}M\n"
+        f"🏢 Top Project: {top_project_text}\n\n"
+        f"📱 Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n"
     )
+
+    # Add social sources if available (Discord feature parity)
+    if data['social_metrics'].get('sources'):
+        sources = ', '.join(data['social_metrics']['sources'][:2])  # Limit for space
+        tweet_text += f"📊 Sources: {sources}\n"
+
+    tweet_text += f"\n🎥 {video_source}: {video_title}\n{data['youtube_video']['url']}\n\n{data['hashtag']}"
+
+    return tweet_text
 
 def create_thread_post(results):
     """Create a thread-style post for X with multiple tweets."""
@@ -398,18 +418,18 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
             f"{coin} crypto news 2025",
             f"{coin} cryptocurrency update"
         ]
-        
+
         # Known accurate content creators for crypto (rating boost)
         trusted_creators = [
             'coin bureau', 'crypto daily', 'investanswers', 'altcoin daily',
             'crypto capital venture', 'crypto zombie', 'digital asset news'
         ]
-        
+
         for search_query in search_queries:
             try:
                 # Use Rumble search URL with better formatting
                 search_url = f"https://rumble.com/search/video?q={search_query.replace(' ', '+')}"
-                
+
                 headers = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -417,11 +437,11 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
                     'Accept-Encoding': 'gzip, deflate',
                     'Connection': 'keep-alive',
                 }
-                
+
                 async with session.get(search_url, headers=headers, timeout=10) as response:
                     if response.status == 200:
                         html = await response.text()
-                        
+
                         # Enhanced regex patterns for Rumble videos with creator detection
                         import re
                         patterns = [
@@ -429,7 +449,7 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
                             r'href="(/v[^"]+)"[^>]*>([^<]{10,80})</a>',
                             r'<a[^>]*href="(/v[^"]+)"[^>]*>([^<]+)</a>'
                         ]
-                        
+
                         for pattern in patterns:
                             matches = re.findall(pattern, html, re.IGNORECASE)
                             if matches:
@@ -438,10 +458,10 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
                                 title = re.sub(r'<[^>]+>', '', title).strip()
                                 if len(title) > 5:  # Valid title
                                     video_url = f"https://rumble.com{video_path}"
-                                    
+
                                     # Calculate accuracy score
                                     accuracy_score = calculate_content_accuracy_score(title, 'rumble', trusted_creators)
-                                    
+
                                     logger.info(f"✅ Found Rumble video for {coin}: {title[:50]}... (Score: {accuracy_score}/10)")
                                     return {
                                         "title": title,
@@ -451,21 +471,21 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
                                         "source": "Rumble",
                                         "accuracy_score": accuracy_score
                                     }
-                    
+
                     elif response.status == 429:
                         logger.warning(f"Rumble rate limited, trying next query")
                         await asyncio.sleep(5)
                         continue
-                        
+
                 await asyncio.sleep(2)  # Respect rate limits
-                        
+
             except asyncio.TimeoutError:
                 logger.warning(f"Timeout searching Rumble for {search_query}")
                 continue
             except Exception as e:
                 logger.error(f"Error searching Rumble for {search_query}: {e}")
                 continue
-        
+
         # Enhanced fallback with specific crypto content
         logger.info(f"Using general Rumble crypto search for {coin}")
         return {
@@ -475,7 +495,7 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
             "video_id": "",
             "source": "Rumble"
         }
-        
+
     except Exception as e:
         logger.error(f"Critical error fetching Rumble video for {coin}: {e}")
         # Absolute fallback
@@ -487,170 +507,67 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
             "source": "Rumble"
         }
 
-async def fetch_youtube_video(youtube, coin: str, current_date: str, session: aiohttp.ClientSession = None):
+async def fetch_youtube_video(coin: str, current_date: str, session: aiohttp.ClientSession = None):
+    """Fetch a recent video for the coin with Rumble/YouTube fallback"""
+
+    # Try Rumble first (no API limits)
     try:
-        # Get content rating preferences for the coin
-        content_ratings = get_content_accuracy_ratings(coin)
-        preferred_source = content_ratings.get('preferred_source', 'youtube')
-        
-        # Try preferred source first, then failover
-        if preferred_source == 'rumble' and session:
-            logger.info(f"Trying Rumble first for {coin} (rated as preferred source)")
-            rumble_result = await fetch_rumble_video_with_rating(coin, session)
-            if rumble_result and rumble_result.get('accuracy_score', 0) >= 7.0:
-                logger.info(f"Using high-rated Rumble video for {coin}: {rumble_result['title'][:50]}... (Score: {rumble_result['accuracy_score']}/10)")
-                return rumble_result
-            else:
-                logger.info(f"Rumble content quality insufficient for {coin}, trying YouTube")
-        
-        # Try YouTube (primary or backup)
-        search_queries = [
-            f"{coin} crypto 2025",
-            f"{coin} cryptocurrency news", 
-            f"{coin} price prediction 2025",
-            f"{coin} analysis crypto"
-        ]
+        if session:
+            search_query = f"{coin.replace(' ', '+')}+crypto+2025"
+            rumble_url = f"https://rumble.com/search/video?q={search_query}"
 
-        for search_query in search_queries:
-            try:
-                request = youtube.search().list(
-                    part="snippet",
-                    q=search_query,
-                    type="video",
-                    maxResults=5,  # Reduced to minimize quota usage
-                    publishedAfter="2024-01-01T00:00:00Z"
-                )
-                response = request.execute()
+            async with session.get(rumble_url, headers={'User-Agent': 'Mozilla/5.0'}) as response:
+                if response.status == 200:
+                    text = await response.text()
+                    # Simple extraction - find first video title
+                    if 'data-js="videoTitle"' in text:
+                        start = text.find('data-js="videoTitle"') + 50
+                        end = text.find('</h3>', start)
+                        if start > 49 and end > start:
+                            title = text[start:end].strip()[:100]
+                            return {
+                                "title": f"{title} | {coin} Analysis",
+                                "url": rumble_url,
+                                "source": "Rumble"
+                            }
+    except Exception as e:
+        logger.debug(f"Rumble search failed for {coin}: {e}")
 
-                for item in response.get('items', []):
-                    video_id = item['id']['videoId']
-                    if not db.has_video_been_used(video_id):
-                        title = item['snippet']['title']
-                        channel_title = item['snippet'].get('channelTitle', '')
-                        url = f"https://youtu.be/{video_id}"
-                        thumbnail_url = item['snippet']['thumbnails'].get('high', {}).get('url', 
-                                      item['snippet']['thumbnails'].get('medium', {}).get('url', 
-                                      item['snippet']['thumbnails'].get('default', {}).get('url', '')))
+    # Fallback to YouTube if available
+    try:
+        youtube_api_key = get_youtube_api_key()
+        if youtube_api_key:
+            youtube = build('youtube', 'v3', developerKey=youtube_api_key)
+            search_query = f"{coin} crypto 2025"
 
-                        # Calculate accuracy score for YouTube content
-                        trusted_youtube_creators = [
-                            'coin bureau', 'crypto daily', 'investanswers', 'altcoin daily',
-                            'crypto capital venture', 'crypto zombie', 'digital asset news',
-                            'blockchain backer', 'crypto jebb', 'crypto crew university'
-                        ]
-                        
-                        accuracy_score = calculate_content_accuracy_score(
-                            f"{title} {channel_title}", 'youtube', trusted_youtube_creators
-                        )
-
-                        db.add_used_video(coin, video_id, current_date)
-                        logger.info(f"Fetched YouTube video for {coin}: {title} (Score: {accuracy_score}/10)")
-                        return {
-                            "title": title, 
-                            "url": url,
-                            "thumbnail_url": thumbnail_url,
-                            "video_id": video_id,
-                            "source": "YouTube",
-                            "accuracy_score": accuracy_score
-                        }
-            except HttpError as e:
-                if "quotaExceeded" in str(e) or "quota" in str(e).lower() or "429" in str(e):
-                    logger.warning(f"YouTube API quota exceeded for {coin}, falling back to Rumble")
-                    if session:
-                        return await fetch_rumble_video(coin, session)
-                    break
-                else:
-                    logger.error(f"YouTube API error for query '{search_query}': {e}")
-                    continue
-
-        # If no unused videos found, try one more YouTube attempt
-        try:
-            logger.warning(f"No unused YouTube videos found for {coin}, trying most recent video.")
-            final_query = f"{coin} crypto 2025"
             request = youtube.search().list(
                 part="snippet",
-                q=final_query,
+                q=search_query,
                 type="video",
-                maxResults=1,
+                maxResults=3,
                 publishedAfter="2024-01-01T00:00:00Z"
             )
             response = request.execute()
 
             if response.get('items'):
                 item = response['items'][0]
-                title = item['snippet']['title']
-                url = f"https://youtu.be/{item['id']['videoId']}"
-                thumbnail_url = item['snippet']['thumbnails'].get('high', {}).get('url', 
-                              item['snippet']['thumbnails'].get('medium', {}).get('url', ''))
-                logger.info(f"Using recent video for {coin} (may be reused): {title}")
                 return {
-                    "title": title, 
-                    "url": url,
-                    "thumbnail_url": thumbnail_url,
-                    "video_id": item['id']['videoId'],
+                    "title": item['snippet']['title'],
+                    "url": f"https://youtu.be/{item['id']['videoId']}",
                     "source": "YouTube"
                 }
-        except HttpError as e:
-            if "quotaExceeded" in str(e) or "quota" in str(e).lower():
-                logger.warning(f"YouTube API quota exceeded on final attempt for {coin}, using Rumble")
-                if session:
-                    return await fetch_rumble_video(coin, session)
+    except Exception as e:
+        logger.warning(f"YouTube API error for {coin}: {e}")
 
-        # Final fallback - generic crypto content or Rumble if session available
-        if session:
-            logger.info(f"All YouTube attempts failed for {coin}, using Rumble fallback")
-            return await fetch_rumble_video(coin, session)
-        else:
-            logger.warning(f"No videos found for {coin}, using generic YouTube fallback.")
-            return {
-                "title": f"Latest {coin.title()} Crypto Analysis", 
-                "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025",
-                "thumbnail_url": "",
-                "video_id": "",
-                "source": "YouTube"
-            }
-
-    except HttpError as e:
-        logger.error(f"YouTube API error for {coin}: {str(e)}")
-        
-        # Check if it's a quota/rate limit error
-        if "quotaExceeded" in str(e) or "quota" in str(e).lower() or "429" in str(e):
-            logger.warning(f"YouTube rate limited for {coin}, falling back to Rumble")
-            if session:
-                return await fetch_rumble_video(coin, session)
-        
-        # Fallback to search URL instead of N/A
-        return {
-            "title": f"{coin.title()} Crypto Updates", 
-            "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto",
-            "thumbnail_url": "",
-            "video_id": "",
-            "source": "YouTube"
-        }
+    # Final fallback
+    return {
+        "title": f"Latest {coin} Crypto Analysis 2025",
+        "url": f"https://youtube.com/search?q={coin.replace(' ', '+')}+crypto+analysis",
+        "source": "Search"
+    }
 
 async def research_top_projects(coingecko_id: str, coin_symbol: str, session: aiohttp.ClientSession):
-    """
-    Conduct on-chain research to identify top projects associated with a given cryptocurrency.
-    This function simulates querying on-chain data and external APIs to discover projects
-    being built on or utilizing the specified cryptocurrency.
-
-    Args:
-        coingecko_id (str): The CoinGecko ID of the cryptocurrency.
-        coin_symbol (str): The symbol of the cryptocurrency (e.g., BTC, ETH).
-        session (aiohttp.ClientSession): The aiohttp session for making asynchronous HTTP requests.
-
-    Returns:
-        dict: A dictionary containing information about the top project found, including its name,
-              URL, description, and type (e.g., DEX, DeFi platform, wallet). If no project is found,
-              returns a dictionary with default values.
-    """
-    # Simulate on-chain data retrieval and project discovery
-    # In a real-world scenario, this would involve querying blockchain data,
-    # decentralized exchanges, and other relevant sources to identify projects
-    # interacting with the specified cryptocurrency.
-
-    # For demonstration purposes, let's define a dictionary of known projects
-    # associated with different cryptocurrencies.
+    """Research function to find top projects for each coin"""
     known_projects = {
         'ripple': {
             'name': 'XRP Ledger',
@@ -702,20 +619,55 @@ async def research_top_projects(coingecko_id: str, coin_symbol: str, session: ai
         }
     }
 
-    # Check if the cryptocurrency is in the list of known projects
     if coingecko_id in known_projects:
-        top_project = known_projects[coingecko_id]
-        logger.info(f"Top project found for {coin_symbol}: {top_project['name']}")
+        project_info = known_projects[coingecko_id]
+        logger.info(f"Top project found for {coin_symbol}: {project_info['name']} - {project_info['url']}")
+
+        return {
+            'top_project': project_info,
+            'project_name': project_info['name'],
+            'project_url': project_info['url'],
+            'project_description': project_info['description'],
+            'project_type': project_info['type']
+        }
     else:
-        top_project = {}
         logger.warning(f"No top project found for {coin_symbol}. Using default values.")
+        return {
+            'top_project': {},
+```python
+            'project_name': 'Research Pending',
+            'project_url': '',
+            'project_description': 'Project research in progress',
+            'project_type': 'Unknown'
+        }
 
-    # Add the top project to the result dictionary
-    result = {
-        'top_project': top_project
-    }
+def format_discord_post(data):
+    """Format data for Discord posting with full feature set"""
+    change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
 
-    return result
+    # Build top project info with URL
+    top_project_text = data.get('project_name', data.get('top_project', 'Research Pending'))
+    if data.get('project_url'):
+        top_project_text += f" - {data['project_url']}"
+
+    # Build social metrics with sources
+    social_text = f"{data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}"
+    if data['social_metrics'].get('sources'):
+        sources = ', '.join(data['social_metrics']['sources'])
+        social_text += f" (Sources: {sources})"
+
+    # Build video info with source
+    video_source = data['youtube_video'].get('source', 'Video')
+
+    return (
+        f"{data['coin_name']} ({data['coin_symbol']}): ${data['price']:.2f} ({data['price_change_24h']:.2f}% 24h) {change_symbol}\n"
+        f"Predicted: ${data['predicted_price']:.2f} (Linear regression)\n"
+        f"Tx Volume: {data['tx_volume']:.2f}M\n"
+        f"Top Project: {top_project_text}\n"
+        f"{data['hashtag']}\n"
+        f"Social: {social_text}\n"
+        f"{video_source}: {data['youtube_video']['title']} - {data['youtube_video']['url']}"
+    )
 
 async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thread_mode: bool = False, simultaneous_post: bool = False, queue_only: bool = False):
     import fcntl
@@ -723,15 +675,15 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
     import time
     from modules.notification_system import notification_system
     from modules.content_comparison import content_comparison
-    
+
     start_time = datetime.now()
     logger.info("Starting CryptoBotV2 daily run...")
     logger.debug(f"Test Discord mode: {test_discord}")
-    
+
     # Enhanced duplicate prevention
     lock_file = None
     run_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
-    
+
     if not test_discord:
         try:
             lock_file_path = os.path.join(tempfile.gettempdir(), 'crypto_bot.lock')
@@ -747,7 +699,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             if lock_file:
                 lock_file.close()
             return
-    
+
     # Relaxed queue check - only warn about large queues but don't block
     if not test_discord:
         try:
@@ -812,15 +764,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=test_discord)
             logger.info(f"Social metrics for {coin['symbol']}: {social_metrics['mentions']} mentions, {social_metrics['sentiment']} sentiment")
 
-            # Research top on-chain projects
-            logger.info(f"Researching on-chain projects for {coin['symbol']}...")
+            # Research top projects
+            print(f"  🔍 Researching top projects for {coin['name']}...")
             project_research = await research_top_projects(coin['coingecko_id'], coin['symbol'], session)
-            top_project_info = project_research.get('top_project', {})
-            logger.info(f"Found top project for {coin['symbol']}: {top_project_info.get('name', coin['top_project'])}")
 
-            logger.info(f"✓ Collected data for {coin['name']}")
-
-            # Store data for the thread
             coin_data = {
                 'coin_name': coin['name'],
                 'coin_symbol': coin['symbol'],
@@ -828,10 +775,11 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 'price_change_24h': price_change_24h,
                 'predicted_price': predicted_price,
                 'tx_volume': tx_volume,
-                'top_project': top_project_info.get('name', coin['top_project']),
-                'top_project_url': top_project_info.get('url', ''),
-                'top_project_description': top_project_info.get('description', ''),
-                'top_project_type': top_project_info.get('type', 'Exchange'),
+                'top_project': project_research.get('project_name', coin['top_project']),
+                'project_name': project_research.get('project_name', coin['top_project']),
+                'project_url': project_research.get('project_url', ''),
+                'project_description': project_research.get('project_description', ''),
+                'project_type': project_research.get('project_type', 'Exchange'),
                 'hashtag': coin['hashtag'],
                 'social_metrics': social_metrics,
                 'youtube_video': await fetch_youtube_video(youtube, coin['name'], current_date, session),
@@ -866,7 +814,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
 
             # Post coin updates
             for data in results:
-                reply_text = format_tweet(data)
+                reply_text = format_discord_post(data)
                 async with session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
                     if response.status == 204:
                         logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
@@ -903,7 +851,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
 
                 # Post coin updates to Discord
                 for data in results:
-                    reply_text = format_tweet(data)
+                    reply_text = format_discord_post(data)
                     async with session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
                         if response.status == 204:
                             logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
@@ -1054,7 +1002,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
 
                     # Post coin updates
                     for data in results:
-                        reply_text = format_tweet(data)
+                        reply_text = format_discord_post(data)
                         async with session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
                             if response.status == 204:
                                 logger.info(f"Successfully posted {data['coin_name']} update to Discord. Status code: 204")
@@ -1070,7 +1018,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # DIRECT X POSTING MODE - Mirror Discord features exactly
             logger.info("🚀 DIRECT X POSTING MODE - Mirroring Discord features")
             logger.info("⚠️  Bypassing queue system for immediate posting test")
-            
+
             try:
                 # Validate X client can post
                 if not x_client:
@@ -1081,7 +1029,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     logger.error("  - X_ACCESS_TOKEN") 
                     logger.error("  - X_ACCESS_TOKEN_SECRET")
                     return
-                
+
                 # Test authentication first
                 try:
                     user_info = x_client.get_me()
@@ -1090,7 +1038,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     logger.error(f"❌ X authentication failed: {e}")
                     logger.error("Your X API credentials may be invalid or expired")
                     return
-                
+
                 # Post main tweet (mirrors Discord main post)
                 logger.info("📤 Posting main tweet to X...")
                 try:
@@ -1098,10 +1046,10 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     main_tweet_id = main_tweet.data['id']
                     logger.info(f"✅ Posted main tweet: {main_tweet_id}")
                     print(f"🐦 Main tweet posted! ID: {main_tweet_id}")
-                    
+
                     # Small delay before replies
                     await asyncio.sleep(3)
-                    
+
                 except tweepy.TooManyRequests as e:
                     logger.error(f"❌ RATE LIMITED on main tweet: {e}")
                     logger.error("Your X account has hit the posting rate limit")
@@ -1114,31 +1062,31 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 except Exception as e:
                     logger.error(f"❌ Failed to post main tweet: {e}")
                     return
-                
+
                 # Post individual coin replies (mirrors Discord coin posts)
                 previous_tweet_id = main_tweet_id
                 posted_coins = 0
-                
+
                 for i, data in enumerate(results):
                     try:
                         reply_text = format_tweet(data)
                         logger.info(f"📤 Posting {data['coin_name']} reply ({i+1}/{len(results)})...")
-                        
+
                         reply_tweet = x_client.create_tweet(
                             text=reply_text,
                             in_reply_to_tweet_id=previous_tweet_id
                         )
-                        
+
                         previous_tweet_id = reply_tweet.data['id']
                         posted_coins += 1
-                        
+
                         logger.info(f"✅ Posted {data['coin_name']} reply: {reply_tweet.data['id']}")
                         print(f"🐦 {data['coin_name']} posted! ID: {reply_tweet.data['id']}")
-                        
+
                         # Delay between posts to respect rate limits
                         if i < len(results) - 1:  # Don't wait after last post
                             await asyncio.sleep(5)  # 5 second delay
-                            
+
                     except tweepy.TooManyRequests as e:
                         logger.error(f"❌ RATE LIMITED on {data['coin_name']}: {e}")
                         logger.error(f"Successfully posted {posted_coins}/{len(results)} coins before rate limit")
@@ -1150,7 +1098,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     except Exception as e:
                         logger.error(f"❌ Failed to post {data['coin_name']}: {e}")
                         continue
-                
+
                 # Final summary
                 if posted_coins == len(results):
                     logger.info(f"🎉 SUCCESS: Posted all {posted_coins} coins to X!")
@@ -1163,7 +1111,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     logger.warning("Rate limits prevented complete posting")
                     print(f"\n⚠️  Partial Success - Rate Limited")
                     print(f"📊 Posted: {posted_coins}/{len(results)} coins")
-                    
+
             except Exception as e:
                 logger.error(f"❌ CRITICAL ERROR in direct X posting: {e}")
                 logger.error("Direct posting failed - this is why queue system exists")
@@ -1178,11 +1126,11 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # Start the queue worker FIRST
             logger.info("🚀 Starting queue worker...")
             start_x_queue()
-            
+
             # Wait for worker to initialize
             import time
             time.sleep(2)
-            
+
             # Verify worker is running
             initial_status = get_x_queue_status()
             if not initial_status['worker_running']:
@@ -1190,7 +1138,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 return
             else:
                 logger.info("✅ Queue worker is running")
-            
+
             # Enable auto-resume if requested
             if args.auto_resume:
                 logger.info("✅ Auto-resume enabled - queue will restart if worker stops")
@@ -1219,7 +1167,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
             # Show final queue status
             final_status = get_x_queue_status()
             logger.info(f"📊 Final Status: Worker: {final_status['worker_running']}, Threads: {final_status['thread_queue_size']}, Posts: {final_status['post_queue_size']}")
-            
+
             if final_status['rate_limited']:
                 logger.info("⏳ Posts will process when rate limit resets")
             else:
@@ -1229,7 +1177,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
         completion_success = True
         errors_list = []
         content_differences = []
-        
+
         try:
             # Compare content if posting to both platforms
             if not test_discord and len(results) > 0:
@@ -1237,7 +1185,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 if content_differences:
                     await content_comparison.analyze_why_different(discord_results, results)
                     await notification_system.send_content_difference_alert(content_differences, session)
-            
+
             # Determine platform for notification
             if test_discord:
                 platform = 'discord'
@@ -1245,14 +1193,14 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 platform = 'both'
             else:
                 platform = 'x'
-            
+
             # Get final queue status
             final_queue_status = {}
             try:
                 final_queue_status = get_x_queue_status()
             except:
                 pass
-            
+
             # Send completion notification
             completion_details = {
                 'posts_count': len(results),
@@ -1262,16 +1210,16 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 'rate_limited': final_queue_status.get('rate_limited', False),
                 'run_time': (datetime.now() - start_time).total_seconds()
             }
-            
+
             await notification_system.send_completion_notification(
                 platform, completion_success, completion_details, session
             )
-            
+
         except Exception as e:
             logger.error(f"Error in completion notifications: {e}")
-        
+
         logger.info("CryptoBotV2 run completed successfully.")
-        
+
         # Clean up process lock
         if lock_file and not test_discord:
             try:
@@ -1283,7 +1231,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    
+
     # Enhanced logging setup for verbose feedback
     logging.basicConfig(
         level=logging.INFO,
@@ -1293,13 +1241,13 @@ if __name__ == "__main__":
             logging.FileHandler('bot_detailed.log')
         ]
     )
-    
+
     print("🚀 CRYPTOBOT V2 STARTUP - VERBOSE MODE")
     print("=" * 60)
     print(f"⏰ Start time: {start_time}")
     print(f"📋 Logging to: bot_detailed.log")
     print("")
-    
+
     logger.info("Script execution started with verbose logging")
 
     parser = argparse.ArgumentParser(description="CryptoBotV2 - Post daily crypto updates to X or Discord")
@@ -1320,7 +1268,7 @@ if __name__ == "__main__":
     parser.add_argument('--verbose', action='store_true',
                         help='Enable extra verbose logging and diagnostics')
     args = parser.parse_args()
-    
+
     # Enable debug logging if verbose mode
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -1328,22 +1276,22 @@ if __name__ == "__main__":
         print("")
 
     test_discord = args.test_discord
-    
+
     # Comprehensive startup diagnostics
     print("🔍 PRE-RUN DIAGNOSTICS")
     print("-" * 40)
-    
+
     # Check critical environment variables
     critical_env_vars = ['DISCORD_WEBHOOK_URL', 'X_CONSUMER_KEY', 'X_CONSUMER_SECRET', 'X_ACCESS_TOKEN', 'X_ACCESS_TOKEN_SECRET']
     missing_vars = []
-    
+
     for var in critical_env_vars:
         if not os.getenv(var):
             missing_vars.append(var)
             print(f"❌ MISSING: {var}")
         else:
             print(f"✅ SET: {var}")
-    
+
     if missing_vars:
         print(f"\n🚨 CRITICAL ERROR: Missing environment variables!")
         print("💡 Add these to Replit Secrets:")
@@ -1351,9 +1299,9 @@ if __name__ == "__main__":
             print(f"   • {var}")
         print("\n❌ Cannot proceed without these credentials")
         exit(1)
-    
+
     print("✅ All critical environment variables present")
-    
+
     # Test basic X API connection if not Discord-only mode
     if not test_discord:
         print("\n🔗 Testing X API connection...")
@@ -1374,7 +1322,7 @@ if __name__ == "__main__":
             print("🔄 Forcing queue-only mode for safety")
             args.queue_only = True
             logger.error(f"X API connection failed, switching to queue mode: {e}")
-    
+
     print("\n🚀 Starting bot execution...")
     print("=" * 60)
     dual_post = args.dual_post
