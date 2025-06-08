@@ -1,59 +1,77 @@
+
 #!/usr/bin/env python3
 """
-Script to check the status of the X posting queue.
+Check X posting queue status with specific posting capability assessment.
 """
 
-import logging
 from modules.x_thread_queue import get_x_queue_status
+from datetime import datetime
+import tweepy
+from modules.api_clients import get_x_client
 
-# Set up simple logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-
-def main():
-    """Check and display X queue status."""
+def check_posting_capability():
+    """Check if we can actually post to X right now."""
     print("🔍 Checking X Posting Queue Status...")
     print("=" * 40)
-
+    
+    # Get queue status
+    status = get_x_queue_status()
+    
+    print("📊 Queue Status:")
+    print(f"   • Posts queued: {status['post_queue_size']}")
+    print(f"   • Threads queued: {status['thread_queue_size']}")
+    print(f"   • Worker running: {'✅' if status['worker_running'] else '❌'}")
+    print(f"   • Rate limited: {'✅' if status['rate_limited'] else '❌'}")
+    
+    # Test actual posting capability
+    print(f"\n🧪 Testing X API Posting Capability...")
+    can_post_now = False
+    
     try:
-        status = get_x_queue_status()
-
-        print(f"📊 Queue Status:")
-        print(f"   • Posts queued: {status['post_queue_size']}")
-        print(f"   • Threads queued: {status['thread_queue_size']}")
-        print(f"   • Worker running: {'✅' if status['worker_running'] else '❌'}")
-        print(f"   • Rate limited: {'🚫' if status['rate_limited'] else '✅'}")
-
-        if status['rate_limit_reset']:
-            from datetime import datetime
-            reset_time = datetime.fromisoformat(status['rate_limit_reset'])
-            remaining = (reset_time - datetime.now()).total_seconds() / 60
-            if remaining > 0:
-                print(f"   • Rate limit resets in: {remaining:.1f} minutes")
-            else:
-                print(f"   • Rate limit has expired, should reset soon")
-
-        # Status assessment
-        if status['worker_running'] and not status['rate_limited']:
-            print("\n✅ Queue system is healthy and ready")
-        elif status['worker_running'] and status['rate_limited']:
-            print("\n⏳ Queue system running but rate limited")
-        elif not status['worker_running']:
-            print("\n❌ Queue worker is not running")
-            print("💡 Run 'python restart_x_queue.py' to fix")
-        
-        # Queue recommendations
-        total_items = status['post_queue_size'] + status['thread_queue_size']
-        if total_items > 10:
-            print(f"\n⚠️  Large queue detected ({total_items} items)")
-            print("This may indicate a backlog or rate limiting")
-        elif total_items > 0:
-            print(f"\n📝 Queue has {total_items} items pending")
+        client = get_x_client(posting_only=True)
+        if client:
+            # Try to get user info (minimal API call)
+            user_info = client.get_me()
+            print(f"✅ X API accessible: @{user_info.data.username}")
+            can_post_now = True
         else:
-            print("\n📭 Queue is empty")
-
+            print("❌ X API client failed to initialize")
+    except tweepy.TooManyRequests:
+        print("❌ X API rate limited (429 error)")
+        can_post_now = False
     except Exception as e:
-        print(f"❌ Error checking queue status: {e}")
-        print("💡 Queue system may not be initialized")
+        print(f"❌ X API error: {e}")
+        can_post_now = False
+    
+    # Final assessment
+    print(f"\n🎯 POSTING CAPABILITY ASSESSMENT:")
+    print("=" * 40)
+    
+    if status['worker_running'] and can_post_now:
+        print("✅ CAN POST IMMEDIATELY")
+        print("   • Queue worker is running")
+        print("   • X API is accessible")
+        print("   • Posts will be sent instantly")
+    elif status['worker_running'] and not can_post_now:
+        print("⏳ CAN QUEUE (WILL POST LATER)")
+        print("   • Queue worker is running")
+        print("   • X API is rate limited")
+        print("   • Posts will queue and auto-send when limit resets")
+        if status['rate_limited'] and status.get('rate_limit_reset'):
+            print(f"   • Estimated reset: {status['rate_limit_reset']}")
+        else:
+            print("   • Estimated reset: ~15 minutes")
+    elif not status['worker_running']:
+        print("❌ CANNOT POST")
+        print("   • Queue worker is not running")
+        print("   • Run 'python fix_queue_permanently.py' to fix")
+    else:
+        print("❓ UNKNOWN STATUS")
+        print("   • Unclear queue/API state")
+    
+    print(f"\n📭 Queue is {'empty' if status['post_queue_size'] == 0 and status['thread_queue_size'] == 0 else 'not empty'}")
+    
+    return can_post_now, status['worker_running']
 
 if __name__ == "__main__":
-    main()
+    check_posting_capability()
