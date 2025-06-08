@@ -123,6 +123,10 @@ class XThreadQueue:
         except:
             pass
 
+        # Enhanced error recovery
+        consecutive_errors = 0
+        max_consecutive_errors = 5
+
         while self.is_running:
             try:
                 # Check if we're rate limited
@@ -184,7 +188,20 @@ class XThreadQueue:
 
             except Exception as e:
                 logger.error(f"Error in X posting worker: {e}")
-                time.sleep(30)  # Wait before retrying
+                consecutive_errors += 1
+                
+                if consecutive_errors >= max_consecutive_errors:
+                    logger.error(f"Too many consecutive errors ({consecutive_errors}), forcing recovery")
+                    # Force clear rate limit state
+                    self.rate_limit_reset_time = None
+                    self.client = None
+                    consecutive_errors = 0
+                    logger.info("Forced recovery applied, continuing...")
+                
+                time.sleep(min(30 * consecutive_errors, 300))  # Progressive backoff, max 5 minutes
+            else:
+                # Reset error counter on successful iteration
+                consecutive_errors = 0
 
         logger.debug("X posting worker stopped")
 
