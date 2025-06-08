@@ -136,46 +136,114 @@ def get_date():
 
 def format_tweet(data):
     change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
+    
+    # Enhanced engagement hooks for monetization
+    if data['price_change_24h'] > 5:
+        hook = "🚀 BREAKING:"
+    elif data['price_change_24h'] < -5:
+        hook = "🔥 ALERT:"
+    else:
+        hook = "📊 UPDATE:"
+    
+    # Add call-to-action elements
+    engagement_cta = "\n💬 What's your price target? Drop predictions below!"
+    
+    # Enhanced formatting for better engagement
     top_project_text = f"{data['top_project']}"
     if data.get('top_project_url'):
         top_project_text += f" - {data['top_project_url']}"
-    return (
-        f"{data['coin_name']} ({data['coin_symbol']}): ${data['price']:.2f} ({data['price_change_24h']:.2f}% 24h) {change_symbol}\n"
-        f"Predicted: ${data['predicted_price']:.2f} (Linear regression)\n"
-        f"Tx Volume: {data['tx_volume']:.2f}M\n"
-        f"Top Project: {top_project_text}\n"
-        f"{data['hashtag']}\n"
-        f"Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n"
-        f"Video: {data['youtube_video']['title']}... {data['youtube_video']['url']}"
+    
+    # Monetization-optimized format with engagement hooks
+    tweet_content = (
+        f"{hook} {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n\n"
+        f"💰 Current: ${data['price']:.4f}\n"
+        f"📈 24h: {data['price_change_24h']:+.2f}%\n"
+        f"🔮 AI Prediction: ${data['predicted_price']:.4f}\n"
+        f"📊 Volume: ${data['tx_volume']:.1f}M\n"
+        f"🏢 Top Exchange: {top_project_text}\n\n"
+        f"📱 Social Buzz: {data['social_metrics']['mentions']} mentions ({data['social_metrics']['sentiment']})\n"
+        f"🎥 Analysis: {data['youtube_video']['title'][:40]}...\n"
+        f"{data['youtube_video']['url']}\n\n"
+        f"{data['hashtag']} #CryptoAnalysis #Trading"
     )
+    
+    # Add engagement CTA if under character limit
+    if len(tweet_content + engagement_cta) <= 270:
+        tweet_content += engagement_cta
+    
+    return tweet_content
 
 def create_thread_post(results):
-    """Create a thread-style post for X with multiple tweets."""
+    """Create monetization-optimized thread for X with engagement hooks."""
     current_date = get_date()
     current_time = get_timestamp()
 
-    # Main thread starter
-    main_post = f"🧵 THREAD: Crypto Market Deep Dive ({current_date} at {current_time})\n\nAnalysis of top altcoins with predictions, social sentiment, and project updates 👇\n\n#CryptoThread #Altcoins 1/{len(results) + 1}"
+    # Calculate market winners/losers for engagement hook
+    winners = [r for r in results if r['price_change_24h'] > 0]
+    losers = [r for r in results if r['price_change_24h'] < 0]
+    
+    # Engagement-focused main post
+    main_post = (
+        f"🧵 CRYPTO MARKET THREAD: {current_date}\n\n"
+        f"🚀 {len(winners)} coins UP, 📉 {len(losers)} coins DOWN today\n"
+        f"📊 AI predictions + social sentiment analysis below\n\n"
+        f"💰 Which coin will you buy the dip on?\n"
+        f"👇 Full breakdown in thread...\n\n"
+        f"#CryptoThread #TradingSignals #CryptoAnalysis\n"
+        f"1/{len(results) + 2}"
+    )
 
-    # Individual thread posts
+    # Individual thread posts with monetization focus
     thread_posts = []
-    for i, data in enumerate(results, 2):
+    
+    # Add market summary post first
+    top_gainer = max(results, key=lambda x: x['price_change_24h'])
+    top_loser = min(results, key=lambda x: x['price_change_24h'])
+    
+    summary_post = (
+        f"2/{len(results) + 2} 📊 MARKET SNAPSHOT\n\n"
+        f"🥇 Top Gainer: {top_gainer['coin_symbol']} (+{top_gainer['price_change_24h']:.2f}%)\n"
+        f"🥉 Top Loser: {top_loser['coin_symbol']} ({top_loser['price_change_24h']:.2f}%)\n\n"
+        f"💡 Trading Strategy:\n"
+        f"• Watch for {top_gainer['coin_symbol']} pullback\n"
+        f"• Consider {top_loser['coin_symbol']} recovery play\n\n"
+        f"⚡ Individual analysis below...\n"
+        f"#TradingTips #CryptoStrategy"
+    )
+    
+    thread_posts.append({
+        'text': summary_post,
+        'coin_name': 'market_summary'
+    })
+
+    # Enhanced individual coin posts
+    for i, data in enumerate(results, 3):
         change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
+        
+        # Engagement hooks based on performance
+        if data['price_change_24h'] > 3:
+            performance_hook = "🚀 MOMENTUM PLAY"
+        elif data['price_change_24h'] < -3:
+            performance_hook = "💎 DIP OPPORTUNITY"
+        else:
+            performance_hook = "⚖️ CONSOLIDATION"
 
         top_project_text = f"{data['top_project']}"
         if data.get('top_project_url'):
             top_project_text += f" - {data['top_project_url']}"
 
         post_text = (
-            f"{i}/{len(results) + 1} {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n\n"
-            f"💰 Price: ${data['price']:.2f}\n"
-            f"📊 24h Change: {data['price_change_24h']:.2f}%\n"
-            f"🔮 Predicted: ${data['predicted_price']:.2f}\n"
-            f"💹 Volume: {data['tx_volume']:.2f}M\n"
-            f"🏢 Top Project: {top_project_text}\n\n"
-            f"📱 Social: {data['social_metrics']['mentions']} mentions, {data['social_metrics']['sentiment']}\n\n"
-            f"🎥 Latest: {data['youtube_video']['title'][:50]}...\n{data['youtube_video']['url']}\n\n"
-            f"{data['hashtag']}"
+            f"{i}/{len(results) + 2} {performance_hook}\n"
+            f"{data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n\n"
+            f"💰 Price: ${data['price']:.4f}\n"
+            f"📊 24h: {data['price_change_24h']:+.2f}%\n"
+            f"🤖 AI Target: ${data['predicted_price']:.4f}\n"
+            f"📈 Volume: ${data['tx_volume']:.1f}M\n"
+            f"🏢 Main Exchange: {top_project_text}\n\n"
+            f"📱 Buzz: {data['social_metrics']['mentions']} mentions ({data['social_metrics']['sentiment']})\n\n"
+            f"🎥 {data['youtube_video']['title'][:35]}...\n"
+            f"{data['youtube_video']['url']}\n\n"
+            f"{data['hashtag']} #CryptoAnalysis"
         )
 
         thread_posts.append({

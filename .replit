@@ -1170,6 +1170,55 @@ args = "echo \"📊 Monitoring status:\""
 task = "shell.exec"
 args = "python check_queue_status.py"
 
+[[workflows.workflow]]
+name = "Monetization Bot Run"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"💰 MONETIZATION-OPTIMIZED CRYPTO BOT\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Peak time posting optimization\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Engagement-focused content format\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Call-to-action integration\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Viral potential scoring\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python posting_scheduler.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only --verbose"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Engagement metrics:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]

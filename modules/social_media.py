@@ -232,11 +232,20 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
         sources_used.append(f"market_baseline (+{added_mentions})")
         logger.info(f"Enhanced {coin_id} with baseline mentions: +{added_mentions}")
 
+    # Calculate engagement potential score for monetization
+    engagement_score = min(100, (total_mentions * 2) + (len(sentiment_scores) * 10))
+    
+    # Determine viral potential
+    viral_potential = "High" if total_mentions > 30 else "Medium" if total_mentions > 15 else "Low"
+    
     result = {
         "mentions": total_mentions,
         "sentiment": sentiment,
         "sources": sources_used,
-        "confidence": len(sentiment_scores) > 5  # High confidence if we have enough data
+        "confidence": len(sentiment_scores) > 5,
+        "engagement_score": engagement_score,
+        "viral_potential": viral_potential,
+        "monetization_tier": "Premium" if engagement_score > 60 else "Standard"
     }
 
     logger.info(f"Social metrics for {symbol}: {total_mentions} mentions ({', '.join(sources_used)}), {sentiment} sentiment")
