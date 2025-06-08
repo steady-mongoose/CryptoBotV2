@@ -1,7 +1,7 @@
 {
   "date": "2025-06-08",
   "total_units_used": 0,
-  "calls_made": 39,
+  "calls_made": 47,
   "quota_remaining": 10000,
   "call_log": [
     {
@@ -234,6 +234,54 @@
     },
     {
       "timestamp": "2025-06-08T19:37:39.476431",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:40:05.844030",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:40:44.875332",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:41:06.335381",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:42:45.324504",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:43:06.492205",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:43:47.020958",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:44:08.162342",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:44:51.727343",
       "operation": "search_quota_exceeded",
       "units_cost": 0,
       "success": false
