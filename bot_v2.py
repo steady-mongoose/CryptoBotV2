@@ -490,7 +490,7 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
 async def fetch_youtube_video(youtube, coin: str, current_date: str, session: aiohttp.ClientSession = None):
     try:
         from modules.youtube_usage_tracker import youtube_tracker
-        
+
         # Check YouTube quota before attempting API calls
         if not youtube_tracker.can_make_call(100):
             logger.warning(f"YouTube quota exhausted ({youtube_tracker.usage_data['quota_remaining']} units remaining), using Rumble for {coin}")
@@ -502,7 +502,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                     "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025",
                     "source": "YouTube Search (Quota Exceeded)"
                 }
-        
+
         # Get content rating preferences for the coin
         content_ratings = get_content_accuracy_ratings(coin)
         preferred_source = content_ratings.get('preferred_source', 'youtube')
@@ -533,7 +533,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                     if session:
                         return await fetch_rumble_video_with_rating(coin, session)
                     break
-                
+
                 request = youtube.search().list(
                     part="snippet",
                     q=search_query,
@@ -542,12 +542,11 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                     publishedAfter="2024-01-01T00:00:00Z"
                 )
                 response = request.execute()
-                
+
                 # Track successful API call (100 units for search)
                 youtube_tracker.track_api_call("search", 100, True)
 
-                for item in response.get('items', []):</old_str>
-
+                
                 for item in response.get('items', []):
                     video_id = item['id']['videoId']
                     if not db.has_video_been_used(video_id):
@@ -591,7 +590,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                     # Track other API errors
                     youtube_tracker.track_api_call("search_error", 0, False)
                     logger.error(f"YouTube API error for query '{search_query}': {e}")
-                    continue</old_str>
+                    continue
 
         # If no unused videos found, try one more YouTube attempt
         try:
@@ -622,8 +621,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                 }
         except HttpError as e:
             if "quotaExceeded" in str(e) or "quota" in str(e).lower():
-                logger.warning(f"YouTube API quota exceeded on final attempt for {coin}, using Rumble")
-                if session:
+                logger.warning(f"YouTube API quota exceeded on final attempt for {coin}, using Rumble")                if session:
                     return await fetch_rumble_video(coin, session)
 
         # Final fallback - generic crypto content or Rumble if session available
@@ -1310,7 +1308,7 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
         logger.info("CryptoBotV2 run completed successfully.")
 
         # Clean up process lock
-        if lock_file and not test_discord:</old_str>
+        if lock_file and not test_discord:
             try:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
                 lock_file.close()
@@ -1353,7 +1351,7 @@ if __name__ == "__main__":
     parser.add_argument('--direct-x-post', action='store_true',
                         help='Post directly to X (bypass queue) to test immediate posting')
     parser.add_argument('--auto-resume', action='store_true',
-                        help='Enable automatic resume of queue worker if it stops')
+                        help='Enable automatic resume of queue worker if it stops')```text
     parser.add_argument('--verbose', action='store_true',
                         help='Enable extra verbose logging and diagnostics')
     args = parser.parse_args()
