@@ -145,8 +145,18 @@ def format_tweet(data):
     else:
         hook = "📊 UPDATE:"
     
-    # Add call-to-action elements
-    engagement_cta = "\n💬 What's your price target? Drop predictions below!"
+    # Enhanced monetization CTAs based on social metrics
+    viral_potential = data['social_metrics'].get('viral_potential', 'Medium')
+    monetization_tier = data['social_metrics'].get('monetization_tier', 'Standard')
+    
+    if viral_potential == "High":
+        engagement_cta = "\n🔥 THREAD below: Why this pump/dump happened + what's next ⬇️"
+    elif data['price_change_24h'] > 10:
+        engagement_cta = "\n🚨 Share this if you called this pump! What's your next pick?"
+    elif data['price_change_24h'] < -10:
+        engagement_cta = "\n💎 Buying the dip? Drop your DCA strategy below ⬇️"
+    else:
+        engagement_cta = "\n💡 Educational thread coming: Reply 'EXPLAIN' for whitepaper breakdown"
     
     # Enhanced formatting for better engagement
     top_project_text = f"{data['top_project']}"

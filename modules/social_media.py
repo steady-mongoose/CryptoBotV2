@@ -235,8 +235,19 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     # Calculate engagement potential score for monetization
     engagement_score = min(100, (total_mentions * 2) + (len(sentiment_scores) * 10))
     
-    # Determine viral potential
+    # Determine viral potential and topic recommendations
     viral_potential = "High" if total_mentions > 30 else "Medium" if total_mentions > 15 else "Low"
+    
+    # Generate engagement-optimized content suggestions
+    engagement_topics = generate_trending_topics(coin_id, total_mentions, sentiment)
+    
+    # Calculate monetization metrics
+    monetization_metrics = {
+        "reply_potential": "High" if total_mentions > 25 else "Medium",
+        "thread_worthiness": engagement_score > 50,
+        "educational_angle": get_educational_hook(coin_id),
+        "trending_topics": engagement_topics
+    }
     
     result = {
         "mentions": total_mentions,
@@ -263,6 +274,46 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
 async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = False) -> Dict[str, any]:
     """Wrapper function for backward compatibility"""
     return await fetch_social_metrics_multi_source(coin_id, session, skip_x_api)
+
+async def generate_trending_topics(coin_id: str, mentions: int, sentiment: str) -> List[str]:
+    """Generate trending topic suggestions for maximum engagement."""
+    
+    # High-engagement topic templates
+    educational_topics = [
+        f"🧵 THREAD: How {symbol_map.get(coin_id, coin_id.upper())} actually works (explained simply)",
+        f"📚 Breaking down {symbol_map.get(coin_id, coin_id.upper())} whitepaper in 5 tweets",
+        f"💡 Why institutions are quietly accumulating {symbol_map.get(coin_id, coin_id.upper())}",
+        f"🔍 {symbol_map.get(coin_id, coin_id.upper())} use cases most people don't know about"
+    ]
+    
+    psychological_topics = [
+        f"📊 {symbol_map.get(coin_id, coin_id.upper())} chart psychology: What smart money sees",
+        f"🧠 Why most people lose money trading {symbol_map.get(coin_id, coin_id.upper())} (behavioral analysis)",
+        f"⚠️ {symbol_map.get(coin_id, coin_id.upper())} red flags vs. buying opportunities"
+    ]
+    
+    # Select topics based on sentiment and mentions
+    if sentiment == "Bullish" and mentions > 20:
+        return educational_topics + psychological_topics
+    elif sentiment == "Bearish":
+        return [
+            f"🔥 Why {symbol_map.get(coin_id, coin_id.upper())} dump might be your biggest opportunity",
+            f"📉 {symbol_map.get(coin_id, coin_id.upper())} bear market survival guide"
+        ]
+    else:
+        return educational_topics[:2]
+
+def get_educational_hook(coin_id: str) -> str:
+    """Get educational hook for monetization."""
+    educational_hooks = {
+        'ripple': "Cross-border payments revolution",
+        'hedera-hashgraph': "Enterprise blockchain adoption",
+        'stellar': "Financial inclusion technology",
+        'sui': "Next-gen smart contract platform",
+        'ondo-finance': "Real-world asset tokenization",
+        'algorand': "Pure proof-of-stake innovation"
+    }
+    return educational_hooks.get(coin_id, "Blockchain technology deep-dive")
 
 async def get_x_alternative_metrics(symbol: str, session: aiohttp.ClientSession) -> int:
     """Get X-related metrics using alternative APIs when X search is rate limited."""
