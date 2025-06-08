@@ -1352,7 +1352,7 @@ if __name__ == "__main__":
     parser.add_argument('--direct-x-post', action='store_true',
                         help='Post directly to X (bypass queue) to test immediate posting')
     parser.add_argument('--auto-resume', action='store_true',
-                        help='Enable automatic resume of queue worker if it stops')```text
+                        help='Enable automatic resume of queue worker if it stops')
     parser.add_argument('--verbose', action='store_true',
                         help='Enable extra verbose logging and diagnostics')
     args = parser.parse_args()
