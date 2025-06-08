@@ -1088,6 +1088,19 @@ args = "echo \"📊 Checking final status:\""
 task = "shell.exec"
 args = "python check_queue_status.py"
 
+[[workflows.workflow]]
+name = "Test Direct X Now"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Testing immediate X posting based on can_i_post_now.py results...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --direct-x-post --verbose"
+
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]

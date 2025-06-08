@@ -1,0 +1,152 @@
+{
+  "date": "2025-06-08",
+  "total_units_used": 0,
+  "calls_made": 24,
+  "quota_remaining": 10000,
+  "call_log": [
+    {
+      "timestamp": "2025-06-08T19:01:35.898284",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:02:15.779557",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:02:37.314042",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:03:36.818123",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:03:58.090433",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:05:49.109560",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:06:10.325237",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:06:54.349850",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:11:58.451084",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:12:42.469954",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:13:08.671881",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:14:10.167503",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:15:06.972143",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:15:52.778873",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:16:16.841179",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:17:07.638671",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:17:38.690223",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:18:16.999895",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:18:38.104191",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:19:36.540161",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:19:57.525413",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:21:47.841637",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:22:09.014324",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    },
+    {
+      "timestamp": "2025-06-08T19:22:52.235311",
+      "operation": "search_quota_exceeded",
+      "units_cost": 0,
+      "success": false
+    }
+  ]
+}
