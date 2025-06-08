@@ -146,9 +146,9 @@ async def check_queue_system():
             await asyncio.sleep(2)  # Give it time to start
             print("✅ Queue worker started successfully")
         
-        # Check queue status
-        queue_size = len(x_queue.queue)
-        print(f"📊 Current queue size: {queue_size} posts")
+        # Check queue status  
+        status = get_x_queue_status()
+        print(f"📊 Current queue status: {status['post_queue_size']} posts, {status['thread_queue_size']} threads")
         
         return True
         
