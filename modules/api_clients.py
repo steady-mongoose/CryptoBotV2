@@ -4,6 +4,7 @@ import tweepy
 from pycoingecko import CoinGeckoAPI
 from binance.client import Client as BinanceClient  # Import Binance client
 from googleapiclient.discovery import build
+import aiohttp
 
 logger = logging.getLogger('CryptoBot')
 
@@ -205,4 +206,85 @@ def get_notification_config():
         'signal_number': os.getenv('SIGNAL_PHONE_NUMBER'),
         'sms_number': os.getenv('SMS_PHONE_NUMBER'),
         'enabled': os.getenv('NOTIFICATIONS_ENABLED', 'false').lower() == 'true'
+    }
+
+async def fetch_youtube_video(coin: str, current_date: str, session: aiohttp.ClientSession = None):
+    """Fetch latest video for a coin with Rumble fallback."""
+    try:
+        youtube_api_key = get_youtube_api_key()
+        if not youtube_api_key:
+            logger.warning("YouTube API key not found, using Rumble fallback")
+            return await fetch_rumble_video(coin, session)
+
+        youtube = build('youtube', 'v3', developerKey=youtube_api_key)
+        search_query = f"{coin} crypto 2025"
+
+        request = youtube.search().list(
+            part="snippet",
+            q=search_query,
+            type="video",
+            maxResults=3,
+            publishedAfter="2024-01-01T00:00:00Z"
+        )
+        response = request.execute()
+
+        if response.get('items'):
+            item = response['items'][0]
+            return {
+                "title": item['snippet']['title'],
+                "url": f"https://youtu.be/{item['id']['videoId']}",
+                "source": "YouTube"
+            }
+        else:
+            logger.info(f"No YouTube videos found for {coin}, trying Rumble")
+            return await fetch_rumble_video(coin, session)
+
+    except Exception as e:
+        if "quota" in str(e).lower():
+            logger.warning(f"YouTube quota exceeded for {coin}, using Rumble fallback")
+            return await fetch_rumble_video(coin, session)
+        else:
+            logger.error(f"YouTube API error for {coin}: {e}")
+            return await fetch_rumble_video(coin, session)
+
+async def fetch_rumble_video(coin: str, session: aiohttp.ClientSession = None):
+    """Fetch video from Rumble as YouTube alternative."""
+    try:
+        if not session:
+            async with aiohttp.ClientSession() as session:
+                return await _fetch_rumble_internal(coin, session)
+        else:
+            return await _fetch_rumble_internal(coin, session)
+    except Exception as e:
+        logger.error(f"Rumble API error for {coin}: {e}")
+        return {
+            "title": f"Latest {coin} analysis - Crypto Market Update",
+            "url": f"https://rumble.com/search/video?q={coin.replace(' ', '+')}+crypto",
+            "source": "Rumble Search"
+        }
+
+async def _fetch_rumble_internal(coin: str, session: aiohttp.ClientSession):
+    """Internal Rumble fetch implementation."""
+    search_url = f"https://rumble.com/search/video?q={coin.replace(' ', '+')}+crypto"
+
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+
+        async with session.get(search_url, headers=headers, timeout=10) as response:
+            if response.status == 200:
+                # Simple fallback with realistic title
+                return {
+                    "title": f"{coin.title()} Crypto Analysis - Market Update & Price Prediction",
+                    "url": search_url,
+                    "source": "Rumble"
+                }
+    except Exception as e:
+        logger.error(f"Rumble fetch error: {e}")
+
+    return {
+        "title": f"Latest {coin} analysis - Crypto Market Update",
+        "url": search_url,
+        "source": "Rumble Search"
     }

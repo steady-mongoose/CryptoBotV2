@@ -78,13 +78,13 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
                 else:
                     # If timestamp is already a datetime object, use it directly
                     cached_time = timestamp
-                
+
                 if datetime.now() - cached_time < timedelta(hours=24):  # Use older cache for Discord-only
                     logger.info(f"Using cached social metrics for {coin_id}")
                     return cache[coin_id]["data"]
             else:
                 logger.warning(f"Invalid cache structure for {coin_id}, regenerating cache entry")
-        
+
         # Return fallback social metrics without any API calls
         return {
             "mentions": 15,  # Conservative baseline
@@ -92,7 +92,7 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
             "sources": ["fallback"],
             "confidence": False
         }
-    
+
     cache = load_social_metrics_cache()
 
     # Check if we have recent cached data (less than 1 hour old for fresh data)
@@ -107,7 +107,7 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
                     cached_time = datetime.fromtimestamp(timestamp)
                 else:
                     cached_time = timestamp
-                
+
                 # Use shorter cache time for more current data
                 if datetime.now() - cached_time < timedelta(hours=1):
                     logger.info(f"Using fresh cached social metrics for {coin_id}")
@@ -132,15 +132,15 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
     # X API SEARCH - COMPLETELY DISABLED to prevent rate limits
     x_mentions_from_api = 0
     x_api_success = False
-    
+
     # Initialize X API bypass handler and force disable search
     from modules.x_bypass_handler import x_bypass_handler
     x_bypass_handler.force_disable_search()  # Force disable search operations
-    
+
     logger.info(f"X API search FORCE DISABLED for {symbol} (preventing ALL rate limits)")
-    
+
     # NO X API SEARCH ATTEMPTS WHATSOEVER - this prevents all rate limit errors
-    
+
     # If X API search failed, use alternative X metrics
     if not x_api_success:
         logger.info(f"Using alternative X metrics for {symbol} (X API search unavailable)")
@@ -219,7 +219,7 @@ async def fetch_social_metrics_multi_source(coin_id: str, session: aiohttp.Clien
                 logger.info(f"Enhanced with alternative social metrics: {alt_data['mentions']} mentions")
         except Exception as e:
             logger.error(f"Error getting alternative social metrics: {e}")
-    
+
     # Enhanced fallback - ensure realistic mentions based on market activity
     if total_mentions < 8:
         # Base mentions from real market activity patterns
@@ -272,9 +272,9 @@ async def get_x_alternative_metrics(symbol: str, session: aiohttp.ClientSession)
                         mentions_estimate = min(followers // 1000, 50)
                         logger.info(f"Alternative X metrics for {symbol}: {mentions_estimate} (from {followers} followers)")
                         return mentions_estimate
-        
+
         await asyncio.sleep(1)  # Rate limit respect
-        
+
         # Fallback: Use LunarCrush API for social metrics
         lunar_url = f"https://api.lunarcrush.com/v2?data=assets&symbol={symbol}"
         async with session.get(lunar_url) as response:
@@ -287,12 +287,12 @@ async def get_x_alternative_metrics(symbol: str, session: aiohttp.ClientSession)
                         mentions_estimate = min(tweets_24h, 30)
                         logger.info(f"LunarCrush X metrics for {symbol}: {mentions_estimate}")
                         return mentions_estimate
-        
+
         await asyncio.sleep(1)
-        
+
     except Exception as e:
         logger.error(f"Error fetching alternative X metrics for {symbol}: {e}")
-    
+
     # Final fallback based on coin popularity
     popularity_estimates = {
         'XRP': 25, 'HBAR': 15, 'XLM': 18, 'XDC': 8,
