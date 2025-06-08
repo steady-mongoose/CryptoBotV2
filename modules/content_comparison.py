@@ -5,6 +5,11 @@ from datetime import datetime
 
 logger = logging.getLogger('CryptoBot')
 
+import logging
+from typing import Dict, List
+
+logger = logging.getLogger('CryptoBot')
+
 class ContentComparison:
     """Compare content between Discord and X posts to identify differences."""
     

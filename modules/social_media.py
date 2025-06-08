@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import aiohttp
 import logging
-from typing import Dict
+from typing import Dict, List
 import tweepy
 import json
 import os
@@ -16,9 +16,13 @@ try:
     ALTERNATIVE_SOCIAL_AVAILABLE = True
 except ImportError:
     ALTERNATIVE_SOCIAL_AVAILABLE = False
-    logger.warning("Alternative social metrics module not available")
+    # logger will be defined below, so we'll log this after logger initialization
 
 logger = logging.getLogger('CryptoBot')
+
+# Log import warning if alternative social module is not available
+if not ALTERNATIVE_SOCIAL_AVAILABLE:
+    logger.warning("Alternative social metrics module not available")
 
 # Updated symbol mapping for correct coin IDs to match hashtags
 symbol_map = {

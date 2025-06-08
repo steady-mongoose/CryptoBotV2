@@ -7,6 +7,14 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger('CryptoBot')
 
+import asyncio
+import logging
+from datetime import datetime, timedelta
+from typing import Dict, List
+import aiohttp
+
+logger = logging.getLogger('CryptoBot')
+
 class AlternativeSocialMetrics:
     """Alternative social metrics when X API is rate limited."""
     
