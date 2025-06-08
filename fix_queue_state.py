@@ -70,10 +70,7 @@ def main():
         print(f"❌ Error checking new status: {e}")
 
 if __name__ == "__main__":
-    main())
-        print(f"\n✅ New Status:")
-        print(f"   • Posts queued: {new_status['post_queue_size']}")
-        print(f"   • Threads queued: {new_status['thread_queue_size']}")
+    main()
         print(f"   • Worker running: {'✅' if new_status['worker_running'] else '❌'}")
         print(f"   • Rate limited: {'🚫' if new_status['rate_limited'] else '✅'}")
         

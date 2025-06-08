@@ -57,23 +57,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-        print("\n" + "=" * 40)
-
-        if status['post_queue_size'] > 0 or status['thread_queue_size'] > 0:
-            print("📝 Posts are queued and will be posted automatically")
-            if status['rate_limited']:
-                print("⏳ Waiting for rate limit to reset...")
-                print("💡 Posts will automatically process when limit resets")
-            elif not status['worker_running']:
-                print("⚠️  Worker not running - queue may need restart")
-            else:
-                print("🚀 Queue is being processed")
-        else:
-            print("✅ No posts in queue")
-
-    except Exception as e:
-        print(f"❌ Error checking queue status: {e}")
-
-if __name__ == "__main__":
-    main()
