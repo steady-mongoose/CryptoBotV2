@@ -32,6 +32,32 @@ def main():
             else:
                 print(f"   • Rate limit has expired, should reset soon")
 
+        # Status assessment
+        if status['worker_running'] and not status['rate_limited']:
+            print("\n✅ Queue system is healthy and ready")
+        elif status['worker_running'] and status['rate_limited']:
+            print("\n⏳ Queue system running but rate limited")
+        elif not status['worker_running']:
+            print("\n❌ Queue worker is not running")
+            print("💡 Run 'python restart_x_queue.py' to fix")
+        
+        # Queue recommendations
+        total_items = status['post_queue_size'] + status['thread_queue_size']
+        if total_items > 10:
+            print(f"\n⚠️  Large queue detected ({total_items} items)")
+            print("This may indicate a backlog or rate limiting")
+        elif total_items > 0:
+            print(f"\n📝 Queue has {total_items} items pending")
+        else:
+            print("\n📭 Queue is empty")
+
+    except Exception as e:
+        print(f"❌ Error checking queue status: {e}")
+        print("💡 Queue system may not be initialized")
+
+if __name__ == "__main__":
+    main()
+
         print("\n" + "=" * 40)
 
         if status['post_queue_size'] > 0 or status['thread_queue_size'] > 0:
