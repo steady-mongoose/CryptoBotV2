@@ -489,6 +489,20 @@ async def fetch_rumble_video_with_rating(coin: str, session: aiohttp.ClientSessi
 
 async def fetch_youtube_video(youtube, coin: str, current_date: str, session: aiohttp.ClientSession = None):
     try:
+        from modules.youtube_usage_tracker import youtube_tracker
+        
+        # Check YouTube quota before attempting API calls
+        if not youtube_tracker.can_make_call(100):
+            logger.warning(f"YouTube quota exhausted ({youtube_tracker.usage_data['quota_remaining']} units remaining), using Rumble for {coin}")
+            if session:
+                return await fetch_rumble_video_with_rating(coin, session)
+            else:
+                return {
+                    "title": f"Latest {coin.title()} Crypto Analysis",
+                    "url": f"https://youtube.com/results?search_query={coin.replace(' ', '+')}+crypto+2025",
+                    "source": "YouTube Search (Quota Exceeded)"
+                }
+        
         # Get content rating preferences for the coin
         content_ratings = get_content_accuracy_ratings(coin)
         preferred_source = content_ratings.get('preferred_source', 'youtube')
@@ -513,6 +527,13 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
 
         for search_query in search_queries:
             try:
+                # Check quota before each call
+                if not youtube_tracker.can_make_call(100):
+                    logger.warning(f"YouTube quota limit reached during {coin} search, switching to Rumble")
+                    if session:
+                        return await fetch_rumble_video_with_rating(coin, session)
+                    break
+                
                 request = youtube.search().list(
                     part="snippet",
                     q=search_query,
@@ -521,6 +542,9 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                     publishedAfter="2024-01-01T00:00:00Z"
                 )
                 response = request.execute()
+                
+                # Track successful API call (100 units for search)
+                youtube_tracker.track_api_call("search", 100, True)</old_str>
 
                 for item in response.get('items', []):
                     video_id = item['id']['videoId']
@@ -555,13 +579,17 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                         }
             except HttpError as e:
                 if "quotaExceeded" in str(e) or "quota" in str(e).lower() or "429" in str(e):
+                    # Track failed quota call
+                    youtube_tracker.track_api_call("search_quota_exceeded", 0, False)
                     logger.warning(f"YouTube API quota exceeded for {coin}, falling back to Rumble")
                     if session:
                         return await fetch_rumble_video(coin, session)
                     break
                 else:
+                    # Track other API errors
+                    youtube_tracker.track_api_call("search_error", 0, False)
                     logger.error(f"YouTube API error for query '{search_query}': {e}")
-                    continue
+                    continue</old_str>
 
         # If no unused videos found, try one more YouTube attempt
         try:
@@ -1270,10 +1298,17 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
         except Exception as e:
             logger.error(f"Error in completion notifications: {e}")
 
+        # Print YouTube API usage report
+        try:
+            from modules.youtube_usage_tracker import youtube_tracker
+            youtube_tracker.print_usage_report()
+        except Exception as e:
+            logger.error(f"Error printing YouTube usage report: {e}")
+
         logger.info("CryptoBotV2 run completed successfully.")
 
         # Clean up process lock
-        if lock_file and not test_discord:
+        if lock_file and not test_discord:</old_str>
             try:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
                 lock_file.close()
