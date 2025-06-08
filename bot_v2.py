@@ -621,7 +621,8 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                 }
         except HttpError as e:
             if "quotaExceeded" in str(e) or "quota" in str(e).lower():
-                logger.warning(f"YouTube API quota exceeded on final attempt for {coin}, using Rumble")                if session:
+                logger.warning(f"YouTube API quota exceeded on final attempt for {coin}, using Rumble")
+                if session:
                     return await fetch_rumble_video(coin, session)
 
         # Final fallback - generic crypto content or Rumble if session available
