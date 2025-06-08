@@ -126,20 +126,34 @@ class XThreadQueue:
         # Enhanced error recovery
         consecutive_errors = 0
         max_consecutive_errors = 5
+        last_rate_limit_check = None
 
         while self.is_running:
             try:
-                # Check if we're rate limited
+                # Enhanced rate limit checking with aggressive recovery
                 if self._is_rate_limited():
                     remaining_time = (self.rate_limit_reset_time - datetime.now()).total_seconds()
                     if remaining_time > 0:
                         logger.info(f"Rate limited for {remaining_time/60:.1f} more minutes. Queue has {self.post_queue.qsize()} posts + {self.thread_queue.qsize()} threads waiting.")
+                        
+                        # Every 5 minutes, test if rate limit actually reset early
+                        if not last_rate_limit_check or (datetime.now() - last_rate_limit_check).total_seconds() > 300:
+                            logger.info("🔄 Testing if rate limit reset early...")
+                            if self._test_rate_limit_status():
+                                logger.info("✅ Rate limit reset early! Resuming posting...")
+                                self.rate_limit_reset_time = None
+                                last_rate_limit_check = None
+                                continue
+                            else:
+                                last_rate_limit_check = datetime.now()
+                        
                         time.sleep(60)  # Wait 1 minute before checking again
                         continue
                     else:
                         # Rate limit has expired, clear it
                         logger.info("Rate limit window has reset, resuming posting...")
                         self.rate_limit_reset_time = None
+                        last_rate_limit_check = None
 
                 # Initialize client if needed (posting-only to avoid rate limit conflicts)
                 if not self.client:
@@ -330,6 +344,23 @@ class XThreadQueue:
         self.rate_limit_reset_time = datetime.now() + timedelta(minutes=15)
         logger.warning(f"Rate limited, will retry after {self.rate_limit_reset_time}")
         logger.info("Posts will remain queued and automatically process when rate limit resets")
+
+    def _test_rate_limit_status(self):
+        """Test if rate limit has actually reset by making a minimal API call."""
+        try:
+            if self.client:
+                # Test with minimal API call (get user info)
+                user_info = self.client.get_me()
+                logger.debug("✅ Rate limit test successful")
+                return True
+        except tweepy.TooManyRequests:
+            logger.debug("❌ Still rate limited")
+            return False
+        except Exception as e:
+            logger.debug(f"Rate limit test inconclusive: {e}")
+            return False
+        
+        return False
 
     def get_queue_status(self) -> Dict:
         """Get current status of the queues."""

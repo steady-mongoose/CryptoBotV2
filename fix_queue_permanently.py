@@ -135,8 +135,52 @@ def main():
     print("✅ All blocking states cleared")
     print("✅ Monitoring script created")
     print("\n💡 Run 'python monitor_queue.py' to watch queue status")
+    print("💡 Or run 'python auto_resume_worker.py' for full automation")
+    
+    # Enable automatic rate limit recovery
+    setup_automatic_recovery()
     
     return True
+
+def setup_automatic_recovery():
+    """Set up automatic recovery system for rate limits."""
+    print("\n🤖 Setting up automatic rate limit recovery...")
+    
+    # Create recovery script
+    recovery_script = '''#!/usr/bin/env python3
+import time
+import os
+from datetime import datetime, timedelta
+from modules.x_thread_queue import get_x_queue_status, start_x_queue
+
+def auto_recover():
+    """Auto-recover from rate limits."""
+    while os.path.exists('auto_resume_enabled.txt'):
+        try:
+            status = get_x_queue_status()
+            
+            # If rate limited, wait and test recovery
+            if status['rate_limited'] and status['rate_limit_reset']:
+                reset_time = datetime.fromisoformat(status['rate_limit_reset'])
+                if datetime.now() >= reset_time:
+                    print(f"⏰ Rate limit should be reset, testing recovery...")
+                    start_x_queue()
+            
+            time.sleep(300)  # Check every 5 minutes
+            
+        except Exception as e:
+            print(f"Recovery error: {e}")
+            time.sleep(60)
+
+if __name__ == "__main__":
+    auto_recover()
+'''
+    
+    with open('auto_recovery.py', 'w') as f:
+        f.write(recovery_script)
+    
+    print("   ✅ Automatic recovery system created")
+    print("   💡 Run 'python auto_recovery.py &' for background automation")
 
 def create_monitoring_script():
     """Create a script to monitor queue health."""

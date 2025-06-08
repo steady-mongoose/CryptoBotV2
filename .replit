@@ -1101,6 +1101,75 @@ args = "echo \"🚀 Testing immediate X posting based on can_i_post_now.py resul
 task = "shell.exec"
 args = "python bot_v2.py --direct-x-post --verbose"
 
+[[workflows.workflow]]
+name = "Full Automation Mode"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🤖 Starting FULL AUTOMATION mode...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Queue system with auto-resume\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Automatic rate limit recovery\" "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Background monitoring\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python fix_queue_permanently.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Starting bot with full automation...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only --auto-resume"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔄 Starting background auto-resume worker...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python auto_resume_worker.py &"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ FULLY AUTOMATED - System will handle all rate limits automatically\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Monitoring status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
