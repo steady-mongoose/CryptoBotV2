@@ -11,7 +11,7 @@ class SMSNotifications:
     
     def __init__(self):
         self.api_key = os.getenv('TEXTBELT_API_KEY', 'textbelt')  # 'textbelt' is free tier
-        self.phone_number = "9407688082"  # Your number
+        self.phone_number = os.getenv('PHONE_NUMBER', '9407688082')  # Your number
         self.enabled = True
         
     def send_sms(self, message: str) -> bool:
