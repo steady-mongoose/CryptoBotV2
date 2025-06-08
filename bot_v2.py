@@ -544,7 +544,9 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str, session: ai
                 response = request.execute()
                 
                 # Track successful API call (100 units for search)
-                youtube_tracker.track_api_call("search", 100, True)</old_str>
+                youtube_tracker.track_api_call("search", 100, True)
+
+                for item in response.get('items', []):</old_str>
 
                 for item in response.get('items', []):
                     video_id = item['id']['videoId']
