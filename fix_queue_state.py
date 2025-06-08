@@ -65,18 +65,4 @@ def main():
         print(f"❌ Error verifying new status: {e}")
 
 if __name__ == "__main__":
-    main())
-        print(f"\n✅ New Status:")
-        print(f"   • Worker running: {'✅' if new_status['worker_running'] else '❌'}")
-        print(f"   • Rate limited: {'🚫' if new_status['rate_limited'] else '✅'}")
-        
-        if new_status['worker_running']:
-            print("\n🎉 Queue system is now ready!")
-        else:
-            print("\n❌ Worker still not running - check X API credentials")
-            
-    except Exception as e:
-        print(f"❌ Error getting new status: {e}")
-
-if __name__ == "__main__":
     main()
