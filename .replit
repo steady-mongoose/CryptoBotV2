@@ -6,7 +6,7 @@ channel = "stable-24_05"
 packages = ["glibcLocales"]
 
 [workflows]
-runButton = "Run Bot (Queue Safe)"
+runButton = "Run Bot (Production)"
 
 [[workflows.workflow]]
 name = "Generate Manual Template Only"
@@ -999,6 +999,90 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "echo \"📊 Checking X posting queue status...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Direct X Test"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Testing DIRECT X posting (bypassing queue system)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️ This will attempt immediate posting to X API\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --direct-x-post"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Results summary above - check for rate limit errors\""
+
+[[workflows.workflow]]
+name = "Check System Status"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🩺 Running system diagnostics...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python pre_run_diagnostics.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking queue status...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Test Discord Only"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing Discord webhook posting...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --test-discord"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Discord test completed!\""
+
+[[workflows.workflow]]
+name = "Run Bot (Production)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Running CryptoBot with safe queue system...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Queue prevents rate limits and handles failures automatically\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking final status:\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
