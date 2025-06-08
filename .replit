@@ -6,7 +6,7 @@ channel = "stable-24_05"
 packages = ["glibcLocales"]
 
 [workflows]
-runButton = "Main Bot Run (Queue Only)"
+runButton = "Run Bot (Queue Safe)"
 
 [[workflows.workflow]]
 name = "Generate Manual Template Only"
@@ -599,19 +599,11 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"📱 Discord Only Mode - No X API usage\""
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "echo \"✅ Posts complete crypto updates to Discord webhook\""
+args = "echo \"📱 Posting to Discord only (no X API usage)...\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python bot_v2.py --test-discord"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "echo \"✅ Discord posting completed!\""
 
 [[workflows.workflow]]
 name = "X Only (Safe)"
@@ -960,6 +952,57 @@ args = "echo \"📋 If diagnostics pass, run the main bot with:\""
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "echo \"   python bot_v2.py --queue-only --verbose\""
+
+[[workflows.workflow]]
+name = "Run Bot (Queue Safe)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Running CryptoBot with safe queue system...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Queue prevents rate limits and handles failures automatically\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking final status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Run Diagnostics"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🩺 Running system diagnostics...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python pre_run_diagnostics.py"
+
+[[workflows.workflow]]
+name = "Check Queue Status"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking X posting queue status...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
 
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
