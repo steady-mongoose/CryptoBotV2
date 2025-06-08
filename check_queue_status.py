@@ -61,6 +61,12 @@ def check_posting_capability():
             print(f"   • Estimated reset: {status['rate_limit_reset']}")
         else:
             print("   • Estimated reset: ~15 minutes")
+    elif not status['worker_running'] and not can_post_now:
+        print("❌ CANNOT POST RIGHT NOW")
+        print("   • Queue worker is not running (likely due to rate limits)")
+        print("   • X API is rate limited")
+        print("   • Wait 15 minutes, then run 'python fix_queue_permanently.py'")
+        print("   • OR posts will auto-resume when rate limit resets")
     elif not status['worker_running']:
         print("❌ CANNOT POST")
         print("   • Queue worker is not running")

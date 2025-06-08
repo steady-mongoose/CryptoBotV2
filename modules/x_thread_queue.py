@@ -164,6 +164,12 @@ class XThreadQueue:
                         try:
                             user_info = self.client.get_me()
                             logger.info(f"✅ X client verified for user: @{user_info.data.username}")
+                        except tweepy.TooManyRequests as e:
+                            logger.warning(f"X client verification failed: 429 Too Many Requests")
+                            logger.info("⏳ Rate limited during verification - worker will continue and retry when limit resets")
+                            # Set rate limit but don't crash the worker
+                            self.rate_limit_reset_time = datetime.now() + timedelta(minutes=15)
+                            # Keep the worker running - it will wait for rate limit to reset
                         except Exception as e:
                             logger.warning(f"X client verification failed: {e}")
                             # Don't fail completely, just log warning
@@ -186,6 +192,12 @@ class XThreadQueue:
                     # No posts to process, wait a bit
                     time.sleep(5)
 
+            except tweepy.TooManyRequests as e:
+                logger.warning(f"Worker hit rate limit: {e}")
+                self.rate_limit_reset_time = datetime.now() + timedelta(minutes=15)
+                logger.info("⏳ Worker will wait for rate limit to reset, then continue")
+                time.sleep(60)  # Wait 1 minute before checking rate limit status again
+                consecutive_errors = 0  # Don't count rate limits as errors
             except Exception as e:
                 logger.error(f"Error in X posting worker: {e}")
                 consecutive_errors += 1
