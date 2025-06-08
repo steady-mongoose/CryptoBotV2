@@ -1,29 +1,15 @@
 {
-  "timestamp": "2025-06-08T02:28:18.196957",
+  "timestamp": "2025-06-08T10:55:54.851719",
   "issues_found": [
     "XRP: No sentiment analysis data",
-    "XRP: YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=ripple+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-    "XRP: Using fallback YouTube search URL instead of actual video",
     "HBAR: No sentiment analysis data",
-    "HBAR: YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=hedera+hashgraph+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-    "HBAR: Using fallback YouTube search URL instead of actual video",
     "XLM: No sentiment analysis data",
-    "XLM: YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=stellar+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-    "XLM: Using fallback YouTube search URL instead of actual video",
     "XDC: No sentiment analysis data",
-    "XDC: YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=xdce+crowd+sale+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
+    "XDC: YouTube error: NO_VIDEOS_FOUND",
     "XDC: Using fallback YouTube search URL instead of actual video",
     "SUI: No sentiment analysis data",
-    "SUI: YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=sui+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-    "SUI: Using fallback YouTube search URL instead of actual video",
     "ONDO: No sentiment analysis data",
-    "ONDO: YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=ondo+finance+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-    "ONDO: Using fallback YouTube search URL instead of actual video",
-    "ALGO: No sentiment analysis data",
-    "ALGO: YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=algorand+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-    "ALGO: Using fallback YouTube search URL instead of actual video",
-    "CSPR: YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=casper+network+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-    "CSPR: Using fallback YouTube search URL instead of actual video"
+    "ALGO: No sentiment analysis data"
   ],
   "diagnostic_data": {
     "XRP": {
@@ -37,9 +23,11 @@
           "confidence": false
         },
         "youtube_video": {
-          "title": "YouTube error for ripple",
-          "url": "https://youtube.com/search?q=ripple+crypto",
-          "error": "<HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=ripple+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">"
+          "title": "BULLISH XRP NOW!\ud83d\udd25 | RIPPLE (XRP) PRICE PREDICTION &amp; NEWS 2025!",
+          "url": "https://youtu.be/z0nhI26kMJI",
+          "channel": "Cilinix Crypto",
+          "published": "2025-06-08T09:22:45Z",
+          "error": null
         },
         "project_research": {
           "top_project": {
@@ -62,9 +50,7 @@
         "hashtag": "#XRP"
       },
       "issues": [
-        "No sentiment analysis data",
-        "YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=ripple+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-        "Using fallback YouTube search URL instead of actual video"
+        "No sentiment analysis data"
       ]
     },
     "HBAR": {
@@ -78,9 +64,11 @@
           "confidence": false
         },
         "youtube_video": {
-          "title": "YouTube error for hedera hashgraph",
-          "url": "https://youtube.com/search?q=hedera+hashgraph+crypto",
-          "error": "<HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=hedera+hashgraph+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">"
+          "title": "This PROVES Hedera Hashgraph HBAR Will Make You RICH In 2025",
+          "url": "https://youtu.be/ns0EDfWOFj4",
+          "channel": "NCashOfficial - Daily Crypto & Finance News",
+          "published": "2025-06-02T21:00:51Z",
+          "error": null
         },
         "project_research": {
           "top_project": {
@@ -103,9 +91,7 @@
         "hashtag": "#HBAR"
       },
       "issues": [
-        "No sentiment analysis data",
-        "YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=hedera+hashgraph+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-        "Using fallback YouTube search URL instead of actual video"
+        "No sentiment analysis data"
       ]
     },
     "XLM": {
@@ -119,9 +105,11 @@
           "confidence": false
         },
         "youtube_video": {
-          "title": "YouTube error for stellar",
-          "url": "https://youtube.com/search?q=stellar+crypto",
-          "error": "<HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=stellar+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">"
+          "title": "XLM Stellar Lumens Price Prediction",
+          "url": "https://youtu.be/7EPen2ZOWg0",
+          "channel": "Sin City Crypto",
+          "published": "2025-06-04T18:53:30Z",
+          "error": null
         },
         "project_research": {
           "top_project": {
@@ -144,9 +132,7 @@
         "hashtag": "#XLM"
       },
       "issues": [
-        "No sentiment analysis data",
-        "YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=stellar+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-        "Using fallback YouTube search URL instead of actual video"
+        "No sentiment analysis data"
       ]
     },
     "XDC": {
@@ -160,9 +146,9 @@
           "confidence": false
         },
         "youtube_video": {
-          "title": "YouTube error for xdce crowd sale",
+          "title": "No videos found for xdce crowd sale",
           "url": "https://youtube.com/search?q=xdce+crowd+sale+crypto",
-          "error": "<HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=xdce+crowd+sale+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">"
+          "error": "NO_VIDEOS_FOUND"
         },
         "project_research": {
           "top_project": {
@@ -186,7 +172,7 @@
       },
       "issues": [
         "No sentiment analysis data",
-        "YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=xdce+crowd+sale+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
+        "YouTube error: NO_VIDEOS_FOUND",
         "Using fallback YouTube search URL instead of actual video"
       ]
     },
@@ -201,9 +187,11 @@
           "confidence": false
         },
         "youtube_video": {
-          "title": "YouTube error for sui",
-          "url": "https://youtube.com/search?q=sui+crypto",
-          "error": "<HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=sui+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">"
+          "title": "SUI Crypto is One of the BEST Altcoins of 2025! (Here&#39;s Why)",
+          "url": "https://youtu.be/BHbZrpafMkM",
+          "channel": "No Bs Crypto",
+          "published": "2025-06-03T15:20:08Z",
+          "error": null
         },
         "project_research": {
           "top_project": {
@@ -226,9 +214,7 @@
         "hashtag": "#SUI"
       },
       "issues": [
-        "No sentiment analysis data",
-        "YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=sui+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-        "Using fallback YouTube search URL instead of actual video"
+        "No sentiment analysis data"
       ]
     },
     "ONDO": {
@@ -242,9 +228,11 @@
           "confidence": false
         },
         "youtube_video": {
-          "title": "YouTube error for ondo finance",
-          "url": "https://youtube.com/search?q=ondo+finance+crypto",
-          "error": "<HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=ondo+finance+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">"
+          "title": "The BIGGEST Ondo Finance RWA Update 2025 Secrets Revealed",
+          "url": "https://youtu.be/cWQnu84W1AY",
+          "channel": "Gordon Frayne",
+          "published": "2025-06-07T08:00:44Z",
+          "error": null
         },
         "project_research": {
           "top_project": {
@@ -267,9 +255,7 @@
         "hashtag": "#ONDO"
       },
       "issues": [
-        "No sentiment analysis data",
-        "YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=ondo+finance+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-        "Using fallback YouTube search URL instead of actual video"
+        "No sentiment analysis data"
       ]
     },
     "ALGO": {
@@ -283,9 +269,11 @@
           "confidence": false
         },
         "youtube_video": {
-          "title": "YouTube error for algorand",
-          "url": "https://youtube.com/search?q=algorand+crypto",
-          "error": "<HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=algorand+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">"
+          "title": "ALGORAND (ALGO) JUNE 2025 NEXT TARGETS? CRYPTO PRICE ANALYSIS!",
+          "url": "https://youtu.be/yYVg2hTMia8",
+          "channel": "Blockchain Crusader",
+          "published": "2025-06-07T21:01:00Z",
+          "error": null
         },
         "project_research": {
           "top_project": {
@@ -308,9 +296,7 @@
         "hashtag": "#ALGO"
       },
       "issues": [
-        "No sentiment analysis data",
-        "YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=algorand+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-        "Using fallback YouTube search URL instead of actual video"
+        "No sentiment analysis data"
       ]
     },
     "CSPR": {
@@ -324,9 +310,11 @@
           "confidence": false
         },
         "youtube_video": {
-          "title": "YouTube error for casper network",
-          "url": "https://youtube.com/search?q=casper+network+crypto",
-          "error": "<HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=casper+network+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">"
+          "title": "SHOULD YOU BUY CSPR IN 2025? Bullish Casper News, Concerns Addressed, &amp; Technical Analysis!",
+          "url": "https://youtu.be/D-eDnMcGaUk",
+          "channel": "CryptoCharged",
+          "published": "2025-02-11T03:00:06Z",
+          "error": null
         },
         "project_research": {
           "top_project": {
@@ -348,18 +336,15 @@
         "tx_volume": 100.0,
         "hashtag": "#CSPR"
       },
-      "issues": [
-        "YouTube error: <HttpError 403 when requesting https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=casper+network+crypto+2025&type=video&maxResults=3&publishedAfter=2024-01-01T00%3A00%3A00Z&key=AIzaSyA2GDkuUpuKUaVCdOkqibs2XPOBVqUIauM+&alt=json returned \"The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.\". Details: \"[{'message': 'The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.', 'domain': 'youtube.quota', 'reason': 'quotaExceeded'}]\">",
-        "Using fallback YouTube search URL instead of actual video"
-      ]
+      "issues": []
     }
   },
   "summary": {
-    "total_issues": 23,
+    "total_issues": 9,
     "coins_analyzed": 8,
     "issues_by_category": {
       "social_metrics": 0,
-      "video_content": 16,
+      "video_content": 2,
       "project_research": 0,
       "formatting": 0
     }
