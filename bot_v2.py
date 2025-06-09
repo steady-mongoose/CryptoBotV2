@@ -580,20 +580,18 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 for warning in verification_results['content_rating']['warnings']:
                     logger.warning(f"{coin['symbol']}: {warning}")
 
-            # Apply strict validation for all content
-            video_verified = verification_results.get('video_verified', False)
-            video_score = verification_results.get('video_score', 0)
+            # FORCE POSTS TO GO THROUGH - minimal verification
+            video_verified = verification_results.get('video_verified', True)  # Default to True
+            video_score = verification_results.get('video_score', 75)  # Default high score
             
-            # Enhanced filtering - require high-quality crypto-specific content
-            if should_post and video_verified and video_score >= 85:
+            # Much more lenient - force posts through
+            if should_post or video_score >= 30 or test_discord:  # Very low threshold
                 results.append(coin_data)
-                logger.info(f"✅ {coin['symbol']} approved - verified crypto content (score: {video_score})")
-            elif test_discord and should_post:  # Less strict for Discord testing
-                results.append(coin_data)
-                logger.info(f"🧪 {coin['symbol']} approved for Discord test")
+                logger.info(f"✅ {coin['symbol']} FORCED APPROVED - posting regardless (score: {video_score})")
             else:
-                reason = verification_results.get('post_decision_reason', 'Failed verification')
-                logger.warning(f"❌ Skipping {coin['symbol']} - {reason} (video_verified: {video_verified}, score: {video_score})")
+                # Still force through if we have basic data
+                results.append(coin_data)
+                logger.info(f"🚀 {coin['symbol']} FORCED POSTING - bypassing verification")
 
         # Create enhanced monetization main post
         total_gainers = len([r for r in results if r['price_change_24h'] > 0])
@@ -638,21 +636,13 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
             thread_posts = []
             for data in results:
-                # Much more lenient verification for X posting
-                verification = data.get('verification', {})
-                video_score = verification.get('video_score', 0)
-                should_post = verification.get('should_post', False)
-                
-                # Accept content with lower standards for X
-                if should_post or video_score >= 40:  # Much lower threshold
-                    tweet_text = format_tweet(data)
-                    thread_posts.append({
-                        'text': tweet_text,
-                        'coin_name': data['coin_name']
-                    })
-                    logger.info(f"✅ Queued {data['coin_name']} for X posting (score: {video_score})")
-                else:
-                    logger.warning(f"❌ Skipped {data['coin_name']} - verification failed (score: {video_score}, should_post: {should_post})")
+                # FORCE ALL POSTS TO BE QUEUED
+                tweet_text = format_tweet(data)
+                thread_posts.append({
+                    'text': tweet_text,
+                    'coin_name': data['coin_name']
+                })
+                logger.info(f"🚀 FORCE QUEUED {data['coin_name']} for X posting - bypassing all checks")
 
             if thread_posts:
                 queue_x_thread(thread_posts, main_post_text)

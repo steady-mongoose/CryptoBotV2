@@ -37,18 +37,30 @@ def _queue_worker():
                 # Import X client here to avoid circular imports
                 from modules.api_clients import get_x_client
                 
-                # Get X client for posting
+                # Get X client for posting with detailed logging
+                logger.info("🔑 Attempting to get X client for posting...")
                 x_client = get_x_client(posting_only=True)
                 if not x_client:
-                    logger.error("Failed to get X client - skipping post")
+                    logger.error("❌ CRITICAL: Failed to get X client - check API credentials!")
+                    logger.error("Check these environment variables:")
+                    logger.error("- X_CONSUMER_KEY")
+                    logger.error("- X_CONSUMER_SECRET") 
+                    logger.error("- X_ACCESS_TOKEN")
+                    logger.error("- X_ACCESS_TOKEN_SECRET")
                     _post_queue.task_done()
                     continue
+                
+                logger.info("✅ X client obtained successfully")
 
-                # Post main tweet
-                logger.info(f"Posting main tweet: {main_post[:50]}...")
-                main_tweet = x_client.create_tweet(text=main_post)
-                main_tweet_id = main_tweet.data['id']
-                logger.info(f"Posted main tweet: {main_tweet_id}")
+                # Post main tweet with detailed logging
+                logger.info(f"🐦 POSTING MAIN TWEET: {main_post[:100]}...")
+                try:
+                    main_tweet = x_client.create_tweet(text=main_post)
+                    main_tweet_id = main_tweet.data['id']
+                    logger.info(f"✅ MAIN TWEET POSTED SUCCESSFULLY: https://twitter.com/user/status/{main_tweet_id}")
+                except Exception as tweet_error:
+                    logger.error(f"❌ MAIN TWEET FAILED: {tweet_error}")
+                    raise
 
                 # Post replies
                 previous_tweet_id = main_tweet_id
