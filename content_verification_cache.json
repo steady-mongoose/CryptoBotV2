@@ -6,8 +6,8 @@
     "timestamp": "2025-06-09T00:43:38.926700"
   },
   "price_ripple": {
-    "last_price": 2.26,
-    "timestamp": "2025-06-09T13:18:43.924973"
+    "last_price": 2.3,
+    "timestamp": "2025-06-09T19:20:22.677604"
   },
   "youtube__hedera hashgraph": {
     "verified": true,
@@ -16,8 +16,8 @@
     "timestamp": "2025-06-09T00:43:39.261904"
   },
   "price_hedera hashgraph": {
-    "last_price": 0.171135,
-    "timestamp": "2025-06-09T13:18:47.800430"
+    "last_price": 0.175234,
+    "timestamp": "2025-06-09T19:20:27.094499"
   },
   "youtube__stellar": {
     "verified": true,
@@ -27,7 +27,7 @@
   },
   "price_stellar": {
     "last_price": 0.268,
-    "timestamp": "2025-06-09T13:18:47.969735"
+    "timestamp": "2025-06-09T19:20:27.277625"
   },
   "youtube__xdce crowd sale": {
     "verified": true,
@@ -37,7 +37,7 @@
   },
   "price_xdce crowd sale": {
     "last_price": 0.045,
-    "timestamp": "2025-06-09T13:18:50.478394"
+    "timestamp": "2025-06-09T19:20:30.150581"
   },
   "youtube__sui": {
     "verified": true,
@@ -47,7 +47,7 @@
   },
   "price_sui": {
     "last_price": 4.35,
-    "timestamp": "2025-06-09T13:18:53.046505"
+    "timestamp": "2025-06-09T19:20:32.910781"
   },
   "youtube__ondo finance": {
     "verified": true,
@@ -57,7 +57,7 @@
   },
   "price_ondo finance": {
     "last_price": 1.95,
-    "timestamp": "2025-06-09T13:18:53.073128"
+    "timestamp": "2025-06-09T19:20:32.948493"
   },
   "youtube__algorand": {
     "verified": true,
@@ -67,7 +67,7 @@
   },
   "price_algorand": {
     "last_price": 0.42,
-    "timestamp": "2025-06-09T13:18:55.623925"
+    "timestamp": "2025-06-09T19:20:35.730553"
   },
   "youtube__casper network": {
     "verified": true,
@@ -124,12 +124,16 @@
     "timestamp": "2025-06-09T00:46:29.870563"
   },
   "video_youtube__ripple_": {
-    "verified": false,
-    "score": 55.0,
-    "reason": "Issues: Content not verified as recent (within 24h)",
-    "timestamp": "2025-06-09T00:52:43.198916",
+    "verified": true,
+    "score": 73.0,
+    "reason": "Verified high-quality crypto-specific content",
+    "timestamp": "2025-06-09T17:33:13.474416",
     "crypto_specific": true,
-    "recency_verified": false
+    "recency_verified": false,
+    "public_available": true,
+    "engagement_score": 65,
+    "specificity_score": 30,
+    "issues_count": 1
   },
   "video_youtube__hedera hashgraph_": {
     "verified": true,
@@ -147,7 +151,7 @@
     "verified": true,
     "score": 138.0,
     "reason": "Verified high-quality crypto-specific content",
-    "timestamp": "2025-06-09T13:18:47.969145",
+    "timestamp": "2025-06-09T19:20:27.276829",
     "crypto_specific": true,
     "recency_verified": true,
     "public_available": true,
@@ -159,7 +163,7 @@
     "verified": false,
     "score": 50.0,
     "reason": "Issues: Low engagement potential: 53/100, Content not verified as recent (within 24h)",
-    "timestamp": "2025-06-09T13:18:50.477557",
+    "timestamp": "2025-06-09T19:20:30.149839",
     "crypto_specific": true,
     "recency_verified": false,
     "public_available": true,
@@ -169,17 +173,21 @@
   },
   "video_twitch_twitch_4_2025-06-09_sui_2025-06-09": {
     "verified": true,
-    "score": 105.0,
-    "reason": "Verified crypto-specific recent content",
-    "timestamp": "2025-06-09T00:52:51.568731",
+    "score": 138.0,
+    "reason": "Verified high-quality crypto-specific content",
+    "timestamp": "2025-06-09T19:20:32.909964",
     "crypto_specific": true,
-    "recency_verified": true
+    "recency_verified": true,
+    "public_available": true,
+    "engagement_score": 67,
+    "specificity_score": 30,
+    "issues_count": 0
   },
   "video_twitch_twitch_5_2025-06-09_ondo finance_2025-06-09": {
     "verified": true,
     "score": 138.0,
     "reason": "Verified high-quality crypto-specific content",
-    "timestamp": "2025-06-09T13:18:53.072519",
+    "timestamp": "2025-06-09T19:20:32.946605",
     "crypto_specific": true,
     "recency_verified": true,
     "public_available": true,
@@ -191,7 +199,7 @@
     "verified": false,
     "score": 50.0,
     "reason": "Issues: Low engagement potential: 53/100, Content not verified as recent (within 24h)",
-    "timestamp": "2025-06-09T13:18:55.623334",
+    "timestamp": "2025-06-09T19:20:35.729917",
     "crypto_specific": true,
     "recency_verified": false,
     "public_available": true,
@@ -203,7 +211,7 @@
     "verified": false,
     "score": 33.0,
     "reason": "Issues: Low engagement potential: 53/100, Content not verified as recent (within 24h)",
-    "timestamp": "2025-06-09T13:18:58.182986",
+    "timestamp": "2025-06-09T19:20:38.594430",
     "crypto_specific": false,
     "recency_verified": false,
     "public_available": true,
@@ -234,5 +242,53 @@
     "engagement_score": 65,
     "specificity_score": 30,
     "issues_count": 1
+  },
+  "video_youtube_mrTgHHIdIcs_sui_": {
+    "verified": true,
+    "score": 73.0,
+    "reason": "Verified high-quality crypto-specific content",
+    "timestamp": "2025-06-09T17:33:23.383070",
+    "crypto_specific": true,
+    "recency_verified": false,
+    "public_available": true,
+    "engagement_score": 65,
+    "specificity_score": 30,
+    "issues_count": 1
+  },
+  "video_youtube_eeolFOoXQTA_ripple_": {
+    "verified": false,
+    "score": 70.0,
+    "reason": "Issues: Low engagement potential: 55/100",
+    "timestamp": "2025-06-09T19:04:19.302970",
+    "crypto_specific": true,
+    "recency_verified": false,
+    "public_available": true,
+    "engagement_score": 55,
+    "specificity_score": 30,
+    "issues_count": 1
+  },
+  "video_youtube_0r6TCI2oJ2Y_sui_": {
+    "verified": true,
+    "score": 100.0,
+    "reason": "Verified high-quality crypto-specific content",
+    "timestamp": "2025-06-09T19:04:29.519582",
+    "crypto_specific": true,
+    "recency_verified": false,
+    "public_available": true,
+    "engagement_score": 75,
+    "specificity_score": 30,
+    "issues_count": 0
+  },
+  "video_rumble__hedera hashgraph_": {
+    "verified": false,
+    "score": 50.0,
+    "reason": "Issues: Low engagement potential: 53/100, Content not verified as recent (within 24h)",
+    "timestamp": "2025-06-09T19:20:27.093759",
+    "crypto_specific": true,
+    "recency_verified": false,
+    "public_available": true,
+    "engagement_score": 53,
+    "specificity_score": 30,
+    "issues_count": 2
   }
 }
