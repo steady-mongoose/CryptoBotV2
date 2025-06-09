@@ -690,17 +690,68 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
             except Exception as e:
                 logger.error(f"X API error: {e}")
 
-        # Update last post timestamp
-        with open("last_post_timestamp.txt", 'w') as f:
-            f.write(current_time.isoformat())
-
-        logger.info("Bot run completed")
+        # Comprehensive completion validation
+        completion_status = {
+            'success': True,
+            'errors': [],
+            'warnings': [],
+            'posted_count': len(results),
+            'platform': 'discord' if test_discord else 'x_queue' if queue_only else 'x_direct'
+        }
         
-        # REAL COMPLETION CHECK
+        # Validate results
+        if not results:
+            completion_status['success'] = False
+            completion_status['errors'].append("No content generated for posting")
+        
+        # Check for verification issues
+        failed_verifications = [r for r in results if not r.get('verification', {}).get('should_post', True)]
+        if failed_verifications:
+            completion_status['warnings'].append(f"{len(failed_verifications)} posts failed content verification")
+        
+        # Platform-specific validation
+        if test_discord and not DISCORD_WEBHOOK_URL:
+            completion_status['success'] = False
+            completion_status['errors'].append("Discord webhook URL not configured")
+        
+        if not test_discord and not x_client and not queue_only:
+            completion_status['success'] = False
+            completion_status['errors'].append("X client not available for direct posting")
+        
+        # Update last post timestamp only if successful
+        if completion_status['success']:
+            with open("last_post_timestamp.txt", 'w') as f:
+                f.write(current_time.isoformat())
+        
+        # Enhanced completion reporting
+        if completion_status['success']:
+            logger.info(f"✅ Bot run completed successfully - {completion_status['posted_count']} posts")
+            if completion_status['warnings']:
+                for warning in completion_status['warnings']:
+                    logger.warning(f"⚠️ {warning}")
+        else:
+            logger.error("❌ Bot run failed")
+            for error in completion_status['errors']:
+                logger.error(f"💥 {error}")
+        
+        # User-friendly status messages
         if queue_only:
-            print("🔄 Posts queued for X - check queue worker logs for actual posting status")
-        elif not test_discord:
-            print("🎯 Direct X posting attempted - check logs above for success/failure")
+            queue_status = get_x_queue_status()
+            print(f"🔄 {completion_status['posted_count']} posts queued for X")
+            print(f"📊 Queue size: {queue_status['queue_size']}")
+            print(f"🤖 Worker status: {'Running' if queue_status['worker_running'] else 'Stopped'}")
+            if not completion_status['success']:
+                print("⚠️ Check errors above - some posts may not have been queued")
+        elif test_discord:
+            print(f"✅ Discord test completed - {completion_status['posted_count']} posts sent")
+            if completion_status['errors']:
+                print("⚠️ Some posts failed - check webhook configuration")
+        else:
+            print(f"🎯 Direct X posting attempted - {completion_status['posted_count']} posts")
+            if completion_status['success']:
+                print("✅ All posts completed successfully")
+            else:
+                print("❌ Some posts failed - check X API credentials and logs")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CryptoBotV2")

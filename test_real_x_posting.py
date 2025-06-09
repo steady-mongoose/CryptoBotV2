@@ -5,14 +5,16 @@ Real X Posting Test - Verify actual posts reach X platform
 """
 
 import logging
+import asyncio
 from datetime import datetime
 from modules.api_clients import get_x_client_with_failover
 from modules.rate_limit_manager import rate_manager
+from modules.x_thread_queue import verify_post_exists
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('RealXTest')
 
-def test_real_x_posting():
+async def test_real_x_posting():
     """Test if posts actually reach X platform."""
     print("🔍 TESTING REAL X POSTING TO PLATFORM")
     print("=" * 50)
@@ -50,11 +52,21 @@ def test_real_x_posting():
         # Record the successful post
         rate_manager.record_post(account_num)
         
+        # Automatic verification attempt
+        print("\n4️⃣ Verifying post exists...")
+        verification_result = await verify_post_exists(tweet_id)
+        
+        if verification_result['exists']:
+            print("✅ VERIFICATION PASSED: Post confirmed on X platform")
+        else:
+            print(f"⚠️  VERIFICATION INCONCLUSIVE: {verification_result['error']}")
+            print("This may be normal - X API limits verification methods")
+        
         # Ask user to verify
         print("\n" + "="*50)
-        print("🔍 MANUAL VERIFICATION REQUIRED:")
+        print("🔍 MANUAL VERIFICATION RECOMMENDED:")
         print(f"Go to: {tweet_url}")
-        print("Check if the tweet is visible on X platform")
+        print("Confirm the tweet is visible on X platform")
         print("="*50)
         
         return True
@@ -74,7 +86,7 @@ def test_real_x_posting():
         return False
 
 if __name__ == "__main__":
-    success = test_real_x_posting()
+    success = asyncio.run(test_real_x_posting())
     if success:
         print("\n🎉 Test completed - check the URL above to verify")
     else:

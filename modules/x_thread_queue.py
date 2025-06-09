@@ -9,6 +9,25 @@ from modules.rate_limit_manager import rate_manager
 logger = logging.getLogger('CryptoBot')
 
 # Global queue and worker state
+
+async def verify_post_exists(tweet_id: str) -> dict:
+    """Verify that a posted tweet actually exists on the platform."""
+    try:
+        import aiohttp
+        
+        # Simple verification attempt
+        verification_url = f"https://twitter.com/user/status/{tweet_id}"
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.head(verification_url, timeout=10) as response:
+                if response.status == 200:
+                    return {"exists": True, "status_code": response.status}
+                else:
+                    return {"exists": False, "error": f"HTTP {response.status}", "status_code": response.status}
+    except Exception as e:
+        return {"exists": False, "error": str(e), "status_code": None}
+
+
 _post_queue = queue.Queue()
 _worker_thread = None
 _worker_running = False
@@ -112,10 +131,19 @@ def _queue_worker():
                     except:
                         pass
                 
-                logger.info(f"✅ X POSTING SUCCESS: Main tweet: {main_tweet_id}, Replies: {len(posts)}")
-                print(f"✅ X posting completed successfully!")
-                print(f"📍 Main tweet: https://twitter.com/user/status/{main_tweet_id}")
-                print(f"📊 Posted {len(posts)} replies successfully")
+                # Verify post actually exists on platform
+                verification_status = await verify_post_exists(main_tweet_id)
+                
+                if verification_status['exists']:
+                    logger.info(f"✅ X POSTING SUCCESS: Main tweet: {main_tweet_id}, Replies: {len(posts)}")
+                    print(f"✅ X posting completed successfully!")
+                    print(f"📍 Main tweet: https://twitter.com/user/status/{main_tweet_id}")
+                    print(f"📊 Posted {len(posts)} replies successfully")
+                    print(f"🔍 VERIFIED: Post confirmed on X platform")
+                else:
+                    logger.warning(f"⚠️ Post created but verification failed: {verification_status['error']}")
+                    print(f"⚠️ Post may not be visible - check manually: https://twitter.com/user/status/{main_tweet_id}")
+                    print(f"🔍 Verification issue: {verification_status['error']}")
 
             except Exception as api_error:
                 logger.error(f"❌ REAL X API ERROR: {api_error}")

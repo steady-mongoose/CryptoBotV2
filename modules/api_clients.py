@@ -87,11 +87,21 @@ def get_x_client(posting_only=False, account_number=1):
             )
             logger.info(f"X {account_type} full client initialized")
 
-        # Return client without testing to avoid 401 errors
-        # Authentication will be tested when actually posting
-        logger.info(f"X {account_type} client initialized successfully")
-
-        return client
+        # Validate client setup without making API calls
+        try:
+            # Basic validation of credentials format
+            if not consumer_key.startswith(('AAAA', 'BBBB')) and len(consumer_key) < 20:
+                logger.warning(f"X {account_type} consumer key format appears invalid")
+            
+            if not access_token.startswith(('1', '2', '3')) and len(access_token) < 40:
+                logger.warning(f"X {account_type} access token format appears invalid")
+                
+            logger.info(f"X {account_type} client initialized successfully")
+            return client
+            
+        except Exception as validation_error:
+            logger.error(f"X {account_type} client validation failed: {validation_error}")
+            return None
 
     except Exception as e:
         logger.error(f"Error initializing X client for account {account_number}: {e}")
