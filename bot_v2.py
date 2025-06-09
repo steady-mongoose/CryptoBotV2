@@ -695,6 +695,12 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
             f.write(current_time.isoformat())
 
         logger.info("Bot run completed")
+        
+        # REAL COMPLETION CHECK
+        if queue_only:
+            print("🔄 Posts queued for X - check queue worker logs for actual posting status")
+        elif not test_discord:
+            print("🎯 Direct X posting attempted - check logs above for success/failure")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CryptoBotV2")

@@ -80,25 +80,63 @@ def _queue_worker():
                     # Add delay between posts to avoid rate limits
                     time.sleep(5)
 
-                logger.info(f"✅ Successfully posted thread with {len(posts)} replies to X")
+                # Send success notification
+                from modules.api_clients import get_notification_webhook_url
+                import aiohttp
+                import asyncio
+                
+                webhook_url = get_notification_webhook_url()
+                if webhook_url:
+                    try:
+                        success_message = f"🎉 X POSTING SUCCESS!\n✅ Posted main tweet: https://twitter.com/user/status/{main_tweet_id}\n✅ Posted {len(posts)} replies\n🕒 {datetime.now().strftime('%H:%M:%S')}"
+                        
+                        async def send_notification():
+                            async with aiohttp.ClientSession() as session:
+                                await session.post(webhook_url, json={"content": success_message})
+                        
+                        asyncio.run(send_notification())
+                    except:
+                        pass
+                
+                logger.info(f"🎉 REAL SUCCESS: Posted to X - Main tweet: {main_tweet_id}, Replies: {len(posts)}")
+                print(f"🎉 ACTUAL X POSTING SUCCESS! Main tweet: https://twitter.com/user/status/{main_tweet_id}")
 
             except Exception as api_error:
-                logger.error(f"❌ X API error during posting: {api_error}")
+                logger.error(f"❌ REAL X API ERROR: {api_error}")
                 logger.error(f"Failed to post thread with {len(posts)} posts")
+                
+                # Send failure notification
+                from modules.api_clients import get_notification_webhook_url
+                import aiohttp
+                import asyncio
+                
+                webhook_url = get_notification_webhook_url()
+                if webhook_url:
+                    try:
+                        error_message = f"❌ X POSTING FAILED!\n💥 Error: {str(api_error)[:100]}\n🕒 {datetime.now().strftime('%H:%M:%S')}"
+                        
+                        async def send_notification():
+                            async with aiohttp.ClientSession() as session:
+                                await session.post(webhook_url, json={"content": error_message})
+                        
+                        asyncio.run(send_notification())
+                    except:
+                        pass
                 
                 # More detailed error handling
                 error_str = str(api_error).lower()
                 if "rate limit" in error_str or "429" in error_str:
                     logger.warning("Rate limit hit - waiting 2 minutes before retry")
-                    time.sleep(120)  # Shorter wait
+                    time.sleep(120)
                 elif "auth" in error_str or "401" in error_str or "403" in error_str:
-                    logger.error("Authentication error - check X API credentials")
-                    logger.error("Try regenerating X API keys and updating secrets")
+                    logger.error("❌ AUTHENTICATION ERROR - X API credentials invalid!")
+                    logger.error("🔑 Check your X API secrets: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
+                    print("❌ X API AUTHENTICATION FAILED - CHECK YOUR SECRETS!")
                 elif "duplicate" in error_str:
                     logger.warning("Duplicate content detected - continuing with next post")
                 else:
                     logger.error(f"General API error: {api_error}")
-                    logger.info("Continuing with queue processing...")
+                    print(f"❌ X API ERROR: {api_error}")
                 # Continue processing other posts
 
             _post_queue.task_done()
