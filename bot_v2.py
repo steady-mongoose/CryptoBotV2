@@ -110,15 +110,15 @@ def predict_price(historical_prices, current_price):
 
 async def fetch_multi_platform_video(youtube, coin: str, current_date: str, session: aiohttp.ClientSession):
     """Fetch videos from multiple platforms with intelligent rotation."""
-    
+
     # Platform rotation based on coin index for diversity
     coin_obj = next((c for c in COINS if c['name'] == coin), None)
     coin_index = COINS.index(coin_obj) if coin_obj else 0
     platforms = ['youtube', 'rumble', 'twitch']
     primary_platform = platforms[coin_index % len(platforms)]
-    
+
     logger.info(f"Trying {primary_platform} first for {coin}")
-    
+
     # Try primary platform first
     if primary_platform == 'youtube':
         video = await fetch_youtube_video(youtube, coin, current_date)
@@ -126,11 +126,11 @@ async def fetch_multi_platform_video(youtube, coin: str, current_date: str, sess
         video = await fetch_rumble_video(coin, session, current_date)
     else:  # twitch
         video = await fetch_twitch_video(coin, session, current_date)
-    
+
     # If primary platform fails or returns low-quality content, try alternatives
     if not video or (video.get('video_id') == "" and video.get('quality_score', 0) < 60):
         logger.info(f"Primary platform failed for {coin}, trying alternatives...")
-        
+
         for platform in platforms:
             if platform != primary_platform:
                 try:
@@ -140,7 +140,7 @@ async def fetch_multi_platform_video(youtube, coin: str, current_date: str, sess
                         alt_video = await fetch_rumble_video(coin, session, current_date)
                     else:  # twitch
                         alt_video = await fetch_twitch_video(coin, session, current_date)
-                    
+
                     if alt_video and alt_video.get('quality_score', 0) > video.get('quality_score', 0):
                         video = alt_video
                         logger.info(f"Found better content on {platform} for {coin}")
@@ -148,7 +148,7 @@ async def fetch_multi_platform_video(youtube, coin: str, current_date: str, sess
                 except Exception as e:
                     logger.error(f"Error trying {platform} for {coin}: {e}")
                     continue
-    
+
     return video
 
 async def fetch_youtube_video(youtube, coin: str, current_date: str):
@@ -171,7 +171,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
                 title = item['snippet']['title']
                 url = f"https://youtu.be/{video_id}"
                 quality_score = calculate_video_quality_score(title, 'youtube')
-                
+
                 db.add_used_video(coin, video_id, current_date)
                 return {
                     "title": title, 
@@ -183,7 +183,7 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
 
         # High-quality YouTube fallback
         return get_fallback_video(coin, 'youtube')
-        
+
     except Exception as e:
         logger.error(f"YouTube API error for {coin}: {e}")
         return get_fallback_video(coin, 'youtube')
@@ -194,17 +194,17 @@ async def fetch_rumble_video(coin: str, session: aiohttp.ClientSession, current_
         # Get coin index for unique ID generation
         coin_obj = next((c for c in COINS if c['name'] == coin), None)
         coin_index = COINS.index(coin_obj) if coin_obj else 0
-        
+
         # Search Rumble for recent crypto content with specific token names
         coin_symbol = next((c['symbol'] for c in COINS if c['name'] == coin), coin.split()[0])
         search_terms = [coin_symbol, coin.replace(' ', '+'), 'crypto', 'analysis', current_date.replace('-', '/')]
         search_query = '+'.join(search_terms)
         search_url = f"https://rumble.com/search/video?q={search_query}"
-        
+
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        
+
         # Try to fetch real content (will fallback to curated if search fails)
         async with session.get(search_url, headers=headers, timeout=10) as response:
             if response.status == 200:
@@ -243,14 +243,14 @@ async def fetch_rumble_video(coin: str, session: aiohttp.ClientSession, current_
                         'title': f'CSPR Network Upgrades - {current_date} Highway Consensus Analysis'
                     }
                 }
-                
+
                 content = verified_content.get(coin, {
                     'url': search_url,
                     'title': f'{coin_symbol} Market Analysis - {current_date} Update'
                 })
-                
+
                 quality_score = calculate_video_quality_score(content['title'], 'rumble')
-                
+
                 return {
                     "title": content['title'],
                     "url": content['url'],
@@ -260,10 +260,10 @@ async def fetch_rumble_video(coin: str, session: aiohttp.ClientSession, current_
                     "verified_crypto_specific": True,
                     "content_date": current_date
                 }
-    
+
     except Exception as e:
         logger.error(f"Rumble fetch error for {coin}: {e}")
-    
+
     return get_fallback_video(coin, 'rumble')
 
 async def fetch_twitch_video(coin: str, session: aiohttp.ClientSession, current_date: str):
@@ -273,7 +273,7 @@ async def fetch_twitch_video(coin: str, session: aiohttp.ClientSession, current_
         coin_obj = next((c for c in COINS if c['name'] == coin), None)
         coin_index = COINS.index(coin_obj) if coin_obj else 0
         coin_symbol = coin_obj['symbol'] if coin_obj else coin.split()[0]
-        
+
         # Crypto-specific Twitch content with current date verification
         crypto_specific_content = {
             'ripple': {
@@ -317,15 +317,15 @@ async def fetch_twitch_video(coin: str, session: aiohttp.ClientSession, current_
                 'keywords': ['CSPR', 'Casper', 'upgrades', 'consensus']
             }
         }
-        
+
         content = crypto_specific_content.get(coin, {
             'url': f'https://www.twitch.tv/search?term={coin_symbol}+crypto+{current_date}',
             'title': f'{coin_symbol} Live Trading Analysis - {current_date}',
             'keywords': [coin_symbol, 'crypto', 'analysis']
         })
-        
+
         quality_score = calculate_video_quality_score(content['title'], 'twitch')
-        
+
         return {
             "title": content['title'],
             "url": content['url'],
@@ -336,38 +336,38 @@ async def fetch_twitch_video(coin: str, session: aiohttp.ClientSession, current_
             "content_date": current_date,
             "target_keywords": content['keywords']
         }
-        
+
     except Exception as e:
         logger.error(f"Twitch fetch error for {coin}: {e}")
-    
+
     return get_fallback_video(coin, 'twitch')
 
 def calculate_video_quality_score(title: str, platform: str) -> int:
     """Calculate quality score for video content."""
     score = 50  # Base score
     title_lower = title.lower()
-    
+
     # Educational content bonus
     educational_keywords = ['analysis', 'explained', 'guide', 'tutorial', 'fundamentals', 'technical', 'deep dive']
     score += sum(10 for keyword in educational_keywords if keyword in title_lower)
-    
+
     # Professional keywords bonus
     professional_keywords = ['professional', 'expert', 'institutional', 'market', 'research']
     score += sum(8 for keyword in professional_keywords if keyword in title_lower)
-    
+
     # Platform quality modifier
     platform_modifiers = {'youtube': 0, 'rumble': 5, 'twitch': 3}  # Rumble gets slight bonus for alternative perspective
     score += platform_modifiers.get(platform, 0)
-    
+
     # Penalty for clickbait
     clickbait_words = ['shocking', 'unbelievable', 'must see', '100x', 'moon', 'lambo']
     score -= sum(15 for word in clickbait_words if word in title_lower)
-    
+
     return max(0, min(100, score))
 
 def get_fallback_video(coin: str, platform: str):
     """Get high-quality fallback video content."""
-    
+
     # Platform-specific high-quality fallback content
     fallback_content = {
         'youtube': {
@@ -401,12 +401,12 @@ def get_fallback_video(coin: str, platform: str):
             'casper network': {'url': 'https://www.twitch.tv/directory/game/crypto', 'title': 'Casper Network Live - Upgradeable Contracts Demo'}
         }
     }
-    
+
     content = fallback_content.get(platform, {}).get(coin, {
         'url': f'https://example.com/{coin}',
         'title': f'{coin.title()} Crypto Analysis - Market Update'
     })
-    
+
     return {
         "title": content['title'],
         "url": content['url'],
@@ -417,7 +417,7 @@ def get_fallback_video(coin: str, platform: str):
 
 def format_tweet(data):
     change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
-    
+
     # Content verification badge
     verification_badge = ""
     if 'verification' in data:
@@ -426,10 +426,10 @@ def format_tweet(data):
             verification_badge = "✅ VERIFIED "
         elif content_score >= 60:
             verification_badge = "🔍 REVIEWED "
-    
+
     # Enhanced monetization content
     momentum_emoji = "🔥" if data['price_change_24h'] > 5 else "⚡" if data['price_change_24h'] > 2 else "🌊"
-    
+
     # Premium insights based on price action
     if data['price_change_24h'] > 5:
         insight = "🎯 BREAKOUT ALERT"
@@ -439,7 +439,7 @@ def format_tweet(data):
         insight = "⚠️ DIP OPPORTUNITY"
     else:
         insight = "📈 TECHNICAL ANALYSIS"
-    
+
     # Whitepaper/fundamental highlights
     fundamentals = {
         'ripple': "💳 Cross-border payments leader",
@@ -451,7 +451,7 @@ def format_tweet(data):
         'algorand': "🌿 Carbon-negative blockchain",
         'casper network': "🔄 Upgradeable smart contracts"
     }
-    
+
     fundamental_note = fundamentals.get(data['coin_name'], "🔍 Emerging technology")
 
     tweet_content = (
@@ -476,13 +476,13 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
     # Check for recent posts to prevent duplicates
     last_post_file = "last_post_timestamp.txt"
     current_time = datetime.now()
-    
+
     if os.path.exists(last_post_file):
         try:
             with open(last_post_file, 'r') as f:
                 last_post_time = datetime.fromisoformat(f.read().strip())
                 time_since_last = current_time - last_post_time
-                
+
                 # Prevent posts within 10 minutes of each other
                 if time_since_last < timedelta(minutes=10):
                     logger.warning(f"Preventing duplicate post - last post was {time_since_last.total_seconds():.0f} seconds ago")
@@ -496,7 +496,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
     async with aiohttp.ClientSession() as session:
         current_date = get_date()
-        current_time = get_timestamp()
+        current_timestamp_str = get_timestamp()
 
         # Fetch data for each coin
         results = []
@@ -528,12 +528,12 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
             # Verify content accuracy and quality
             verification_results = await verify_all_content(coin_data)
             coin_data['verification'] = verification_results
-            
+
             # Log verification results
             should_post = verification_results.get('should_post', False)
             content_score = verification_results.get('content_rating', {}).get('overall_score', 0)
             logger.info(f"{coin['symbol']} content score: {content_score}/100 - {'APPROVED' if should_post else 'REJECTED'}")
-            
+
             if verification_results.get('content_rating', {}).get('warnings'):
                 for warning in verification_results['content_rating']['warnings']:
                     logger.warning(f"{coin['symbol']}: {warning}")
@@ -547,7 +547,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
         # Create enhanced monetization main post
         total_gainers = len([r for r in results if r['price_change_24h'] > 0])
         market_sentiment = "🔥 BULLISH" if total_gainers >= 5 else "⚡ MIXED" if total_gainers >= 3 else "🌊 BEARISH"
-        
+
         main_post_text = (
             f"🚀 CRYPTO ALPHA REPORT ({current_date})\n"
             f"{market_sentiment} Market Sentiment\n\n"
@@ -559,7 +559,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
         # Get upcoming live stream posts
         live_stream_posts = get_next_stream_posts(max_posts=2)
-        
+
         # Post to platforms
         if test_discord:
             # Discord only
@@ -573,7 +573,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                     if response.status == 204:
                         logger.info(f"Posted {data['coin_name']} to Discord")
                 await asyncio.sleep(0.5)
-            
+
             # Post live stream alerts to Discord
             for i, stream_post in enumerate(live_stream_posts):
                 async with session.post(DISCORD_WEBHOOK_URL, json={"content": stream_post}) as response:
@@ -588,6 +588,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
             thread_posts = []
             for data in results:
                 tweet_text = format_tweet(data)
+                ```python
                 thread_posts.append({
                     'text': tweet_text,
                     'coin_name': data['coin_name']
@@ -595,7 +596,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
             queue_x_thread(thread_posts, main_post_text)
             logger.info(f"Queued thread with {len(thread_posts)} posts")
-            
+
             # Queue live stream posts separately (free tier compliant)
             for i, stream_post in enumerate(live_stream_posts):
                 queue_x_thread([{'text': stream_post, 'coin_name': f'live_stream_{i+1}'}], 
@@ -617,7 +618,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 previous_tweet_id = reply_tweet.data['id']
                 logger.info(f"Posted reply for {data['coin_name']}")
                 await asyncio.sleep(5)
-            
+
             # Post live stream alerts as separate tweets (free tier compliant)
             for i, stream_post in enumerate(live_stream_posts):
                 await asyncio.sleep(10)  # Space out posts to avoid spam detection
@@ -628,7 +629,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
         # Update last post timestamp
         with open("last_post_timestamp.txt", 'w') as f:
             f.write(current_time.isoformat())
-            
+
         logger.info("Bot run completed")
 
 if __name__ == "__main__":
