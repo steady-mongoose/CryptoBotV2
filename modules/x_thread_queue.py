@@ -112,8 +112,10 @@ def _queue_worker():
                     except:
                         pass
                 
-                logger.info(f"🎉 REAL SUCCESS: Posted to X - Main tweet: {main_tweet_id}, Replies: {len(posts)}")
-                print(f"🎉 ACTUAL X POSTING SUCCESS! Main tweet: https://twitter.com/user/status/{main_tweet_id}")
+                logger.info(f"✅ X POSTING SUCCESS: Main tweet: {main_tweet_id}, Replies: {len(posts)}")
+                print(f"✅ X posting completed successfully!")
+                print(f"📍 Main tweet: https://twitter.com/user/status/{main_tweet_id}")
+                print(f"📊 Posted {len(posts)} replies successfully")
 
             except Exception as api_error:
                 logger.error(f"❌ REAL X API ERROR: {api_error}")
