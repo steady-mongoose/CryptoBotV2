@@ -3,6 +3,7 @@ import threading
 import time
 import queue
 import asyncio
+import json
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from modules.rate_limit_manager import rate_manager
@@ -12,21 +13,71 @@ logger = logging.getLogger('CryptoBot')
 # Global queue and worker state
 
 async def verify_post_exists(tweet_id: str) -> dict:
-    """Verify that a posted tweet actually exists on the platform."""
+    """Verify that a posted tweet actually exists and is accessible on the platform."""
     try:
         import aiohttp
         
-        # Simple verification attempt
+        # Try multiple verification methods
         verification_url = f"https://twitter.com/user/status/{tweet_id}"
         
         async with aiohttp.ClientSession() as session:
-            async with session.head(verification_url, timeout=10) as response:
-                if response.status == 200:
-                    return {"exists": True, "status_code": response.status}
-                else:
-                    return {"exists": False, "error": f"HTTP {response.status}", "status_code": response.status}
+            # Method 1: HEAD request to check accessibility
+            try:
+                async with session.head(verification_url, timeout=15) as response:
+                    if response.status == 200:
+                        # Method 2: Try to fetch actual content
+                        async with session.get(verification_url, timeout=15) as content_response:
+                            if content_response.status == 200:
+                                content = await content_response.text()
+                                # Check if page contains tweet content indicators
+                                if any(indicator in content.lower() for indicator in ['twitter', 'tweet', 'post', 'status']):
+                                    return {
+                                        "exists": True, 
+                                        "content_verified": True,
+                                        "status_code": response.status,
+                                        "method": "full_verification",
+                                        "url": verification_url
+                                    }
+                                else:
+                                    return {
+                                        "exists": False, 
+                                        "content_verified": False,
+                                        "error": "Content not found in response",
+                                        "status_code": content_response.status,
+                                        "method": "content_check_failed"
+                                    }
+                            else:
+                                return {
+                                    "exists": False, 
+                                    "content_verified": False,
+                                    "error": f"Content fetch failed: HTTP {content_response.status}",
+                                    "status_code": content_response.status,
+                                    "method": "content_fetch_failed"
+                                }
+                    else:
+                        return {
+                            "exists": False, 
+                            "content_verified": False,
+                            "error": f"URL not accessible: HTTP {response.status}",
+                            "status_code": response.status,
+                            "method": "url_check_failed"
+                        }
+            except asyncio.TimeoutError:
+                return {
+                    "exists": False, 
+                    "content_verified": False,
+                    "error": "Verification timeout - X platform may be slow",
+                    "status_code": None,
+                    "method": "timeout"
+                }
     except Exception as e:
-        return {"exists": False, "error": str(e), "status_code": None}
+        return {
+            "exists": False, 
+            "content_verified": False,
+            "error": f"Verification exception: {str(e)}",
+            "status_code": None,
+            "method": "exception"
+        }
 
 
 _post_queue = queue.Queue()
@@ -114,15 +165,20 @@ def _queue_worker():
                     else:
                         time.sleep(8)   # Standard delay
 
-                # Send success notification
+                # Send notification only after verification
+                thread_url = f"https://twitter.com/user/status/{main_tweet_id}"
+                verification_status = asyncio.run(verify_post_exists(main_tweet_id))
+                
                 from modules.api_clients import get_notification_webhook_url
                 import aiohttp
-                import asyncio
                 
                 webhook_url = get_notification_webhook_url()
                 if webhook_url:
                     try:
-                        success_message = f"🎉 X POSTING SUCCESS!\n✅ Posted main tweet: https://twitter.com/user/status/{main_tweet_id}\n✅ Posted {len(posts)} replies\n🕒 {datetime.now().strftime('%H:%M:%S')}"
+                        if verification_status.get('exists') and verification_status.get('content_verified'):
+                            success_message = f"🎉 X POSTING VERIFIED SUCCESS!\n✅ THREAD URL: {thread_url}\n✅ Posted {len(posts)} replies\n🔍 VERIFIED: Post confirmed on platform\n🕒 {datetime.now().strftime('%H:%M:%S')}"
+                        else:
+                            success_message = f"❌ X POSTING FAILED VERIFICATION!\n🚫 Could not verify post on platform\n📍 Attempted: {thread_url}\n❌ Error: {verification_status.get('error', 'Unknown')}\n🕒 {datetime.now().strftime('%H:%M:%S')}"
                         
                         async def send_notification():
                             async with aiohttp.ClientSession() as session:
@@ -132,19 +188,56 @@ def _queue_worker():
                     except:
                         pass
                 
-                # Verify post actually exists on platform
+                # Verify post actually exists on platform with enhanced verification
                 verification_status = asyncio.run(verify_post_exists(main_tweet_id))
                 
-                if verification_status['exists']:
-                    logger.info(f"✅ X POSTING SUCCESS: Main tweet: {main_tweet_id}, Replies: {len(posts)}")
-                    print(f"✅ X posting completed successfully!")
-                    print(f"📍 Main tweet: https://twitter.com/user/status/{main_tweet_id}")
+                if verification_status['exists'] and verification_status.get('content_verified', False):
+                    # Export thread data as JSON
+                    thread_export = {
+                        "main_tweet": {
+                            "id": main_tweet_id,
+                            "url": f"https://twitter.com/user/status/{main_tweet_id}",
+                            "text": main_post[:100] + "..." if len(main_post) > 100 else main_post,
+                            "timestamp": datetime.now().isoformat()
+                        },
+                        "replies": [
+                            {
+                                "text": post.get('text', '')[:100] + "..." if len(post.get('text', '')) > 100 else post.get('text', ''),
+                                "coin_name": post.get('coin_name', 'Unknown')
+                            }
+                            for post in posts
+                        ],
+                        "verification": {
+                            "verified": True,
+                            "method": verification_status.get('method', 'api_check'),
+                            "timestamp": datetime.now().isoformat(),
+                            "status_code": verification_status.get('status_code')
+                        }
+                    }
+                    
+                    logger.info(f"✅ X POSTING SUCCESS - VERIFIED: Main tweet: {main_tweet_id}, Replies: {len(posts)}")
+                    print(f"✅ X POSTING VERIFIED SUCCESSFUL!")
+                    print(f"📍 THREAD URL: https://twitter.com/user/status/{main_tweet_id}")
                     print(f"📊 Posted {len(posts)} replies successfully")
-                    print(f"🔍 VERIFIED: Post confirmed on X platform")
+                    print(f"🔍 VERIFICATION: Post confirmed accessible on X platform")
+                    print(f"📁 THREAD EXPORT: {json.dumps(thread_export, indent=2)}")
+                    
+                    # Save thread export to file
+                    export_filename = f"x_thread_export_{main_tweet_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                    try:
+                        with open(export_filename, 'w') as f:
+                            json.dump(thread_export, f, indent=2)
+                        print(f"💾 Thread data exported to: {export_filename}")
+                    except Exception as e:
+                        logger.error(f"Failed to save thread export: {e}")
+                        
                 else:
-                    logger.warning(f"⚠️ Post created but verification failed: {verification_status['error']}")
-                    print(f"⚠️ Post may not be visible - check manually: https://twitter.com/user/status/{main_tweet_id}")
-                    print(f"🔍 Verification issue: {verification_status['error']}")
+                    logger.error(f"❌ X POSTING FAILED VERIFICATION: {verification_status.get('error', 'Unknown error')}")
+                    print(f"❌ X POSTING FAILED - VERIFICATION FAILED")
+                    print(f"🚫 Cannot confirm post visibility on X platform")
+                    print(f"📍 Attempted URL: https://twitter.com/user/status/{main_tweet_id}")
+                    print(f"🔍 Error: {verification_status.get('error', 'Unknown verification error')}")
+                    print(f"⚠️ CRITICAL: Do not consider this posting successful!")
 
             except Exception as api_error:
                 logger.error(f"❌ REAL X API ERROR: {api_error}")

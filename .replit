@@ -204,6 +204,23 @@ args = "python run_diagnostics.py"
 task = "shell.exec"
 args = "echo \"✅ Diagnostics completed - check results above\""
 
+[[workflows.workflow]]
+name = "X Verification Test"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔍 Testing X posting with strict verification...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_x_verification.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️ Only success if URL proof and JSON export provided above!\""
+
 [deployment]
 run = ["sh", "-c", "python bot_v2.py --queue-only"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
