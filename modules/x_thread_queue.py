@@ -31,19 +31,48 @@ def _queue_worker():
 
             logger.info(f"Processing queued thread with {len(posts)} posts from {timestamp}")
 
-            # Simulate posting (replace with actual X API calls when ready)
-            logger.info(f"Main post: {main_post[:50]}...")
+            try:
+                # Import X client here to avoid circular imports
+                from modules.api_clients import get_x_client
+                
+                # Get X client for posting
+                x_client = get_x_client(posting_only=True)
+                if not x_client:
+                    logger.error("Failed to get X client - skipping post")
+                    _post_queue.task_done()
+                    continue
 
-            for i, post in enumerate(posts):
-                post_text = post.get('text', '')
-                coin_name = post.get('coin_name', 'Unknown')
-                logger.info(f"Reply {i+1} for {coin_name}: {post_text[:50]}...")
+                # Post main tweet
+                logger.info(f"Posting main tweet: {main_post[:50]}...")
+                main_tweet = x_client.create_tweet(text=main_post)
+                main_tweet_id = main_tweet.data['id']
+                logger.info(f"Posted main tweet: {main_tweet_id}")
 
-                # Add delay between posts to avoid rate limits
-                time.sleep(2)
+                # Post replies
+                previous_tweet_id = main_tweet_id
+                for i, post in enumerate(posts):
+                    post_text = post.get('text', '')
+                    coin_name = post.get('coin_name', 'Unknown')
+                    
+                    logger.info(f"Posting reply {i+1} for {coin_name}: {post_text[:50]}...")
+                    
+                    reply_tweet = x_client.create_tweet(
+                        text=post_text,
+                        in_reply_to_tweet_id=previous_tweet_id
+                    )
+                    previous_tweet_id = reply_tweet.data['id']
+                    logger.info(f"Posted reply {i+1}: {previous_tweet_id}")
+
+                    # Add delay between posts to avoid rate limits
+                    time.sleep(5)
+
+                logger.info(f"✅ Successfully posted thread with {len(posts)} replies to X")
+
+            except Exception as api_error:
+                logger.error(f"X API error during posting: {api_error}")
+                # Don't retry, just log and continue
 
             _post_queue.task_done()
-            logger.info("Thread processing completed")
 
         except Exception as e:
             logger.error(f"Error in queue worker: {e}")
