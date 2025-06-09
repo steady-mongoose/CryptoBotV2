@@ -191,13 +191,13 @@ class ContentVerifier:
             if coin_symbol in target_keywords:
                 score += 10
                 
-        # ENHANCED FINAL VERIFICATION with much stricter requirements
-        is_verified = (score >= 90 and           # Much higher threshold
-                      len(issues) == 0 and       # No issues allowed
+        # ENHANCED FINAL VERIFICATION with reasonable requirements for X posting
+        is_verified = (score >= 70 and           # Reasonable threshold for X
+                      len(issues) <= 1 and       # Allow minor issues for X
                       is_public and             # Must be publicly available
                       coin_symbol.lower() in title and  # Must be token-specific
-                      crypto_specific_score >= 35 and   # Much higher crypto-specific requirement
-                      engagement_score >= 75)    # Higher engagement requirement
+                      crypto_specific_score >= 25 and   # Reasonable crypto-specific requirement
+                      engagement_score >= 60)    # Reasonable engagement requirement
         
         reason = "Verified high-quality crypto-specific content" if is_verified else f"Issues: {', '.join(issues)}"
         

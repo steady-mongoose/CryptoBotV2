@@ -15,6 +15,8 @@ _worker_running = False
 def _queue_worker():
     """Worker thread that processes queued posts."""
     global _worker_running
+    
+    logger.info("X queue worker thread started successfully")
 
     while _worker_running:
         try:
@@ -73,11 +75,13 @@ def _queue_worker():
                 logger.error(f"Failed to post thread with {len(posts)} posts")
                 # Check if it's a rate limit or authentication error
                 if "rate limit" in str(api_error).lower():
-                    logger.warning("Rate limit hit - waiting 15 minutes before retry")
-                    time.sleep(900)  # Wait 15 minutes
+                    logger.warning("Rate limit hit - waiting 5 minutes before retry")
+                    time.sleep(300)  # Wait 5 minutes instead of 15
                 elif "auth" in str(api_error).lower():
                     logger.error("Authentication error - check X API credentials")
-                # Don't retry, just log and continue
+                else:
+                    logger.error(f"General API error: {api_error}")
+                # Continue processing other posts
 
             _post_queue.task_done()
 
