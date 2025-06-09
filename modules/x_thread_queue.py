@@ -4,6 +4,7 @@ import time
 import queue
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
+from modules.rate_limit_manager import rate_manager
 
 logger = logging.getLogger('CryptoBot')
 
@@ -35,28 +36,36 @@ def _queue_worker():
 
             try:
                 # Import X client here to avoid circular imports
-                from modules.api_clients import get_x_client
+                from modules.api_clients import get_x_client_with_failover
                 
-                # Get X client for posting with detailed logging
-                logger.info("🔑 Attempting to get X client for posting...")
-                x_client = get_x_client(posting_only=True)
+                # Get X client with automatic failover
+                logger.info("🔑 Attempting to get X client with failover...")
+                x_client, account_num = get_x_client_with_failover(posting_only=True)
                 if not x_client:
-                    logger.error("❌ CRITICAL: Failed to get X client - check API credentials!")
-                    logger.error("Check these environment variables:")
-                    logger.error("- X_CONSUMER_KEY")
-                    logger.error("- X_CONSUMER_SECRET") 
-                    logger.error("- X_ACCESS_TOKEN")
-                    logger.error("- X_ACCESS_TOKEN_SECRET")
+                    logger.error("❌ CRITICAL: Both X accounts failed - check API credentials!")
+                    logger.error("Primary account variables: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
+                    logger.error("Failover account variables: X_CONSUMER_KEY_2, X_CONSUMER_SECRET_2, X_ACCESS_TOKEN_2, X_ACCESS_TOKEN_SECRET_2")
                     _post_queue.task_done()
                     continue
                 
+                logger.info(f"✅ Using X account #{account_num}")
+                
                 logger.info("✅ X client obtained successfully")
 
+                # Check rate limits before posting
+                best_account = rate_manager.get_best_account()
+                if not best_account:
+                    wait_time = rate_manager.get_wait_time()
+                    logger.warning(f"All accounts rate limited - waiting {wait_time//60} minutes")
+                    time.sleep(wait_time)
+                    continue
+                
                 # Post main tweet with detailed logging
                 logger.info(f"🐦 POSTING MAIN TWEET: {main_post[:100]}...")
                 try:
                     main_tweet = x_client.create_tweet(text=main_post)
                     main_tweet_id = main_tweet.data['id']
+                    rate_manager.record_post(account_num)
                     logger.info(f"✅ MAIN TWEET POSTED SUCCESSFULLY: https://twitter.com/user/status/{main_tweet_id}")
                 except Exception as tweet_error:
                     logger.error(f"❌ MAIN TWEET FAILED: {tweet_error}")
@@ -77,8 +86,13 @@ def _queue_worker():
                     previous_tweet_id = reply_tweet.data['id']
                     logger.info(f"Posted reply {i+1}: {previous_tweet_id}")
 
-                    # Add delay between posts to avoid rate limits
-                    time.sleep(5)
+                    # Smart delay based on rate limit risk
+                    if i == 0:
+                        time.sleep(10)  # First reply needs more time
+                    elif len(posts) > 5:
+                        time.sleep(15)  # Longer delays for big threads
+                    else:
+                        time.sleep(8)   # Standard delay
 
                 # Send success notification
                 from modules.api_clients import get_notification_webhook_url
@@ -123,11 +137,25 @@ def _queue_worker():
                     except:
                         pass
                 
-                # More detailed error handling
+                # Enhanced rate limit handling with exponential backoff
                 error_str = str(api_error).lower()
                 if "rate limit" in error_str or "429" in error_str:
-                    logger.warning("Rate limit hit - waiting 2 minutes before retry")
-                    time.sleep(120)
+                    # Start with 5 minutes, then exponential backoff
+                    wait_times = [300, 600, 900, 1800]  # 5min, 10min, 15min, 30min
+                    for attempt, wait_time in enumerate(wait_times):
+                        logger.warning(f"Rate limit hit - attempt {attempt + 1}, waiting {wait_time//60} minutes")
+                        time.sleep(wait_time)
+                        
+                        # Try posting again
+                        try:
+                            main_tweet = x_client.create_tweet(text=main_post)
+                            main_tweet_id = main_tweet.data['id']
+                            logger.info(f"✅ RETRY SUCCESS: https://twitter.com/user/status/{main_tweet_id}")
+                            break
+                        except Exception as retry_error:
+                            if "429" not in str(retry_error):
+                                break  # Different error, stop retrying
+                            continue
                 elif "auth" in error_str or "401" in error_str or "403" in error_str:
                     logger.error("❌ AUTHENTICATION ERROR - X API credentials invalid!")
                     logger.error("🔑 Check your X API secrets: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
