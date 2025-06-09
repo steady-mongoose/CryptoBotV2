@@ -144,8 +144,6 @@ class XQueue:
             x_client = get_x_client(posting_only=True)
             if not x_client:
                 logger.error("❌ Could not get X client for queue processing")
-                # Re-queue the thread for later retry
-                self.queue.put(thread_data)
                 return
 
             # Validate thread data
@@ -153,7 +151,8 @@ class XQueue:
                 logger.error("❌ Missing main_post in thread data")
                 return
 
-            logger.info(f"🚀 Processing queued thread with {len(thread_data.get('posts', []))} replies")
+            posts = thread_data.get('posts', [])
+            logger.info(f"🚀 Processing queued thread with {len(posts)} replies")
 
             # Post main tweet
             main_tweet = x_client.create_tweet(text=thread_data['main_post'])
@@ -162,7 +161,7 @@ class XQueue:
                 
                 # Post replies
                 previous_tweet_id = main_tweet.data['id']
-                for i, post in enumerate(thread_data.get('posts', [])):
+                for i, post in enumerate(posts):
                     try:
                         time.sleep(5)  # Rate limit protection
                         
@@ -194,7 +193,9 @@ class XQueue:
         except Exception as e:
             logger.error(f"❌ Critical error processing queued thread: {e}")
             # Log thread data for debugging
-            logger.error(f"Thread data: main_post length={len(thread_data.get('main_post', ''))}, posts count={len(thread_data.get('posts', []))}")
+            posts_count = len(thread_data.get('posts', []))
+            main_post_len = len(thread_data.get('main_post', ''))
+            logger.error(f"Thread data: main_post length={main_post_len}, posts count={posts_count}")
 
 # Global queue instance
 x_queue = XQueue()

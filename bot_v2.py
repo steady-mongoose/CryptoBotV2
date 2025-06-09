@@ -593,8 +593,9 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                     'coin_name': data['coin_name']
                 })
 
-            queue_x_thread(thread_posts, main_post_text)
-            logger.info(f"Queued thread with {len(thread_posts)} posts")
+            if thread_posts:
+                queue_x_thread(thread_posts, main_post_text)
+                logger.info(f"Queued thread with {len(thread_posts)} posts")
 
             # Queue live stream posts separately (free tier compliant)
             for i, stream_post in enumerate(live_stream_posts):
