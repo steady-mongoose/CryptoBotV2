@@ -1174,8 +1174,11 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                 logger.info("Successfully posted to X, no Discord fallback needed")
 
         elif args.direct_x_post and not test_discord:
-            # DIRECT X POSTING MODE - Mirror Discord features exactly
-            logger.info("🚀 DIRECT X POSTING MODE - Mirroring Discord features")
+            # DIRECT X POSTING MODE with dual account failover
+            from modules.x_aggressive_posting import x_aggressive_posting
+            logger.info("🚀 DIRECT X POSTING MODE with Dual Account Failover")
+            logger.info("✅ Automatic account switching on rate limits")
+            logger.info("✅ Aggressive API usage when quota available")
             logger.info("⚠️  Bypassing queue system for immediate posting test")
 
             try:
@@ -1198,12 +1201,29 @@ async def main_bot_run(test_discord: bool = False, dual_post: bool = False, thre
                     logger.error("Your X API credentials may be invalid or expired")
                     return
 
-                # Post main tweet (mirrors Discord main post)
-                logger.info("📤 Posting main tweet to X...")
-                try:
-                    main_tweet = x_client.create_tweet(text=main_post['text'])
-                    main_tweet_id = main_tweet.data['id']
-                    logger.info(f"✅ Posted main tweet: {main_tweet_id}")
+                # Use aggressive posting with dual account failover
+                logger.info("📤 Starting thread posting with dual account failover...")
+                
+                # Prepare coin posts
+                coin_posts = [format_tweet(data) for data in results]
+                
+                # Post using dual account system
+                posting_results = x_aggressive_posting.post_thread_with_failover(
+                    main_post['text'], 
+                    coin_posts
+                )
+                
+                if posting_results["final_status"] == "complete_success":
+                    logger.info(f"🎉 COMPLETE SUCCESS via dual account system!")
+                    logger.info(f"📊 Posted: {posting_results['total_posted']} tweets")
+                    logger.info(f"🐦 Thread link: https://x.com/user/status/{posting_results['main_post']}")
+                elif posting_results["final_status"] == "partial_success":
+                    logger.warning(f"⚠️ PARTIAL SUCCESS: {posting_results['total_posted']} tweets posted")
+                    logger.warning(f"Rate limits: {posting_results['rate_limits_hit']}")
+                else:
+                    logger.error(f"❌ Posting failed: {posting_results['final_status']}")
+                
+                return  # Exit early since dual account system handled everythingweet_id}")
                     print(f"🐦 Main tweet posted! ID: {main_tweet_id}")
 
                     # Small delay before replies

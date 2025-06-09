@@ -46,13 +46,13 @@ def get_x_client(posting_only=False, account_number=1):
             bearer_token = os.getenv('X_BEARER_TOKEN')
             account_type = "Primary (Verified)"
         else:
-            # Secondary account (non-verified)
-            consumer_key = os.getenv('X2_CONSUMER_KEY')
-            consumer_secret = os.getenv('X2_CONSUMER_SECRET')
-            access_token = os.getenv('X2_ACCESS_TOKEN')
-            access_token_secret = os.getenv('X2_ACCESS_TOKEN_SECRET')
-            bearer_token = os.getenv('X2_BEARER_TOKEN')
-            account_type = "Secondary (Non-verified)"
+            # Secondary account (failover)
+            consumer_key = os.getenv('X_CONSUMER_KEY_2')
+            consumer_secret = os.getenv('X_CONSUMER_SECRET_2')
+            access_token = os.getenv('X_ACCESS_TOKEN_2')
+            access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET_2')
+            bearer_token = os.getenv('X_BEARER_TOKEN_2')
+            account_type = "Secondary (Failover)"
 
         if not all([consumer_key, consumer_secret, access_token, access_token_secret]):
             logger.error(f"Missing X API credentials for account {account_number}")

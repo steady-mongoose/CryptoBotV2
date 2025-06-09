@@ -20,7 +20,10 @@ class XThreadQueue:
         self.is_running = False
         self.client = None
         self.rate_limit_reset_time = None
-        self.active_account = 1  # Start with account 1
+        
+        # Import dual account manager
+        from modules.x_dual_account_manager import x_dual_manager
+        self.dual_manager = x_dual_manager
 
     def start_worker(self):
         """Start the background worker thread."""
@@ -110,8 +113,8 @@ class XThreadQueue:
         return True
 
     def _worker(self):
-        """Background worker that processes the posting queues."""
-        logger.debug("X posting worker started")
+        """Background worker that processes the posting queues with dual account support."""
+        logger.debug("X posting worker started with dual account failover")
 
         # Check for auto-resume flag
         auto_resume = False
@@ -123,10 +126,9 @@ class XThreadQueue:
         except:
             pass
 
-        # Enhanced error recovery
+        # Enhanced error recovery with dual account support
         consecutive_errors = 0
-        max_consecutive_errors = 5
-        last_rate_limit_check = None
+        max_consecutive_errors = 5heck = None
 
         while self.is_running:
             try:
