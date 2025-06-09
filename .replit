@@ -1396,6 +1396,63 @@ args = "print(x_dual_manager.get_status_report())"
 task = "shell.exec"
 args = "\""
 
+[[workflows.workflow]]
+name = "Smart Queue Posting"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧠 SMART QUEUE POSTING with Dual Account Support\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Queue system with dual account failover\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Automatic rate limit recovery\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Enhanced features based on quota\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only --verbose"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Queue and account status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -c \""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "from modules.x_dual_account_manager import x_dual_manager"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''print('\\n' + x_dual_manager.get_status_report())'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "\""
+
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
