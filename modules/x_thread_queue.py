@@ -80,26 +80,58 @@ class XQueue:
 
             x_client = get_x_client(posting_only=True)
             if not x_client:
-                logger.error("Could not get X client for queue processing")
+                logger.error("❌ Could not get X client for queue processing - authentication failed")
+                # Re-queue the thread for later retry
+                self.queue.put(thread_data)
                 return
+
+            # Validate thread data
+            if not thread_data.get('main_post'):
+                logger.error("❌ Missing main_post in thread data")
+                return
+
+            logger.info(f"🚀 Processing queued thread with {len(thread_data.get('posts', []))} replies")
 
             # Post main tweet
             main_tweet = x_client.create_tweet(text=thread_data['main_post'])
-            logger.info(f"Posted main tweet from queue: {main_tweet.data['id']}")
-
-            # Post replies
-            previous_tweet_id = main_tweet.data['id']
-            for post in thread_data['posts']:
-                time.sleep(5)  # Rate limit protection
-                reply_tweet = x_client.create_tweet(
-                    text=post['text'],
-                    in_reply_to_tweet_id=previous_tweet_id
-                )
-                previous_tweet_id = reply_tweet.data['id']
-                logger.info(f"Posted reply for {post['coin_name']}")
+            if main_tweet and main_tweet.data:
+                logger.info(f"✅ Posted main tweet from queue: {main_tweet.data['id']}")
+                
+                # Post replies
+                previous_tweet_id = main_tweet.data['id']
+                for i, post in enumerate(thread_data.get('posts', [])):
+                    try:
+                        time.sleep(5)  # Rate limit protection
+                        
+                        if not post.get('text'):
+                            logger.warning(f"⚠️ Skipping empty reply {i+1}")
+                            continue
+                            
+                        reply_tweet = x_client.create_tweet(
+                            text=post['text'],
+                            in_reply_to_tweet_id=previous_tweet_id
+                        )
+                        
+                        if reply_tweet and reply_tweet.data:
+                            previous_tweet_id = reply_tweet.data['id']
+                            coin_name = post.get('coin_name', f'reply_{i+1}')
+                            logger.info(f"✅ Posted reply {i+1} for {coin_name}: {reply_tweet.data['id']}")
+                        else:
+                            logger.error(f"❌ Failed to post reply {i+1} - no response data")
+                            
+                    except Exception as reply_error:
+                        logger.error(f"❌ Error posting reply {i+1}: {reply_error}")
+                        # Continue with remaining replies
+                        continue
+                        
+                logger.info(f"✅ Thread posting completed successfully")
+            else:
+                logger.error("❌ Failed to post main tweet - no response data")
 
         except Exception as e:
-            logger.error(f"Error processing queued thread: {e}")
+            logger.error(f"❌ Critical error processing queued thread: {e}")
+            # Log thread data for debugging
+            logger.error(f"Thread data: main_post length={len(thread_data.get('main_post', ''))}, posts count={len(thread_data.get('posts', []))}")
 
 # Global queue instance
 x_queue = XQueue()

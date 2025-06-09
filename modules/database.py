@@ -17,15 +17,20 @@ class Database:
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.cursor()
                 
-                # Create used_videos table
+                # Create used_videos table with proper indexes
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS used_videos (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         coin TEXT NOT NULL,
-                        video_id TEXT NOT NULL,
+                        video_id TEXT NOT NULL UNIQUE,
                         date_used TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
+                ''')
+                
+                # Create index for video_id lookups
+                cursor.execute('''
+                    CREATE INDEX IF NOT EXISTS idx_video_id ON used_videos(video_id)
                 ''')
                 
                 # Create workflow_history table
@@ -39,11 +44,33 @@ class Database:
                     )
                 ''')
                 
+                # Create index for workflow lookups
+                cursor.execute('''
+                    CREATE INDEX IF NOT EXISTS idx_workflow_type ON workflow_history(workflow_type, timestamp)
+                ''')
+                
+                # Add X posting history table
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS x_post_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        tweet_id TEXT UNIQUE,
+                        content_preview TEXT,
+                        post_type TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        success BOOLEAN DEFAULT TRUE
+                    )
+                ''')
+                
                 conn.commit()
-                logger.info("Database initialized successfully")
+                
+                # Verify tables were created
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tables = [row[0] for row in cursor.fetchall()]
+                logger.info(f"Database initialized successfully with tables: {', '.join(tables)}")
                 
         except Exception as e:
             logger.error(f"Error initializing database: {e}")
+            raise
     
     def has_video_been_used(self, video_id: str) -> bool:
         """Check if a video has been used before."""

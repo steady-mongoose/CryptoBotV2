@@ -589,6 +589,7 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
             for data in results:
                 tweet_text = format_tweet(data)
                 thread_posts.append({
+                    ```python
                     'text': tweet_text,
                     'coin_name': data['coin_name']
                 })
@@ -604,26 +605,29 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
         else:
             # Direct X posting
-            main_tweet = x_client.create_tweet(text=main_post_text)
-            logger.info(f"Posted main tweet: {main_tweet.data['id']}")
+            try:
+                main_tweet = x_client.create_tweet(text=main_post_text)
+                logger.info(f"Posted main tweet: {main_tweet.data['id']}")
 
-            previous_tweet_id = main_tweet.data['id']
-            for data in results:
-                reply_text = format_tweet(data)
-                reply_tweet = x_client.create_tweet(
-                    text=reply_text,
-                    in_reply_to_tweet_id=previous_tweet_id
-                )
-                previous_tweet_id = reply_tweet.data['id']
-                logger.info(f"Posted reply for {data['coin_name']}")
-                await asyncio.sleep(5)
+                previous_tweet_id = main_tweet.data['id']
+                for data in results:
+                    reply_text = format_tweet(data)
+                    reply_tweet = x_client.create_tweet(
+                        text=reply_text,
+                        in_reply_to_tweet_id=previous_tweet_id
+                    )
+                    previous_tweet_id = reply_tweet.data['id']
+                    logger.info(f"Posted reply for {data['coin_name']}")
+                    await asyncio.sleep(5)
 
-            # Post live stream alerts as separate tweets (free tier compliant)
-            for i, stream_post in enumerate(live_stream_posts):
-                await asyncio.sleep(10)  # Space out posts to avoid spam detection
-                stream_tweet = x_client.create_tweet(text=stream_post)
-                logger.info(f"Posted live stream alert {i+1}: {stream_tweet.data['id']}")
-                await asyncio.sleep(5)
+                # Post live stream alerts as separate tweets (free tier compliant)
+                for i, stream_post in enumerate(live_stream_posts):
+                    await asyncio.sleep(10)  # Space out posts to avoid spam detection
+                    stream_tweet = x_client.create_tweet(text=stream_post)
+                    logger.info(f"Posted live stream alert {i+1}: {stream_tweet.data['id']}")
+                    await asyncio.sleep(5)
+            except Exception as e:
+                logger.error(f"X API error: {e}")
 
         # Update last post timestamp
         with open("last_post_timestamp.txt", 'w') as f:

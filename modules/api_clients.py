@@ -87,6 +87,19 @@ def get_x_client(posting_only=False, account_number=1):
             )
             logger.info(f"X {account_type} full client initialized")
 
+        # Test authentication immediately
+        try:
+            user_info = client.get_me()
+            if user_info and user_info.data:
+                logger.info(f"✅ X authentication verified for @{user_info.data.username}")
+            else:
+                logger.error("❌ X authentication failed - no user data returned")
+                return None
+        except Exception as auth_error:
+            logger.error(f"❌ X authentication test failed: {auth_error}")
+            # Return None to prevent using broken client
+            return None
+
         return client
 
     except Exception as e:
