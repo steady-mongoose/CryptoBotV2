@@ -469,18 +469,6 @@ class ContentVerifier:
             
         return ratings
 
-    def should_post_content(self, content_rating: Dict) -> tuple:
-        """Determine if content should be posted based on rating."""
-        overall_score = content_rating.get('overall_score', 0)
-        warnings = content_rating.get('warnings', [])
-        
-        if overall_score >= 70:
-            return True, "High quality content approved"
-        elif overall_score >= 50 and len(warnings) <= 2:
-            return True, "Acceptable quality content approved"
-        else:
-            return False, f"Content rejected - Score: {overall_score}, Warnings: {len(warnings)}"
-
     def should_post_content(self, content_rating: Dict) -> Tuple[bool, str]:
         """Determine if content should be posted based on ratings."""
         overall_score = content_rating['overall_score']

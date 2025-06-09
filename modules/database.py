@@ -1,3 +1,4 @@
+
 import sqlite3
 import logging
 import os
@@ -8,66 +9,6 @@ logger = logging.getLogger('CryptoBot')
 class Database:
     """Database handler for the crypto bot."""
 
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self.init_database()
-
-    def init_database(self):
-        """Initialize database tables."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-
-                # Create used_videos table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS used_videos (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        coin_name TEXT NOT NULL,
-                        video_id TEXT NOT NULL,
-                        date_used TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-
-                conn.commit()
-                logger.info("Database initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing database: {e}")
-
-    def has_video_been_used(self, video_id: str) -> bool:
-        """Check if a video has been used recently."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT COUNT(*) FROM used_videos WHERE video_id = ? AND date_used >= date('now', '-7 days')",
-                    (video_id,)
-                )
-                count = cursor.fetchone()[0]
-                return count > 0
-        except Exception as e:
-            logger.error(f"Error checking video usage: {e}")
-            return False
-
-    def add_used_video(self, coin_name: str, video_id: str, date_used: str):
-        """Add a video to the used videos list."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO used_videos (coin_name, video_id, date_used) VALUES (?, ?, ?)",
-                    (coin_name, video_id, date_used)
-                )
-                conn.commit()
-        except Exception as e:
-            logger.error(f"Error adding used video: {e}")
-
-    def close(self):
-        """Close database connection."""
-        # Connection is closed automatically with context manager
-        pass
-
-class Database:
     def __init__(self, db_file: str):
         self.db_file = db_file
         self.init_database()
@@ -122,6 +63,117 @@ class Database:
                     )
                 ''')
 
+                # Additional tables for comprehensive functionality
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS coins (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        symbol TEXT NOT NULL,
+                        coingecko_id TEXT NOT NULL
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS coin_data_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin_id TEXT NOT NULL,
+                        price REAL,
+                        price_change_24h REAL,
+                        volume REAL,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS news_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin TEXT NOT NULL,
+                        title TEXT,
+                        url TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS price_averages_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin TEXT NOT NULL,
+                        average_price REAL,
+                        period TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS project_sources_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin TEXT NOT NULL,
+                        source_data TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS projects_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin TEXT NOT NULL,
+                        project_data TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS thread_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        thread_id TEXT,
+                        post_count INTEGER,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS youtube_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin TEXT NOT NULL,
+                        video_data TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS youtube_summary_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        video_id TEXT NOT NULL,
+                        summary TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS prices (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin TEXT NOT NULL,
+                        price REAL,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS schema_version (
+                        version INTEGER PRIMARY KEY
+                    )
+                ''')
+
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS social_metrics (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin TEXT NOT NULL,
+                        mentions INTEGER,
+                        sentiment TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
                 conn.commit()
 
                 # Verify tables were created
@@ -153,16 +205,8 @@ class Database:
         try:
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.cursor()
-                # Check if column exists, if not add it
-                cursor.execute("PRAGMA table_info(used_videos)")
-                columns = [column[1] for column in cursor.fetchall()]
-
-                if 'coin' not in columns:
-                    cursor.execute('ALTER TABLE used_videos ADD COLUMN coin TEXT')
-                    conn.commit()
-
                 cursor.execute('''
-                    INSERT INTO used_videos (coin, video_id, date_used) VALUES (?, ?, ?)
+                    INSERT OR IGNORE INTO used_videos (coin, video_id, date_used) VALUES (?, ?, ?)
                 ''', (coin, video_id, date_used))
                 conn.commit()
                 logger.info(f"Added used video: {video_id} for {coin}")
