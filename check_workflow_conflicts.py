@@ -16,18 +16,42 @@ def check_conflicts(workflow_type: str) -> bool:
     """
     print(f"🔍 Checking conflicts for workflow: {workflow_type}")
     
-    has_conflict, reason = workflow_manager.check_workflow_conflicts(workflow_type)
-    
-    if has_conflict:
-        print(f"❌ WORKFLOW CANCELLED: {reason}")
-        print("🛡️ Duplicate post prevention activated")
+    try:
+        # Comprehensive validation
+        validation_results = workflow_manager.validate_workflow_dependencies(workflow_type)
+        
+        if not validation_results['valid']:
+            print(f"❌ WORKFLOW CANCELLED: Dependency validation failed")
+            for error in validation_results['errors']:
+                print(f"   • {error}")
+            return True
+        
+        # Show warnings but don't block execution
+        for warning in validation_results['warnings']:
+            print(f"⚠️  Warning: {warning}")
+        
+        # Check for conflicts
+        has_conflict, reason = workflow_manager.check_workflow_conflicts(workflow_type)
+        
+        if has_conflict:
+            print(f"❌ WORKFLOW CANCELLED: {reason}")
+            print("🛡️ Conflict prevention activated")
+            return True
+        else:
+            print(f"✅ No conflicts detected: {reason}")
+            print(f"🚀 Safe to proceed with {workflow_type}")
+            
+            # Register that this workflow is starting
+            success = workflow_manager.register_workflow_start(workflow_type)
+            if not success:
+                print(f"⚠️  Warning: Could not register workflow start")
+                
+            return False
+            
+    except Exception as e:
+        print(f"❌ WORKFLOW CANCELLED: Unexpected error during validation")
+        print(f"   Error: {e}")
         return True
-    else:
-        print(f"✅ No conflicts detected: {reason}")
-        print(f"🚀 Safe to proceed with {workflow_type}")
-        # Register that this workflow is starting
-        workflow_manager.register_workflow_start(workflow_type)
-        return False
 
 def complete_workflow(workflow_type: str):
     """Mark workflow as completed."""
