@@ -109,19 +109,11 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python check_workflow_conflicts.py --type post_to_x || exit 1"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
 args = "echo \"🚀 Posting crypto analysis to X (Twitter)...\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python bot_v2.py --queue-only"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python check_workflow_conflicts.py --type post_to_x --complete"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

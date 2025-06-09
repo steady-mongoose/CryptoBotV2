@@ -638,12 +638,13 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
             thread_posts = []
             for data in results:
-                # More lenient verification for X posting
+                # Much more lenient verification for X posting
                 verification = data.get('verification', {})
                 video_score = verification.get('video_score', 0)
                 should_post = verification.get('should_post', False)
                 
-                if should_post and video_score >= 60:  # Lower threshold for X
+                # Accept content with lower standards for X
+                if should_post or video_score >= 40:  # Much lower threshold
                     tweet_text = format_tweet(data)
                     thread_posts.append({
                         'text': tweet_text,
