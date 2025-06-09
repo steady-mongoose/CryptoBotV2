@@ -1,0 +1,106 @@
+{
+    "streams": [
+        {
+            "creator_handle": "@coinbureau",
+            "creator_name": "Coin Bureau",
+            "title": "XRP & HBAR Analysis - 2025-06-09 Legal & Enterprise Updates",
+            "scheduled_time": "2025-06-09T02:52:56.172256",
+            "duration_minutes": 45,
+            "topic": "XRP/HBAR Analysis",
+            "specialty": "Educational Analysis",
+            "followers": "2M+",
+            "quality_score": 95,
+            "engagement_potential": "\ud83d\udd25 ULTRA HIGH",
+            "target_tokens": [
+                "XRP",
+                "HBAR"
+            ],
+            "content_focus": "regulatory_enterprise",
+            "crypto_verified": true,
+            "content_date": "2025-06-09",
+            "recency_verified": true
+        },
+        {
+            "creator_handle": "@benjamincowen",
+            "creator_name": "Benjamin Cowen",
+            "title": "Altcoin Risk Assessment: SUI, ONDO, ALGO - 2025-06-09",
+            "scheduled_time": "2025-06-09T08:52:56.172256",
+            "duration_minutes": 50,
+            "topic": "Risk Analysis",
+            "specialty": "Risk Analysis",
+            "followers": "400K+",
+            "quality_score": 94,
+            "engagement_potential": "\u26a1 HIGH",
+            "target_tokens": [
+                "SUI",
+                "ONDO",
+                "ALGO"
+            ],
+            "content_focus": "risk_analysis",
+            "crypto_verified": true,
+            "content_date": "2025-06-09",
+            "recency_verified": true
+        },
+        {
+            "creator_handle": "@rektcapital",
+            "creator_name": "Rekt Capital",
+            "title": "XLM & XDC Technical Charts - 2025-06-09 Support Levels",
+            "scheduled_time": "2025-06-09T14:52:56.172256",
+            "duration_minutes": 35,
+            "topic": "Technical Analysis",
+            "specialty": "Bitcoin Charts",
+            "followers": "500K+",
+            "quality_score": 90,
+            "engagement_potential": "\u26a1 HIGH",
+            "target_tokens": [
+                "XLM",
+                "XDC"
+            ],
+            "content_focus": "technical_analysis",
+            "crypto_verified": true,
+            "content_date": "2025-06-09",
+            "recency_verified": true
+        },
+        {
+            "creator_handle": "@pentosh1",
+            "creator_name": "Pentoshi",
+            "title": "CSPR Network Upgrade Impact - 2025-06-09 Price Action",
+            "scheduled_time": "2025-06-09T18:52:56.172256",
+            "duration_minutes": 40,
+            "topic": "Network Updates",
+            "specialty": "Market Analysis",
+            "followers": "800K+",
+            "quality_score": 92,
+            "engagement_potential": "\u26a1 HIGH",
+            "target_tokens": [
+                "CSPR"
+            ],
+            "content_focus": "network_updates",
+            "crypto_verified": true,
+            "content_date": "2025-06-09",
+            "recency_verified": true
+        },
+        {
+            "creator_handle": "@altcoinpsycho",
+            "creator_name": "Altcoin Psycho",
+            "title": "Multi-Token Portfolio: XRP, SUI, ONDO - 2025-06-09 Strategy",
+            "scheduled_time": "2025-06-09T22:52:56.172256",
+            "duration_minutes": 30,
+            "topic": "Portfolio Strategy",
+            "specialty": "Altcoin Analysis",
+            "followers": "300K+",
+            "quality_score": 85,
+            "engagement_potential": "\ud83d\udcc8 GOOD",
+            "target_tokens": [
+                "XRP",
+                "SUI",
+                "ONDO"
+            ],
+            "content_focus": "portfolio_strategy",
+            "crypto_verified": true,
+            "content_date": "2025-06-09",
+            "recency_verified": true
+        }
+    ],
+    "last_updated": "2025-06-09T00:52:56.172254"
+}

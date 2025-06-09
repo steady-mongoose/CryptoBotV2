@@ -7,7 +7,7 @@
   },
   "price_ripple": {
     "last_price": 2.26,
-    "timestamp": "2025-06-09T00:46:24.188247"
+    "timestamp": "2025-06-09T00:52:43.199783"
   },
   "youtube__hedera hashgraph": {
     "verified": true,
@@ -16,8 +16,8 @@
     "timestamp": "2025-06-09T00:43:39.261904"
   },
   "price_hedera hashgraph": {
-    "last_price": 0.169789,
-    "timestamp": "2025-06-09T00:46:26.479250"
+    "last_price": 0.169962,
+    "timestamp": "2025-06-09T00:52:46.785031"
   },
   "youtube__stellar": {
     "verified": true,
@@ -27,7 +27,7 @@
   },
   "price_stellar": {
     "last_price": 0.268,
-    "timestamp": "2025-06-09T00:46:26.665099"
+    "timestamp": "2025-06-09T00:52:47.009948"
   },
   "youtube__xdce crowd sale": {
     "verified": true,
@@ -37,7 +37,7 @@
   },
   "price_xdce crowd sale": {
     "last_price": 0.045,
-    "timestamp": "2025-06-09T00:46:27.411555"
+    "timestamp": "2025-06-09T00:52:49.279223"
   },
   "youtube__sui": {
     "verified": true,
@@ -47,7 +47,7 @@
   },
   "price_sui": {
     "last_price": 4.35,
-    "timestamp": "2025-06-09T00:46:28.306037"
+    "timestamp": "2025-06-09T00:52:51.569189"
   },
   "youtube__ondo finance": {
     "verified": true,
@@ -57,7 +57,7 @@
   },
   "price_ondo finance": {
     "last_price": 1.95,
-    "timestamp": "2025-06-09T00:46:28.344173"
+    "timestamp": "2025-06-09T00:52:51.603356"
   },
   "youtube__algorand": {
     "verified": true,
@@ -67,7 +67,7 @@
   },
   "price_algorand": {
     "last_price": 0.42,
-    "timestamp": "2025-06-09T00:46:29.084496"
+    "timestamp": "2025-06-09T00:52:53.901352"
   },
   "youtube__casper network": {
     "verified": true,
@@ -122,5 +122,69 @@
     "score": 68.0,
     "reason": "Verified content",
     "timestamp": "2025-06-09T00:46:29.870563"
+  },
+  "video_youtube__ripple_": {
+    "verified": false,
+    "score": 55.0,
+    "reason": "Issues: Content not verified as recent (within 24h)",
+    "timestamp": "2025-06-09T00:52:43.198916",
+    "crypto_specific": true,
+    "recency_verified": false
+  },
+  "video_youtube__hedera hashgraph_": {
+    "verified": false,
+    "score": 55.0,
+    "reason": "Issues: Content not verified as recent (within 24h)",
+    "timestamp": "2025-06-09T00:52:46.784549",
+    "crypto_specific": true,
+    "recency_verified": false
+  },
+  "video_twitch_twitch_2_2025-06-09_stellar_2025-06-09": {
+    "verified": true,
+    "score": 120.0,
+    "reason": "Verified crypto-specific recent content",
+    "timestamp": "2025-06-09T00:52:47.009594",
+    "crypto_specific": true,
+    "recency_verified": true
+  },
+  "video_rumble__xdce crowd sale_": {
+    "verified": false,
+    "score": 45.0,
+    "reason": "Issues: Content not verified as recent (within 24h)",
+    "timestamp": "2025-06-09T00:52:49.278727",
+    "crypto_specific": true,
+    "recency_verified": false
+  },
+  "video_twitch_twitch_4_2025-06-09_sui_2025-06-09": {
+    "verified": true,
+    "score": 105.0,
+    "reason": "Verified crypto-specific recent content",
+    "timestamp": "2025-06-09T00:52:51.568731",
+    "crypto_specific": true,
+    "recency_verified": true
+  },
+  "video_twitch_twitch_5_2025-06-09_ondo finance_2025-06-09": {
+    "verified": true,
+    "score": 120.0,
+    "reason": "Verified crypto-specific recent content",
+    "timestamp": "2025-06-09T00:52:51.602685",
+    "crypto_specific": true,
+    "recency_verified": true
+  },
+  "video_rumble__algorand_": {
+    "verified": false,
+    "score": 45.0,
+    "reason": "Issues: Content not verified as recent (within 24h)",
+    "timestamp": "2025-06-09T00:52:53.900933",
+    "crypto_specific": true,
+    "recency_verified": false
+  },
+  "video_rumble__casper network_": {
+    "verified": false,
+    "score": 40.0,
+    "reason": "Issues: Content not verified as recent (within 24h)",
+    "timestamp": "2025-06-09T00:52:56.171573",
+    "crypto_specific": false,
+    "recency_verified": false
   }
 }
