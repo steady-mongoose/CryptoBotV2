@@ -4,7 +4,7 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Main Bot Run"
+runButton = "X Platform Post"
 
 [[workflows.workflow]]
 name = "Main Bot Run"
@@ -389,6 +389,217 @@ args = "python bot_v2.py --test-discord"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "echo \"✅ Test completed - check Discord for proper formatting!\""
+
+[[workflows.workflow]]
+name = "X Platform Post"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_workflow_conflicts.py --type post_to_x || exit 1"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Posting crypto analysis to X (Twitter)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_workflow_conflicts.py --type post_to_x --complete"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X posting completed successfully!\""
+
+[[workflows.workflow]]
+name = "Discord Test Post"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_workflow_conflicts.py --type post_to_discord || exit 1"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing Discord webhook posting...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --test-discord"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_workflow_conflicts.py --type post_to_discord --complete"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Discord test completed successfully!\""
+
+[[workflows.workflow]]
+name = "Content Verification Test"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔍 Running enhanced content verification test...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -c \""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "import asyncio"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "from modules.content_verification import verify_all_content"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = ""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "async def test_verification():"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    # Test data with enhanced verification requirements"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    test_data = {"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        'coin_name': 'ripple',"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        'price': 2.21,"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        'price_change_24h': 5.2,"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        'youtube_video': {"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            'title': 'XRP Price Analysis 2025-06-09 Legal Updates',"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            'url': 'https://youtu.be/test123',"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            'video_id': 'test123',"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            'platform': 'YouTube',"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            'verified_crypto_specific': True,"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            'content_date': '2025-06-09'"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        },"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        'social_metrics': {'mentions': 45, 'sentiment': 'Bullish'}"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    }"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    results = await verify_all_content(test_data)"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    print('📊 ENHANCED VERIFICATION RESULTS:')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''    print(f'Should Post: {results[\"should_post\"]}')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''    print(f'Content Score: {results[\"content_rating\"][\"overall_score\"]}/100')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''    print(f'Video Verified: {results[\"video_verified\"]}')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''    print(f'Video Score: {results[\"video_score\"]}/100')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''    print(f'Reason: {results[\"post_decision_reason\"]}')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    if results['content_rating']['warnings']:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        print('⚠️ Warnings:')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        for warning in results['content_rating']['warnings']:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            print(f'  • {warning}')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = ""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "asyncio.run(test_verification())"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Content verification test completed!\""
 
 [deployment]
 run = ["sh", "-c", "python bot_v2.py --queue-only"]
