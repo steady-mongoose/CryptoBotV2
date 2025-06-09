@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 """
 X API Test Script
-Comprehensive testing of X (Twitter) API authentication and posting capabilities.
+Free tier compliant testing of X (Twitter) API client creation.
 """
 
 import logging
@@ -13,28 +13,24 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger('XAPITest')
 
 def test_x_api():
-    """Test X API authentication and basic functionality."""
-    print("🧪 Testing X API Authentication and Functionality")
+    """Test X API client creation (free tier compliant)."""
+    print("🧪 Testing X API Client Creation (Free Tier)")
     print("=" * 50)
     
     try:
-        # Test posting-only client
-        print("1️⃣ Testing posting-only client...")
+        # Test posting-only client creation
+        print("1️⃣ Creating X posting client...")
         client = get_x_client(posting_only=True)
         
         if not client:
             print("❌ Failed to create X client")
+            print("⚠️ Check your X API credentials in Secrets")
             return False
             
-        # Test basic client creation only
-        print("2️⃣ Testing client creation...")
-        if client:
-            print("✅ X client created successfully")
-            print("✅ Authentication credentials loaded")
-            print("✅ Ready for posting (read operations not tested to avoid 401 errors)")
-        else:
-            print("❌ Failed to create X client")
-            return False
+        print("✅ X client created successfully")
+        print("✅ Authentication credentials loaded")
+        print("✅ Ready for posting")
+        print("ℹ️ Note: Free tier - no read operations tested")
         
         print("\n✅ X API Test Completed Successfully!")
         print("🚀 Ready to post to X!")

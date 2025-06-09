@@ -507,8 +507,8 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
             price, price_change_24h, tx_volume, historical_prices = await fetch_coingecko_data(coin['coingecko_id'], session)
             predicted_price = predict_price(historical_prices, price)
 
-            # Fetch social metrics with price context
-            social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=test_discord, price_change_24h=price_change_24h)
+            # Fetch social metrics with price context (free tier compliant)
+            social_metrics = await fetch_social_metrics(coin['coingecko_id'], session, skip_x_api=True, price_change_24h=price_change_24h)
 
             # Get video from multiple platforms with intelligent rotation
             youtube_video = await fetch_multi_platform_video(youtube, coin['name'], current_date, session)

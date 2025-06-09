@@ -36,7 +36,7 @@ def save_social_metrics_cache(cache: Dict[str, Dict]):
     except Exception as e:
         logger.error(f"Error saving cache: {e}")
 
-async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = False, price_change_24h: float = 0.0) -> Dict[str, any]:
+async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = True, price_change_24h: float = 0.0) -> Dict[str, any]:
     cache = load_social_metrics_cache()
 
     # Check cache
@@ -52,7 +52,7 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, ski
 
     symbol = symbol_map.get(coin_id, coin_id.upper())
     total_mentions = 0
-    
+
     # Dynamic sentiment based on price action and market conditions
     if price_change_24h > 5:
         sentiment = "Very Bullish"
@@ -75,7 +75,7 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, ski
                 reddit_data = await response.json()
                 reddit_posts = reddit_data.get('data', {}).get('children', [])
                 total_mentions += len(reddit_posts)
-                
+
                 # Adjust sentiment based on Reddit activity
                 if len(reddit_posts) > 3:
                     if sentiment == "Neutral":
@@ -90,9 +90,9 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, ski
         'ripple': 45, 'hedera-hashgraph': 28, 'stellar': 32, 'xinfin-network': 18,
         'sui': 55, 'ondo-finance': 25, 'algorand': 35, 'casper-network': 15
     }
-    
+
     total_mentions += base_mentions.get(coin_id, 20)
-    
+
     # Boost mentions for positive price action
     if price_change_24h > 3:
         total_mentions = int(total_mentions * 1.5)
@@ -120,7 +120,7 @@ from typing import Dict
 
 logger = logging.getLogger('CryptoBot')
 
-async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = False, price_change_24h: float = 0) -> Dict:
+async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = True, price_change_24h: float = 0) -> Dict:
     """Fetch social media metrics for a coin."""
     try:
         # Mock social metrics based on price performance
@@ -134,9 +134,9 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, ski
             'algorand': 80,
             'casper-network': 35
         }
-        
+
         mentions = base_mentions.get(coin_id, 50)
-        
+
         # Adjust mentions based on price change
         if price_change_24h > 5:
             mentions = int(mentions * 1.5)
@@ -152,13 +152,13 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, ski
             sentiment = "Cautious"
         else:
             sentiment = "Neutral"
-        
+
         return {
             'mentions': mentions,
             'sentiment': sentiment,
             'engagement_score': min(100, mentions // 2)
         }
-        
+
     except Exception as e:
         logger.error(f"Error fetching social metrics for {coin_id}: {e}")
         return {
