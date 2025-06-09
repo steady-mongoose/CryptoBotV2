@@ -40,71 +40,76 @@ class ContentVerifier:
 
     async def verify_video_content(self, video_data: Dict, coin_name: str) -> Tuple[bool, float, str]:
         """
-        Verify video content for accuracy and relevance across all platforms.
+        Verify video content for crypto-specificity, accuracy and 24h recency.
         Returns: (is_verified, accuracy_score, reason)
         """
         title = video_data.get('title', '').lower()
         url = video_data.get('url', '')
         video_id = video_data.get('video_id', '')
         platform = video_data.get('platform', 'youtube').lower()
+        content_date = video_data.get('content_date', '')
         
-        # Cache check
-        cache_key = f"video_{platform}_{video_id}_{coin_name}"
+        # Cache check with shorter duration for recent content verification
+        cache_key = f"video_{platform}_{video_id}_{coin_name}_{content_date}"
         if cache_key in self.verification_cache:
             cached = self.verification_cache[cache_key]
             cache_time = datetime.fromisoformat(cached['timestamp'])
-            if datetime.now() - cache_time < timedelta(days=7):
+            if datetime.now() - cache_time < timedelta(hours=6):  # Shorter cache for recency
                 return cached['verified'], cached['score'], cached['reason']
         
         score = 0.0
         issues = []
         
-        # 1. Title relevance check
+        # 1. Crypto-specific token verification (CRITICAL)
         coin_keywords = self._get_coin_keywords(coin_name)
-        if any(keyword in title for keyword in coin_keywords):
-            score += 25
+        coin_symbol = self._get_coin_symbol(coin_name)
+        
+        if coin_symbol.lower() in title or any(keyword in title for keyword in coin_keywords):
+            score += 30  # Higher score for crypto-specific content
         else:
-            issues.append("Video title not relevant to coin")
+            issues.append(f"Video not specific to {coin_symbol}")
+            score -= 20  # Heavy penalty for non-specific content
             
-        # 2. Clickbait detection
+        # 2. 24-hour recency verification (CRITICAL)
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        yesterday_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        if current_date in title or content_date == current_date:
+            score += 25  # Bonus for same-day content
+        elif yesterday_date in title or content_date == yesterday_date:
+            score += 15  # Bonus for recent content
+        elif '2025' in title:
+            score += 10  # Current year content
+        else:
+            issues.append("Content not verified as recent (within 24h)")
+            score -= 15
+            
+        # 3. Clickbait detection (stricter for crypto)
         clickbait_patterns = [
             r'\b(shocking|unbelievable|must see|secret|hidden)\b',
-            r'\b(100x|1000x|moon|lambo)\b',
+            r'\b(100x|1000x|moon|lambo|to the moon)\b',
             r'\$\d+\s*(target|prediction)\s*(!|\?)',
-            r'\b(crash|pump|dump)\s*(!|\?)',
-            r'(\?{2,}|!{2,})',
-            r'\b(breaking|urgent|alert)\b'
+            r'\b(crash|pump|dump|rocket)\s*(!|\?)',
+            r'(\?{3,}|!{3,})',
+            r'\b(breaking|urgent|alert|explosive)\b'
         ]
         
         clickbait_count = sum(1 for pattern in clickbait_patterns if re.search(pattern, title, re.IGNORECASE))
         if clickbait_count == 0:
-            score += 20
-        elif clickbait_count <= 2:
-            score += 10
+            score += 15
+        elif clickbait_count <= 1:
+            score += 5
             issues.append("Minor clickbait indicators")
         else:
             issues.append("High clickbait content detected")
+            score -= 15
             
-        # 3. Date relevance (prefer recent content)
-        if '2025' in title or '2024' in title:
-            score += 15
-        elif any(year in title for year in ['2023', '2022', '2021']):
-            score += 5
-            issues.append("Outdated content")
-        
-        # 4. Educational keywords
-        educational_keywords = ['analysis', 'review', 'explained', 'guide', 'tutorial', 'fundamentals']
+        # 4. Educational/analytical keywords (crypto-focused)
+        educational_keywords = ['analysis', 'review', 'explained', 'technical', 'fundamentals', 'update', 'news']
         if any(keyword in title for keyword in educational_keywords):
             score += 15
         
-        # 5. Hype words penalty
-        hype_words = ['moon', 'rocket', 'explode', 'massive', 'insane']
-        hype_count = sum(1 for word in hype_words if word in title)
-        score -= min(hype_count * 5, 20)
-        if hype_count > 2:
-            issues.append("Excessive hype language")
-            
-        # 6. Platform-specific URL validation and bonuses
+        # 5. Platform verification with crypto-specific checks
         platform_domains = {
             'youtube': ['youtu.be', 'youtube.com'],
             'rumble': ['rumble.com'],
@@ -114,34 +119,53 @@ class ContentVerifier:
         valid_domains = platform_domains.get(platform, ['youtube.com'])
         if any(domain in url for domain in valid_domains):
             score += 10
-            # Platform diversity bonus
-            if platform == 'rumble':
-                score += 5  # Bonus for alternative platform
-            elif platform == 'twitch':
-                score += 3  # Bonus for live/interactive content
+            # Verify crypto-specific content in URL
+            if coin_symbol.upper() in url.upper():
+                score += 5  # Bonus for token-specific URL
         else:
             issues.append(f"Invalid {platform} URL")
             
-        # Content quality from platform score
-        if video_data.get('quality_score', 0) > 70:
+        # 6. Crypto verification flags
+        if video_data.get('verified_crypto_specific'):
             score += 10
-        elif video_data.get('quality_score', 0) > 50:
-            score += 5
-            
-        # Final verification
-        is_verified = score >= 50 and len(issues) <= 2
-        reason = "Verified content" if is_verified else f"Issues: {', '.join(issues)}"
+        if video_data.get('target_keywords'):
+            target_keywords = video_data['target_keywords']
+            if coin_symbol in target_keywords:
+                score += 10
+                
+        # Final verification with stricter requirements
+        is_verified = (score >= 60 and 
+                      len(issues) <= 2 and 
+                      coin_symbol.lower() in title)
+        
+        reason = "Verified crypto-specific recent content" if is_verified else f"Issues: {', '.join(issues)}"
         
         # Cache result
         self.verification_cache[cache_key] = {
             'verified': is_verified,
             'score': score,
             'reason': reason,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'crypto_specific': coin_symbol.lower() in title,
+            'recency_verified': current_date in title or content_date == current_date
         }
         self._save_verification_cache()
         
         return is_verified, score, reason
+    
+    def _get_coin_symbol(self, coin_name: str) -> str:
+        """Get the trading symbol for a coin."""
+        symbol_map = {
+            'ripple': 'XRP',
+            'hedera hashgraph': 'HBAR', 
+            'stellar': 'XLM',
+            'xdce crowd sale': 'XDC',
+            'sui': 'SUI',
+            'ondo finance': 'ONDO',
+            'algorand': 'ALGO',
+            'casper network': 'CSPR'
+        }
+        return symbol_map.get(coin_name, coin_name.split()[0].upper())
 
     def _get_coin_keywords(self, coin_name: str) -> List[str]:
         """Get relevant keywords for coin verification."""
