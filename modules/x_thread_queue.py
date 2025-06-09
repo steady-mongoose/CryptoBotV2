@@ -80,7 +80,7 @@ class XQueue:
 
             x_client = get_x_client(posting_only=True)
             if not x_client:
-                logger.error("❌ Could not get X client for queue processing - authentication failed")
+                logger.error("❌ Could not get X client for queue processing")
                 # Re-queue the thread for later retry
                 self.queue.put(thread_data)
                 return

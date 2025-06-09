@@ -32,8 +32,7 @@ def main():
         try:
             client = get_x_client(posting_only=True)
             if client:
-                user_info = client.get_me()
-                print(f"✅ X API ready: @{user_info.data.username}")
+                print(f"✅ X API client ready for posting")
             else:
                 print("❌ X API client failed")
         except Exception as api_error:
