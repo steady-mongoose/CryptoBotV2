@@ -571,11 +571,20 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 for warning in verification_results['content_rating']['warnings']:
                     logger.warning(f"{coin['symbol']}: {warning}")
 
-            # Only include coins that pass verification (or in test mode)
-            if should_post or test_discord:  # Allow all content in Discord test mode
+            # Apply strict validation for all content
+            video_verified = verification_results.get('video_verified', False)
+            video_score = verification_results.get('video_score', 0)
+            
+            # Enhanced filtering - require high-quality crypto-specific content
+            if should_post and video_verified and video_score >= 85:
                 results.append(coin_data)
+                logger.info(f"✅ {coin['symbol']} approved - verified crypto content (score: {video_score})")
+            elif test_discord and should_post:  # Less strict for Discord testing
+                results.append(coin_data)
+                logger.info(f"🧪 {coin['symbol']} approved for Discord test")
             else:
-                logger.warning(f"Skipping {coin['symbol']} - {verification_results.get('post_decision_reason', 'Failed verification')}")
+                reason = verification_results.get('post_decision_reason', 'Failed verification')
+                logger.warning(f"❌ Skipping {coin['symbol']} - {reason} (video_verified: {video_verified}, score: {video_score})")
 
         # Create enhanced monetization main post
         total_gainers = len([r for r in results if r['price_change_24h'] > 0])
@@ -620,15 +629,22 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
             thread_posts = []
             for data in results:
-                tweet_text = format_tweet(data)
-                thread_posts.append({
-                    'text': tweet_text,
-                    'coin_name': data['coin_name']
-                })
+                # Double-check verification before queuing
+                if data.get('verification', {}).get('video_verified', False):
+                    tweet_text = format_tweet(data)
+                    thread_posts.append({
+                        'text': tweet_text,
+                        'coin_name': data['coin_name']
+                    })
+                    logger.info(f"✅ Queued {data['coin_name']} for X posting")
+                else:
+                    logger.warning(f"❌ Skipped {data['coin_name']} - video not verified for X")
 
             if thread_posts:
                 queue_x_thread(thread_posts, main_post_text)
-                logger.info(f"Queued thread with {len(thread_posts)} posts")
+                logger.info(f"📤 Queued thread with {len(thread_posts)} verified posts for X")
+            else:
+                logger.error("❌ No posts qualified for X - all content failed verification")
 
             # Queue live stream posts separately (free tier compliant)
             for i, stream_post in enumerate(live_stream_posts):
@@ -637,10 +653,18 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 logger.info(f"Queued live stream alert {i+1}")
 
         else:
-            # Direct X posting
+            # Direct X posting - verify client first
+            if not x_client:
+                logger.error("❌ X client not available - cannot post to X")
+                return
+                
             try:
+                # Verify we have verified content to post
+                verified_count = len([r for r in results if r.get('verification', {}).get('video_verified', False)])
+                logger.info(f"📊 Posting {verified_count} verified posts to X")
+                
                 main_tweet = x_client.create_tweet(text=main_post_text)
-                logger.info(f"Posted main tweet: {main_tweet.data['id']}")
+                logger.info(f"✅ Posted main tweet to X: {main_tweet.data['id']}")
 
                 previous_tweet_id = main_tweet.data['id']
                 for data in results:

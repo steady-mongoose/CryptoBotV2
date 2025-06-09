@@ -191,13 +191,13 @@ class ContentVerifier:
             if coin_symbol in target_keywords:
                 score += 10
                 
-        # ENHANCED FINAL VERIFICATION with stricter requirements
-        is_verified = (score >= 80 and           # Higher threshold
+        # ENHANCED FINAL VERIFICATION with much stricter requirements
+        is_verified = (score >= 90 and           # Much higher threshold
                       len(issues) == 0 and       # No issues allowed
                       is_public and             # Must be publicly available
                       coin_symbol.lower() in title and  # Must be token-specific
-                      crypto_specific_score >= 25 and   # Must be crypto-specific
-                      engagement_score >= 70)    # Higher engagement requirement
+                      crypto_specific_score >= 35 and   # Much higher crypto-specific requirement
+                      engagement_score >= 75)    # Higher engagement requirement
         
         reason = "Verified high-quality crypto-specific content" if is_verified else f"Issues: {', '.join(issues)}"
         
@@ -290,44 +290,47 @@ class ContentVerifier:
         
         # MANDATORY: Direct token symbol match (reject if not present)
         if coin_symbol.lower() not in title_lower:
+            logger.warning(f"Token symbol '{coin_symbol}' not found in title: {title}")
             return 0  # Automatic rejection for non-specific content
         
         specificity_score += 30  # High score for symbol match
         
-        # Keyword matches (must have at least one)
+        # Keyword matches (must have at least one coin-specific keyword)
         keyword_matches = sum(1 for keyword in coin_keywords if keyword.lower() in title_lower)
         if keyword_matches == 0:
-            return 5  # Very low score if no keywords match
+            logger.warning(f"No coin-specific keywords found for {coin_symbol} in title: {title}")
+            return 0  # Automatic rejection if no coin keywords
         
-        specificity_score += keyword_matches * 8
+        specificity_score += keyword_matches * 15  # Higher weight for keywords
         
-        # STRICT penalty for generic crypto terms without specific context
-        generic_terms = ['crypto', 'bitcoin', 'altcoin', 'blockchain', 'market', 'trading']
+        # STRICTER penalty for generic crypto terms without specific context
+        generic_terms = ['crypto', 'bitcoin', 'altcoin', 'blockchain', 'market', 'trading', 'cryptocurrency']
         generic_count = sum(1 for term in generic_terms if term in title_lower)
-        if generic_count > 2:  # Too many generic terms
-            specificity_score -= 20
+        if generic_count > 1:  # Even stricter - max 1 generic term allowed
+            specificity_score -= 30
         
-        # Bonus for specific use cases or technology mentions
+        # Enhanced coin-specific technology verification
         tech_terms = {
-            'xrp': ['swift', 'cross-border', 'ripple', 'cbdc', 'sec', 'lawsuit'],
-            'hbar': ['hashgraph', 'enterprise', 'hedera', 'consensus', 'council'],
-            'xlm': ['stellar', 'lumens', 'anchor', 'soroban', 'stripe'],
-            'xdc': ['xinfin', 'trade finance', 'iso20022', 'enterprise'],
-            'sui': ['move programming', 'sui network', 'aptos', 'object'],
-            'ondo': ['rwa', 'real world assets', 'tokenization', 'institutional'],
-            'algo': ['algorand', 'pure proof', 'carbon negative', 'smart contract'],
-            'cspr': ['casper', 'highway consensus', 'upgradeable', 'proof of stake']
+            'xrp': ['swift', 'cross-border', 'ripple', 'cbdc', 'sec', 'lawsuit', 'remittance', 'odl'],
+            'hbar': ['hashgraph', 'enterprise', 'hedera', 'consensus', 'council', 'governing'],
+            'xlm': ['stellar', 'lumens', 'anchor', 'soroban', 'stripe', 'financial inclusion'],
+            'xdc': ['xinfin', 'trade finance', 'iso20022', 'enterprise', 'hybrid'],
+            'sui': ['move programming', 'sui network', 'aptos', 'object', 'parallel execution'],
+            'ondo': ['rwa', 'real world assets', 'tokenization', 'institutional', 'blackrock'],
+            'algo': ['algorand', 'pure proof', 'carbon negative', 'smart contract', 'silvio micali'],
+            'cspr': ['casper', 'highway consensus', 'upgradeable', 'proof of stake', 'cbc']
         }
         
         relevant_terms = tech_terms.get(coin_symbol.lower(), [])
         tech_matches = sum(1 for term in relevant_terms if term.lower() in title_lower)
-        specificity_score += tech_matches * 10
+        specificity_score += tech_matches * 12
         
-        # Minimum threshold check
-        if specificity_score < 25:
+        # STRICT minimum threshold - must be highly specific
+        if specificity_score < 35:
+            logger.warning(f"Content not sufficiently specific for {coin_symbol}: score {specificity_score}")
             return 0  # Reject low-specificity content
         
-        return min(specificity_score, 50)  # Increased cap
+        return min(specificity_score, 60)  # Higher cap for quality content
     
     def _calculate_engagement_rating(self, title: str, platform: str) -> int:
         """Calculate engagement potential rating."""

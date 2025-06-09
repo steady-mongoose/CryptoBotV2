@@ -69,7 +69,14 @@ def _queue_worker():
                 logger.info(f"✅ Successfully posted thread with {len(posts)} replies to X")
 
             except Exception as api_error:
-                logger.error(f"X API error during posting: {api_error}")
+                logger.error(f"❌ X API error during posting: {api_error}")
+                logger.error(f"Failed to post thread with {len(posts)} posts")
+                # Check if it's a rate limit or authentication error
+                if "rate limit" in str(api_error).lower():
+                    logger.warning("Rate limit hit - waiting 15 minutes before retry")
+                    time.sleep(900)  # Wait 15 minutes
+                elif "auth" in str(api_error).lower():
+                    logger.error("Authentication error - check X API credentials")
                 # Don't retry, just log and continue
 
             _post_queue.task_done()
