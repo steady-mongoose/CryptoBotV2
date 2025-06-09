@@ -7,7 +7,7 @@
   },
   "price_ripple": {
     "last_price": 2.26,
-    "timestamp": "2025-06-09T00:43:38.927876"
+    "timestamp": "2025-06-09T00:46:24.188247"
   },
   "youtube__hedera hashgraph": {
     "verified": true,
@@ -16,8 +16,8 @@
     "timestamp": "2025-06-09T00:43:39.261904"
   },
   "price_hedera hashgraph": {
-    "last_price": 0.169604,
-    "timestamp": "2025-06-09T00:43:39.262506"
+    "last_price": 0.169789,
+    "timestamp": "2025-06-09T00:46:26.479250"
   },
   "youtube__stellar": {
     "verified": true,
@@ -27,7 +27,7 @@
   },
   "price_stellar": {
     "last_price": 0.268,
-    "timestamp": "2025-06-09T00:43:39.523095"
+    "timestamp": "2025-06-09T00:46:26.665099"
   },
   "youtube__xdce crowd sale": {
     "verified": true,
@@ -37,7 +37,7 @@
   },
   "price_xdce crowd sale": {
     "last_price": 0.045,
-    "timestamp": "2025-06-09T00:43:39.574782"
+    "timestamp": "2025-06-09T00:46:27.411555"
   },
   "youtube__sui": {
     "verified": true,
@@ -47,7 +47,7 @@
   },
   "price_sui": {
     "last_price": 4.35,
-    "timestamp": "2025-06-09T00:43:39.649458"
+    "timestamp": "2025-06-09T00:46:28.306037"
   },
   "youtube__ondo finance": {
     "verified": true,
@@ -57,7 +57,7 @@
   },
   "price_ondo finance": {
     "last_price": 1.95,
-    "timestamp": "2025-06-09T00:43:39.716138"
+    "timestamp": "2025-06-09T00:46:28.344173"
   },
   "youtube__algorand": {
     "verified": true,
@@ -67,12 +67,60 @@
   },
   "price_algorand": {
     "last_price": 0.42,
-    "timestamp": "2025-06-09T00:43:39.783607"
+    "timestamp": "2025-06-09T00:46:29.084496"
   },
   "youtube__casper network": {
     "verified": true,
     "score": 70.0,
     "reason": "Verified content",
     "timestamp": "2025-06-09T00:43:39.865097"
+  },
+  "video_youtube__ripple": {
+    "verified": true,
+    "score": 75.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:46:24.187967"
+  },
+  "video_youtube__hedera hashgraph": {
+    "verified": true,
+    "score": 60.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:46:26.478869"
+  },
+  "video_twitch_twitch_stellar_2025-06-09_stellar": {
+    "verified": true,
+    "score": 63.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:46:26.664663"
+  },
+  "video_rumble__xdce crowd sale": {
+    "verified": true,
+    "score": 65.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:46:27.411085"
+  },
+  "video_rumble__sui": {
+    "verified": true,
+    "score": 65.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:46:28.304684"
+  },
+  "video_twitch_twitch_ondo finance_2025-06-09_ondo finance": {
+    "verified": true,
+    "score": 63.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:46:28.343767"
+  },
+  "video_rumble__algorand": {
+    "verified": true,
+    "score": 65.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:46:29.084063"
+  },
+  "video_twitch_twitch_casper network_2025-06-09_casper network": {
+    "verified": true,
+    "score": 68.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:46:29.870563"
   }
 }
