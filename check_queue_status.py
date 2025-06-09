@@ -47,7 +47,4 @@ def main():
         print(f"❌ Error checking queue status: {e}")
 
 if __name__ == "__main__":
-    main()")
-
-if __name__ == "__main__":
     main()
