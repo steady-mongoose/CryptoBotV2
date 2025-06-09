@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 import queue
+import asyncio
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from modules.rate_limit_manager import rate_manager
@@ -132,7 +133,7 @@ def _queue_worker():
                         pass
                 
                 # Verify post actually exists on platform
-                verification_status = await verify_post_exists(main_tweet_id)
+                verification_status = asyncio.run(verify_post_exists(main_tweet_id))
                 
                 if verification_status['exists']:
                     logger.info(f"✅ X POSTING SUCCESS: Main tweet: {main_tweet_id}, Replies: {len(posts)}")
