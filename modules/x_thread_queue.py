@@ -137,25 +137,45 @@ def _queue_worker():
                     except:
                         pass
                 
-                # Enhanced rate limit handling with exponential backoff
+                # Enhanced rate limit handling with account marking
                 error_str = str(api_error).lower()
                 if "rate limit" in error_str or "429" in error_str:
-                    # Start with 5 minutes, then exponential backoff
-                    wait_times = [300, 600, 900, 1800]  # 5min, 10min, 15min, 30min
-                    for attempt, wait_time in enumerate(wait_times):
-                        logger.warning(f"Rate limit hit - attempt {attempt + 1}, waiting {wait_time//60} minutes")
-                        time.sleep(wait_time)
-                        
-                        # Try posting again
+                    logger.error(f"❌ RATE LIMIT HIT ON ACCOUNT {account_num}")
+                    
+                    # Mark this account as rate limited for 2 hours
+                    rate_manager.mark_rate_limited(account_num, duration_minutes=120)
+                    
+                    # Try to get a different account
+                    alternative_client, alt_account_num = get_x_client_with_failover(posting_only=True)
+                    
+                    if alternative_client and alt_account_num != account_num:
+                        logger.info(f"🔄 SWITCHING TO ACCOUNT {alt_account_num}")
                         try:
-                            main_tweet = x_client.create_tweet(text=main_post)
+                            main_tweet = alternative_client.create_tweet(text=main_post)
                             main_tweet_id = main_tweet.data['id']
-                            logger.info(f"✅ RETRY SUCCESS: https://twitter.com/user/status/{main_tweet_id}")
-                            break
-                        except Exception as retry_error:
-                            if "429" not in str(retry_error):
-                                break  # Different error, stop retrying
-                            continue
+                            rate_manager.record_post(alt_account_num)
+                            logger.info(f"✅ FAILOVER SUCCESS: https://twitter.com/user/status/{main_tweet_id}")
+                            
+                            # Continue with replies using alternative account
+                            previous_tweet_id = main_tweet_id
+                            for i, post in enumerate(posts):
+                                reply_tweet = alternative_client.create_tweet(
+                                    text=post.get('text', ''),
+                                    in_reply_to_tweet_id=previous_tweet_id
+                                )
+                                previous_tweet_id = reply_tweet.data['id']
+                                time.sleep(15)  # Longer delays after rate limit
+                                
+                        except Exception as failover_error:
+                            logger.error(f"❌ FAILOVER ALSO FAILED: {failover_error}")
+                            # Both accounts rate limited - wait 2 hours
+                            logger.error("🚫 ALL ACCOUNTS RATE LIMITED - WAITING 2 HOURS")
+                            time.sleep(7200)  # 2 hours
+                    else:
+                        logger.error("🚫 NO ALTERNATIVE ACCOUNT AVAILABLE")
+                        # Wait 2 hours before retry
+                        logger.error("⏰ WAITING 2 HOURS FOR RATE LIMIT RESET")
+                        time.sleep(7200)
                 elif "auth" in error_str or "401" in error_str or "403" in error_str:
                     logger.error("❌ AUTHENTICATION ERROR - X API credentials invalid!")
                     logger.error("🔑 Check your X API secrets: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")

@@ -11,15 +11,19 @@ class RateLimitManager:
     
     def __init__(self):
         self.account_limits = {
-            1: {'last_post': None, 'posts_in_window': 0, 'window_start': None},
-            2: {'last_post': None, 'posts_in_window': 0, 'window_start': None}
+            1: {'last_post': None, 'posts_in_window': 0, 'window_start': None, 'rate_limited_until': None},
+            2: {'last_post': None, 'posts_in_window': 0, 'window_start': None, 'rate_limited_until': None}
         }
-        self.posts_per_15min = 25  # Conservative limit
+        self.posts_per_15min = 10  # Very conservative - X limits are strict
         
     def can_post(self, account_num: int) -> bool:
         """Check if account can post without hitting rate limits."""
         now = datetime.now()
         account = self.account_limits[account_num]
+        
+        # Check if account is currently rate limited
+        if account['rate_limited_until'] and now < account['rate_limited_until']:
+            return False
         
         # Reset window if 15 minutes passed
         if account['window_start'] and (now - account['window_start']) > timedelta(minutes=15):
@@ -28,6 +32,12 @@ class RateLimitManager:
         
         # Check if we're under the limit
         return account['posts_in_window'] < self.posts_per_15min
+    
+    def mark_rate_limited(self, account_num: int, duration_minutes: int = 60):
+        """Mark account as rate limited for specified duration."""
+        now = datetime.now()
+        self.account_limits[account_num]['rate_limited_until'] = now + timedelta(minutes=duration_minutes)
+        logger.warning(f"Account {account_num} marked as rate limited for {duration_minutes} minutes")
     
     def get_best_account(self) -> int:
         """Get the account with the most remaining capacity."""
