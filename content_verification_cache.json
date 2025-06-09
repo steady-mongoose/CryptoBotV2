@@ -1,0 +1,78 @@
+{
+  "youtube__ripple": {
+    "verified": true,
+    "score": 70.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:43:38.926700"
+  },
+  "price_ripple": {
+    "last_price": 2.26,
+    "timestamp": "2025-06-09T00:43:38.927876"
+  },
+  "youtube__hedera hashgraph": {
+    "verified": true,
+    "score": 70.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:43:39.261904"
+  },
+  "price_hedera hashgraph": {
+    "last_price": 0.169604,
+    "timestamp": "2025-06-09T00:43:39.262506"
+  },
+  "youtube__stellar": {
+    "verified": true,
+    "score": 70.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:43:39.522785"
+  },
+  "price_stellar": {
+    "last_price": 0.268,
+    "timestamp": "2025-06-09T00:43:39.523095"
+  },
+  "youtube__xdce crowd sale": {
+    "verified": true,
+    "score": 70.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:43:39.574452"
+  },
+  "price_xdce crowd sale": {
+    "last_price": 0.045,
+    "timestamp": "2025-06-09T00:43:39.574782"
+  },
+  "youtube__sui": {
+    "verified": true,
+    "score": 70.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:43:39.649231"
+  },
+  "price_sui": {
+    "last_price": 4.35,
+    "timestamp": "2025-06-09T00:43:39.649458"
+  },
+  "youtube__ondo finance": {
+    "verified": true,
+    "score": 70.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:43:39.715774"
+  },
+  "price_ondo finance": {
+    "last_price": 1.95,
+    "timestamp": "2025-06-09T00:43:39.716138"
+  },
+  "youtube__algorand": {
+    "verified": true,
+    "score": 70.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:43:39.783297"
+  },
+  "price_algorand": {
+    "last_price": 0.42,
+    "timestamp": "2025-06-09T00:43:39.783607"
+  },
+  "youtube__casper network": {
+    "verified": true,
+    "score": 70.0,
+    "reason": "Verified content",
+    "timestamp": "2025-06-09T00:43:39.865097"
+  }
+}
