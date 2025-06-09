@@ -191,45 +191,57 @@ def _queue_worker():
                 # Verify post actually exists on platform with enhanced verification
                 verification_status = asyncio.run(verify_post_exists(main_tweet_id))
                 
-                if verification_status['exists'] and verification_status.get('content_verified', False):
-                    # Export thread data as JSON
-                    thread_export = {
-                        "main_tweet": {
-                            "id": main_tweet_id,
-                            "url": f"https://twitter.com/user/status/{main_tweet_id}",
-                            "text": main_post[:100] + "..." if len(main_post) > 100 else main_post,
-                            "timestamp": datetime.now().isoformat()
-                        },
-                        "replies": [
-                            {
-                                "text": post.get('text', '')[:100] + "..." if len(post.get('text', '')) > 100 else post.get('text', ''),
-                                "coin_name": post.get('coin_name', 'Unknown')
-                            }
-                            for post in posts
-                        ],
-                        "verification": {
-                            "verified": True,
-                            "method": verification_status.get('method', 'api_check'),
-                            "timestamp": datetime.now().isoformat(),
-                            "status_code": verification_status.get('status_code')
+                # FORCE DISPLAY URL AND JSON FOR ALL X WORKFLOWS
+                thread_url = f"https://twitter.com/user/status/{main_tweet_id}"
+                
+                # Export thread data as JSON (MANDATORY for all X workflows)
+                thread_export = {
+                    "main_tweet": {
+                        "id": main_tweet_id,
+                        "url": thread_url,
+                        "text": main_post[:100] + "..." if len(main_post) > 100 else main_post,
+                        "timestamp": datetime.now().isoformat()
+                    },
+                    "replies": [
+                        {
+                            "text": post.get('text', '')[:100] + "..." if len(post.get('text', '')) > 100 else post.get('text', ''),
+                            "coin_name": post.get('coin_name', 'Unknown')
                         }
-                    }
-                    
+                        for post in posts
+                    ],
+                    "verification": verification_status,
+                    "workflow_type": "x_queue_posting",
+                    "posted_at": datetime.now().isoformat()
+                }
+                
+                # ALWAYS DISPLAY THESE - REGARDLESS OF VERIFICATION STATUS
+                print("=" * 60)
+                print("🚀 X POSTING WORKFLOW RESULTS")
+                print("=" * 60)
+                print(f"📍 THREAD URL: {thread_url}")
+                print(f"📊 POSTS COUNT: {len(posts)} replies")
+                print(f"🔍 VERIFICATION: {'PASSED' if verification_status.get('exists') else 'FAILED'}")
+                print("📁 FULL JSON EXPORT:")
+                print(json.dumps(thread_export, indent=2))
+                print("=" * 60)
+                
+                # Save thread export to file (ALWAYS)
+                export_filename = f"x_thread_export_{main_tweet_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                try:
+                    with open(export_filename, 'w') as f:
+                        json.dump(thread_export, f, indent=2)
+                    print(f"💾 Thread data exported to: {export_filename}")
+                except Exception as e:
+                    logger.error(f"Failed to save thread export: {e}")
+                    print(f"❌ Export save failed: {e}")
+                
+                # Log results based on verification
+                if verification_status['exists'] and verification_status.get('content_verified', False):
                     logger.info(f"✅ X POSTING SUCCESS - VERIFIED: Main tweet: {main_tweet_id}, Replies: {len(posts)}")
-                    print(f"✅ X POSTING VERIFIED SUCCESSFUL!")
-                    print(f"📍 THREAD URL: https://twitter.com/user/status/{main_tweet_id}")
-                    print(f"📊 Posted {len(posts)} replies successfully")
-                    print(f"🔍 VERIFICATION: Post confirmed accessible on X platform")
-                    print(f"📁 THREAD EXPORT: {json.dumps(thread_export, indent=2)}")
-                    
-                    # Save thread export to file
-                    export_filename = f"x_thread_export_{main_tweet_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-                    try:
-                        with open(export_filename, 'w') as f:
-                            json.dump(thread_export, f, indent=2)
-                        print(f"💾 Thread data exported to: {export_filename}")
-                    except Exception as e:
-                        logger.error(f"Failed to save thread export: {e}")
+                    print(f"✅ WORKFLOW RESULT: VERIFIED SUCCESS")
+                else:
+                    logger.error(f"❌ X POSTING FAILED VERIFICATION: {verification_status.get('error', 'Unknown error')}")
+                    print(f"❌ WORKFLOW RESULT: VERIFICATION FAILED")
                         
                 else:
                     logger.error(f"❌ X POSTING FAILED VERIFICATION: {verification_status.get('error', 'Unknown error')}")
@@ -278,7 +290,8 @@ def _queue_worker():
                             main_tweet = alternative_client.create_tweet(text=main_post)
                             main_tweet_id = main_tweet.data['id']
                             rate_manager.record_post(alt_account_num)
-                            logger.info(f"✅ FAILOVER SUCCESS: https://twitter.com/user/status/{main_tweet_id}")
+                            failover_url = f"https://twitter.com/user/status/{main_tweet_id}"
+                            logger.info(f"✅ FAILOVER SUCCESS: {failover_url}")
                             
                             # Continue with replies using alternative account
                             previous_tweet_id = main_tweet_id
@@ -289,6 +302,22 @@ def _queue_worker():
                                 )
                                 previous_tweet_id = reply_tweet.data['id']
                                 time.sleep(15)  # Longer delays after rate limit
+                            
+                            # FORCE DISPLAY FAILOVER RESULTS
+                            failover_export = {
+                                "main_tweet": {"id": main_tweet_id, "url": failover_url},
+                                "replies": [{"coin_name": post.get('coin_name', 'Unknown')} for post in posts],
+                                "failover_account": alt_account_num,
+                                "timestamp": datetime.now().isoformat()
+                            }
+                            print("=" * 60)
+                            print("🔄 X FAILOVER POSTING RESULTS")
+                            print("=" * 60)
+                            print(f"📍 THREAD URL: {failover_url}")
+                            print(f"🔄 FAILOVER ACCOUNT: {alt_account_num}")
+                            print("📁 FAILOVER JSON EXPORT:")
+                            print(json.dumps(failover_export, indent=2))
+                            print("=" * 60)
                                 
                         except Exception as failover_error:
                             logger.error(f"❌ FAILOVER ALSO FAILED: {failover_error}")

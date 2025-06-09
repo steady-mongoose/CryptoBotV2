@@ -46,36 +46,38 @@ async def test_x_posting_with_verification():
         print(f"\n3️⃣ CRITICAL: Verifying post actually exists...")
         verification_result = await verify_post_exists(tweet_id)
         
+        # ALWAYS DISPLAY URL AND JSON - REGARDLESS OF VERIFICATION
+        proof_export = {
+            "tweet_id": tweet_id,
+            "url": tweet_url,
+            "message": test_message,
+            "posted_at": datetime.now().isoformat(),
+            "verification": verification_result,
+            "account_used": account_num,
+            "workflow_type": "verification_test"
+        }
+        
+        print("=" * 60)
+        print("🔍 X VERIFICATION TEST RESULTS")
+        print("=" * 60)
+        print(f"📍 THREAD URL: {tweet_url}")
+        print(f"🔍 Verification: {'PASSED' if verification_result.get('exists') else 'FAILED'}")
+        print("📁 COMPLETE JSON EXPORT:")
+        print(json.dumps(proof_export, indent=2))
+        print("=" * 60)
+        
+        # Save proof to file (ALWAYS)
+        proof_filename = f"x_post_proof_{tweet_id}.json"
+        with open(proof_filename, 'w') as f:
+            json.dump(proof_export, f, indent=2)
+        print(f"💾 JSON exported to: {proof_filename}")
+        
         if verification_result.get('exists') and verification_result.get('content_verified'):
-            # Create JSON export as proof
-            proof_export = {
-                "tweet_id": tweet_id,
-                "url": tweet_url,
-                "message": test_message,
-                "posted_at": datetime.now().isoformat(),
-                "verification": verification_result,
-                "account_used": account_num
-            }
-            
-            print("✅ VERIFIED SUCCESS - POST CONFIRMED ON X PLATFORM!")
-            print(f"📍 VERIFIED URL: {tweet_url}")
-            print(f"🔍 Verification method: {verification_result.get('method')}")
-            print(f"📊 Status code: {verification_result.get('status_code')}")
-            print("\n📁 PROOF EXPORT (JSON):")
-            print(json.dumps(proof_export, indent=2))
-            
-            # Save proof to file
-            proof_filename = f"x_post_proof_{tweet_id}.json"
-            with open(proof_filename, 'w') as f:
-                json.dump(proof_export, f, indent=2)
-            print(f"\n💾 Proof saved to: {proof_filename}")
-            
+            print("✅ WORKFLOW RESULT: VERIFIED SUCCESS")
             return True
-            
         else:
-            print("❌ VERIFICATION FAILED - CANNOT CONFIRM POST EXISTS!")
+            print("❌ WORKFLOW RESULT: VERIFICATION FAILED")
             print(f"🚫 Error: {verification_result.get('error')}")
-            print(f"📍 Attempted URL: {tweet_url}")
             print("⚠️  CRITICAL: This is NOT a successful post!")
             return False
             

@@ -44,30 +44,47 @@ async def test_real_x_posting():
         tweet_id = tweet.data['id']
         tweet_url = f"https://twitter.com/user/status/{tweet_id}"
         
-        print("✅ POST SUCCESSFUL!")
-        print(f"📍 Tweet ID: {tweet_id}")
-        print(f"🔗 Direct URL: {tweet_url}")
+        # FORCE DISPLAY URL AND JSON FOR ALL REAL POSTING TESTS
+        post_export = {
+            "tweet_id": tweet_id,
+            "url": tweet_url,
+            "message": test_message,
+            "posted_at": datetime.now().isoformat(),
+            "account_used": account_num,
+            "workflow_type": "real_posting_test"
+        }
+        
+        print("=" * 60)
+        print("🚀 REAL X POSTING TEST RESULTS")
+        print("=" * 60)
+        print(f"📍 THREAD URL: {tweet_url}")
+        print(f"🔗 Tweet ID: {tweet_id}")
         print(f"⏰ Posted at: {datetime.now()}")
+        print("📁 POSTING JSON EXPORT:")
+        print(json.dumps(post_export, indent=2))
+        print("=" * 60)
         
         # Record the successful post
         rate_manager.record_post(account_num)
         
         # Automatic verification attempt
-        print("\n4️⃣ Verifying post exists...")
+        print("4️⃣ Verifying post exists...")
         verification_result = await verify_post_exists(tweet_id)
+        
+        # Add verification to export
+        post_export["verification"] = verification_result
+        
+        # Save export file
+        export_filename = f"real_post_test_{tweet_id}.json"
+        with open(export_filename, 'w') as f:
+            json.dump(post_export, f, indent=2)
+        print(f"💾 JSON exported to: {export_filename}")
         
         if verification_result['exists']:
             print("✅ VERIFICATION PASSED: Post confirmed on X platform")
         else:
             print(f"⚠️  VERIFICATION INCONCLUSIVE: {verification_result['error']}")
             print("This may be normal - X API limits verification methods")
-        
-        # Ask user to verify
-        print("\n" + "="*50)
-        print("🔍 MANUAL VERIFICATION RECOMMENDED:")
-        print(f"Go to: {tweet_url}")
-        print("Confirm the tweet is visible on X platform")
-        print("="*50)
         
         return True
         

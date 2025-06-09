@@ -668,9 +668,12 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 logger.info(f"📊 Posting {verified_count} verified posts to X")
                 
                 main_tweet = x_client.create_tweet(text=main_post_text)
-                logger.info(f"✅ Posted main tweet to X: {main_tweet.data['id']}")
+                main_tweet_id = main_tweet.data['id']
+                thread_url = f"https://twitter.com/user/status/{main_tweet_id}"
+                logger.info(f"✅ Posted main tweet to X: {main_tweet_id}")
 
-                previous_tweet_id = main_tweet.data['id']
+                previous_tweet_id = main_tweet_id
+                posted_replies = []
                 for data in results:
                     reply_text = format_tweet(data)
                     reply_tweet = x_client.create_tweet(
@@ -678,8 +681,35 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                         in_reply_to_tweet_id=previous_tweet_id
                     )
                     previous_tweet_id = reply_tweet.data['id']
+                    posted_replies.append({
+                        "coin_name": data['coin_name'],
+                        "reply_id": reply_tweet.data['id']
+                    })
                     logger.info(f"Posted reply for {data['coin_name']}")
                     await asyncio.sleep(5)
+                
+                # FORCE DISPLAY URL AND JSON FOR DIRECT POSTING
+                direct_post_export = {
+                    "main_tweet": {"id": main_tweet_id, "url": thread_url},
+                    "replies": posted_replies,
+                    "workflow_type": "direct_posting",
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                print("=" * 60)
+                print("🚀 DIRECT X POSTING RESULTS")
+                print("=" * 60)
+                print(f"📍 THREAD URL: {thread_url}")
+                print(f"📊 REPLIES POSTED: {len(posted_replies)}")
+                print("📁 DIRECT POSTING JSON EXPORT:")
+                print(json.dumps(direct_post_export, indent=2))
+                print("=" * 60)
+                
+                # Save export file
+                export_filename = f"direct_post_{main_tweet_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                with open(export_filename, 'w') as f:
+                    json.dump(direct_post_export, f, indent=2)
+                print(f"💾 Direct posting JSON exported to: {export_filename}")
 
                 # Post live stream alerts as separate tweets (free tier compliant)
                 for i, stream_post in enumerate(live_stream_posts):
