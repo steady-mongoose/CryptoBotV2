@@ -373,6 +373,23 @@ args = "asyncio.run(show_streams())"
 task = "shell.exec"
 args = "\""
 
+[[workflows.workflow]]
+name = "Test Fixed Bot"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing fixed bot with enhanced formatting...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --test-discord"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Test completed - check Discord for proper formatting!\""
+
 [deployment]
 run = ["sh", "-c", "python bot_v2.py --queue-only"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]

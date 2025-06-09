@@ -112,7 +112,8 @@ async def fetch_multi_platform_video(youtube, coin: str, current_date: str, sess
     """Fetch videos from multiple platforms with intelligent rotation."""
     
     # Platform rotation based on coin index for diversity
-    coin_index = COINS.index(next(c for c in COINS if c['name'] == coin))
+    coin_obj = next((c for c in COINS if c['name'] == coin), None)
+    coin_index = COINS.index(coin_obj) if coin_obj else 0
     platforms = ['youtube', 'rumble', 'twitch']
     primary_platform = platforms[coin_index % len(platforms)]
     
@@ -191,7 +192,8 @@ async def fetch_rumble_video(coin: str, session: aiohttp.ClientSession, current_
     """Fetch Rumble videos for crypto-specific content with 24h recency check."""
     try:
         # Get coin index for unique ID generation
-        coin_index = next((i for i, c in enumerate(COINS) if c['name'] == coin), 0)
+        coin_obj = next((c for c in COINS if c['name'] == coin), None)
+        coin_index = COINS.index(coin_obj) if coin_obj else 0
         
         # Search Rumble for recent crypto content with specific token names
         coin_symbol = next((c['symbol'] for c in COINS if c['name'] == coin), coin.split()[0])
@@ -268,8 +270,9 @@ async def fetch_twitch_video(coin: str, session: aiohttp.ClientSession, current_
     """Fetch Twitch crypto-specific content with 24h recency verification."""
     try:
         # Get coin index and symbol for verification
-        coin_index = next((i for i, c in enumerate(COINS) if c['name'] == coin), 0)
-        coin_symbol = next((c['symbol'] for c in COINS if c['name'] == coin), coin.split()[0])
+        coin_obj = next((c for c in COINS if c['name'] == coin), None)
+        coin_index = COINS.index(coin_obj) if coin_obj else 0
+        coin_symbol = coin_obj['symbol'] if coin_obj else coin.split()[0]
         
         # Crypto-specific Twitch content with current date verification
         crypto_specific_content = {
@@ -470,6 +473,23 @@ def format_tweet(data):
 async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
     logger.info("Starting CryptoBotV2...")
 
+    # Check for recent posts to prevent duplicates
+    last_post_file = "last_post_timestamp.txt"
+    current_time = datetime.now()
+    
+    if os.path.exists(last_post_file):
+        try:
+            with open(last_post_file, 'r') as f:
+                last_post_time = datetime.fromisoformat(f.read().strip())
+                time_since_last = current_time - last_post_time
+                
+                # Prevent posts within 10 minutes of each other
+                if time_since_last < timedelta(minutes=10):
+                    logger.warning(f"Preventing duplicate post - last post was {time_since_last.total_seconds():.0f} seconds ago")
+                    return
+        except:
+            pass
+
     # Initialize clients
     x_client = None if test_discord else get_x_client(posting_only=True)
     youtube = build('youtube', 'v3', developerKey=get_youtube_api_key())
@@ -567,8 +587,9 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
             thread_posts = []
             for data in results:
+                tweet_text = format_tweet(data)
                 thread_posts.append({
-                    'text': format_tweet(data),
+                    'text': tweet_text,
                     'coin_name': data['coin_name']
                 })
 
@@ -604,6 +625,10 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 logger.info(f"Posted live stream alert {i+1}: {stream_tweet.data['id']}")
                 await asyncio.sleep(5)
 
+        # Update last post timestamp
+        with open("last_post_timestamp.txt", 'w') as f:
+            f.write(current_time.isoformat())
+            
         logger.info("Bot run completed")
 
 if __name__ == "__main__":
