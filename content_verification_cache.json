@@ -374,5 +374,17 @@
     "engagement_score": 65,
     "specificity_score": 57,
     "issues_count": 0
+  },
+  "video_youtube_zRK0ITTS3bo_ripple_": {
+    "verified": false,
+    "score": 15.0,
+    "reason": "Issues: Video not specifically about XRP, Low engagement potential: 55/100",
+    "timestamp": "2025-06-09T21:29:26.255448",
+    "crypto_specific": false,
+    "recency_verified": false,
+    "public_available": true,
+    "engagement_score": 55,
+    "specificity_score": 0,
+    "issues_count": 2
   }
 }
