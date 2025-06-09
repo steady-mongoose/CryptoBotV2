@@ -16,6 +16,7 @@ from modules.social_media import fetch_social_metrics
 from modules.database import Database
 from modules.x_thread_queue import start_x_queue, stop_x_queue, queue_x_thread, get_x_queue_status
 from modules.content_verification import verify_all_content
+from modules.x_live_streams import discover_upcoming_live_streams, get_next_stream_posts
 
 # Configure logging
 logging.basicConfig(
@@ -485,6 +486,9 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
             f"#CryptoAlpha #TradingSignals #DeFi"
         )
 
+        # Get upcoming live stream posts
+        live_stream_posts = get_next_stream_posts(max_posts=2)
+        
         # Post to platforms
         if test_discord:
             # Discord only
@@ -497,6 +501,13 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 async with session.post(DISCORD_WEBHOOK_URL, json={"content": reply_text}) as response:
                     if response.status == 204:
                         logger.info(f"Posted {data['coin_name']} to Discord")
+                await asyncio.sleep(0.5)
+            
+            # Post live stream alerts to Discord
+            for i, stream_post in enumerate(live_stream_posts):
+                async with session.post(DISCORD_WEBHOOK_URL, json={"content": stream_post}) as response:
+                    if response.status == 204:
+                        logger.info(f"Posted live stream alert {i+1} to Discord")
                 await asyncio.sleep(0.5)
 
         elif queue_only:
@@ -512,6 +523,12 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
 
             queue_x_thread(thread_posts, main_post_text)
             logger.info(f"Queued thread with {len(thread_posts)} posts")
+            
+            # Queue live stream posts separately (free tier compliant)
+            for i, stream_post in enumerate(live_stream_posts):
+                queue_x_thread([{'text': stream_post, 'coin_name': f'live_stream_{i+1}'}], 
+                             f"🔴 CRYPTO LIVE STREAM ALERT #{i+1}")
+                logger.info(f"Queued live stream alert {i+1}")
 
         else:
             # Direct X posting
@@ -527,6 +544,13 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 )
                 previous_tweet_id = reply_tweet.data['id']
                 logger.info(f"Posted reply for {data['coin_name']}")
+                await asyncio.sleep(5)
+            
+            # Post live stream alerts as separate tweets (free tier compliant)
+            for i, stream_post in enumerate(live_stream_posts):
+                await asyncio.sleep(10)  # Space out posts to avoid spam detection
+                stream_tweet = x_client.create_tweet(text=stream_post)
+                logger.info(f"Posted live stream alert {i+1}: {stream_tweet.data['id']}")
                 await asyncio.sleep(5)
 
         logger.info("Bot run completed")

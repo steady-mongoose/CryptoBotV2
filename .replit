@@ -59,6 +59,320 @@ mode = "sequential"
 task = "shell.exec"
 args = "python content_verification_report.py"
 
+[[workflows.workflow]]
+name = "Post Live Stream Alerts"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔴 POSTING UPCOMING CRYPTO LIVE STREAM ALERTS\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -c \""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "import asyncio"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "from modules.x_live_streams import get_next_stream_posts"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "from modules.api_clients import get_x_client"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "import time"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = ""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "def post_stream_alerts():"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    try:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        # Get stream posts"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        stream_posts = get_next_stream_posts(max_posts=2)"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        if not stream_posts:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            print('❌ No upcoming streams found')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            return"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        # Get X client"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        x_client = get_x_client(posting_only=True)"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        if not x_client:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            print('❌ Could not initialize X client')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            return"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        # Post each stream alert"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        for i, stream_post in enumerate(stream_posts):"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            try:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                tweet = x_client.create_tweet(text=stream_post)"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''                print(f'✅ Posted live stream alert {i+1}: {tweet.data[\"id\"]}')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                time.sleep(10)  # Space out posts for free tier compliance"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            except Exception as e:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                print(f'❌ Error posting stream alert {i+1}: {e}')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        print('🎉 Live stream alerts posting completed!')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    except Exception as e:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        print(f'❌ Error in stream alerts: {e}')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = ""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "post_stream_alerts()"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "\""
+
+[[workflows.workflow]]
+name = "Show Upcoming Streams"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔍 DISCOVERING UPCOMING CRYPTO LIVE STREAMS\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -c \""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "import asyncio"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "import aiohttp"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "from modules.x_live_streams import discover_upcoming_live_streams, format_live_stream_post"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "from datetime import datetime"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = ""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "async def show_streams():"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    try:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        async with aiohttp.ClientSession() as session:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            streams = await discover_upcoming_live_streams(session)"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            if not streams:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                print('❌ No upcoming streams found')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                return"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            print(f'🎙️ Found {len(streams)} upcoming crypto streams:')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            print('=' * 50)"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            for i, stream in enumerate(streams[:5], 1):"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                scheduled_time = datetime.fromisoformat(stream['scheduled_time'])"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                time_until = scheduled_time - datetime.now()"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                hours_until = int(time_until.total_seconds() / 3600)"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''                print(f'{i}. {stream[\"creator_name\"]} ({stream[\"creator_handle\"]})')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''                print(f'   📺 {stream[\"title\"]}')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                print(f'   ⏰ Starting in {hours_until}h')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''                print(f'   🎯 {stream[\"specialty\"]} | {stream[\"followers\"]} followers')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''                print(f'   📊 Engagement: {stream[\"engagement_potential\"]}')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "                print()"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = '''            print('🔔 Use \"Post Live Stream Alerts\" workflow to share these!')'''
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "            "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "    except Exception as e:"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "        print(f'❌ Error discovering streams: {e}')"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = ""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "asyncio.run(show_streams())"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "\""
+
 [deployment]
 run = ["sh", "-c", "python bot_v2.py --queue-only"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
