@@ -1313,35 +1313,7 @@ args = "echo \"📊 Checking dual X account status and rate limits...\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -c \""
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "from modules.x_dual_account_manager import x_dual_manager"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "print(x_dual_manager.get_status_report())"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "strategy = x_dual_manager.get_aggressive_posting_strategy()"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = '''print(f'\\n🎯 Current Strategy: {strategy[\"recommended_usage\"]}')'''
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = '''print(f'✅ Enhanced features: {strategy[\"enhanced_features\"]}')'''
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = '''print(f'📈 Total API calls available: {strategy[\"total_calls_available\"]}')'''
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "\""
+args = "python check_x_credentials.py"
 
 [[workflows.workflow]]
 name = "Aggressive X Posting"
@@ -1382,19 +1354,7 @@ args = "echo \"📊 Final account status:\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -c \""
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "from modules.x_dual_account_manager import x_dual_manager"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "print(x_dual_manager.get_status_report())"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "\""
+args = "python check_x_credentials.py"
 
 [[workflows.workflow]]
 name = "Smart Queue Posting"
@@ -1439,19 +1399,7 @@ args = "python check_queue_status.py"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -c \""
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "from modules.x_dual_account_manager import x_dual_manager"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = '''print('\\n' + x_dual_manager.get_status_report())'''
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "\""
+args = "python check_x_credentials.py"
 
 [deployment]
 run = ["sh", "-c", "python generate_thread_template.py"]

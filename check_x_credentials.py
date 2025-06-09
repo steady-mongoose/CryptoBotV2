@@ -64,3 +64,47 @@ if __name__ == "__main__":
         print("🎉 X API is ready for posting!")
     else:
         print("🚨 Fix the issues above before attempting to post to X")
+#!/usr/bin/env python3
+"""
+Check X account status and rate limits.
+"""
+
+import logging
+import os
+
+logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+def main():
+    """Check X account status."""
+    print("📊 Checking X Account Status")
+    print("-" * 40)
+    
+    # Check if credentials are set
+    required_vars = ['X_CONSUMER_KEY', 'X_CONSUMER_SECRET', 'X_ACCESS_TOKEN', 'X_ACCESS_TOKEN_SECRET']
+    missing = []
+    
+    for var in required_vars:
+        if not os.getenv(var):
+            missing.append(var)
+    
+    if missing:
+        print(f"❌ Missing credentials: {', '.join(missing)}")
+        return
+    
+    try:
+        from modules.api_clients import get_x_client
+        client = get_x_client(posting_only=True)
+        
+        if client:
+            user_info = client.get_me()
+            print(f"✅ Account: @{user_info.data.username}")
+            print(f"🆔 User ID: {user_info.data.id}")
+            print(f"📊 Status: Active")
+        else:
+            print("❌ Failed to authenticate")
+            
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+if __name__ == "__main__":
+    main()
