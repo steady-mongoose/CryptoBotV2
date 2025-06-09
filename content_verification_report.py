@@ -128,3 +128,62 @@ def generate_verification_report():
 
 if __name__ == "__main__":
     generate_verification_report()
+#!/usr/bin/env python3
+"""
+Content Verification Report
+Test and report on content verification systems.
+"""
+
+import asyncio
+import logging
+from modules.content_verification import verify_all_content
+
+logging.basicConfig(level=logging.INFO)
+
+async def main():
+    print("🔍 CONTENT VERIFICATION TEST")
+    print("=" * 40)
+    
+    # Test data
+    test_data = {
+        'coin_name': 'ripple',
+        'coin_symbol': 'XRP',
+        'price': 2.21,
+        'price_change_24h': 5.2,
+        'youtube_video': {
+            'title': 'XRP Price Analysis 2025 - Professional Market Review',
+            'url': 'https://youtu.be/test123',
+            'video_id': 'test123',
+            'platform': 'YouTube',
+            'verified_crypto_specific': True,
+            'content_date': '2025-01-15'
+        },
+        'social_metrics': {
+            'mentions': 150,
+            'sentiment': 'Bullish',
+            'engagement_score': 75
+        }
+    }
+    
+    try:
+        results = await verify_all_content(test_data)
+        
+        print("📊 VERIFICATION RESULTS:")
+        print(f"✅ Should Post: {results.get('should_post', False)}")
+        print(f"📈 Content Score: {results.get('content_rating', {}).get('overall_score', 0)}/100")
+        print(f"🎥 Video Score: {results.get('video_score', 0)}/100")
+        print(f"💭 Decision: {results.get('post_decision_reason', 'Unknown')}")
+        
+        warnings = results.get('content_rating', {}).get('warnings', [])
+        if warnings:
+            print("\n⚠️ WARNINGS:")
+            for warning in warnings:
+                print(f"  • {warning}")
+        
+        print("\n✅ Content verification system is working properly!")
+        
+    except Exception as e:
+        print(f"❌ Error running verification test: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(main())

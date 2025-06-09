@@ -288,3 +288,38 @@ async def _fetch_rumble_internal(coin: str, session: aiohttp.ClientSession):
         "url": search_url,
         "source": "Rumble Search"
     }
+import os
+import logging
+import tweepy
+
+logger = logging.getLogger('CryptoBot')
+
+def get_x_client(posting_only: bool = False):
+    """Get X (Twitter) API client."""
+    try:
+        consumer_key = os.getenv('X_CONSUMER_KEY')
+        consumer_secret = os.getenv('X_CONSUMER_SECRET')
+        access_token = os.getenv('X_ACCESS_TOKEN')
+        access_token_secret = os.getenv('X_ACCESS_TOKEN_SECRET')
+        
+        if not all([consumer_key, consumer_secret, access_token, access_token_secret]):
+            logger.warning("Missing X API credentials")
+            return None
+        
+        client = tweepy.Client(
+            consumer_key=consumer_key,
+            consumer_secret=consumer_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret,
+            wait_on_rate_limit=True
+        )
+        
+        return client
+        
+    except Exception as e:
+        logger.error(f"Error creating X client: {e}")
+        return None
+
+def get_youtube_api_key() -> str:
+    """Get YouTube API key."""
+    return os.getenv('YOUTUBE_API_KEY', '')

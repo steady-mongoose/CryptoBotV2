@@ -1,111 +1,109 @@
-import threading
-import queue
-import time
+
 import logging
+import threading
+import time
+import queue
+from typing import List, Dict, Optional
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-import tweepy
-from modules.api_clients import get_x_client
 
 logger = logging.getLogger('CryptoBot')
 
-class XThreadQueue:
+class XQueue:
     def __init__(self):
-        self.post_queue = queue.Queue()
-        self.thread_queue = queue.Queue()
+        self.queue = queue.Queue()
         self.worker_thread = None
-        self.is_running = False
-        self.client = None
-        self.rate_limit_reset_time = None
-
+        self.running = False
+        self.last_post_time = None
+        self.post_interval = 300  # 5 minutes between posts
+        
     def start_worker(self):
-        if self.worker_thread and self.worker_thread.is_alive():
-            return
-        self.is_running = True
-        self.worker_thread = threading.Thread(target=self._worker, daemon=True)
-        self.worker_thread.start()
-        logger.info("X posting worker started")
-
+        """Start the queue worker thread."""
+        if not self.running:
+            self.running = True
+            self.worker_thread = threading.Thread(target=self._worker, daemon=True)
+            self.worker_thread.start()
+            logger.info("X queue worker started")
+    
     def stop_worker(self):
-        self.is_running = False
+        """Stop the queue worker thread."""
+        self.running = False
         if self.worker_thread:
             self.worker_thread.join(timeout=5)
-        logger.info("X posting worker stopped")
-
+        logger.info("X queue worker stopped")
+    
     def queue_thread(self, posts: List[Dict], main_post_text: str):
+        """Queue a thread for posting."""
         thread_data = {
             'main_post': main_post_text,
             'posts': posts,
-            'timestamp': datetime.now()
+            'timestamp': datetime.now().isoformat()
         }
-        self.thread_queue.put(thread_data)
-        logger.info(f"Queued X thread with {len(posts)} posts")
-
-    def _worker(self):
-        while self.is_running:
-            try:
-                if self._is_rate_limited():
-                    time.sleep(60)
-                    continue
-
-                if not self.client:
-                    self.client = get_x_client(posting_only=True)
-                    if not self.client:
-                        time.sleep(30)
-                        continue
-
-                if not self.thread_queue.empty():
-                    self._process_thread_queue()
-                else:
-                    time.sleep(5)
-
-            except tweepy.TooManyRequests:
-                self.rate_limit_reset_time = datetime.now() + timedelta(minutes=15)
-                time.sleep(60)
-            except Exception as e:
-                logger.error(f"Worker error: {e}")
-                time.sleep(30)
-
-    def _process_thread_queue(self):
-        try:
-            thread_data = self.thread_queue.get_nowait()
-
-            # Post main tweet
-            main_tweet = self.client.create_tweet(text=thread_data['main_post'])
-            logger.info(f"Posted main thread tweet: {main_tweet.data['id']}")
-
-            previous_tweet_id = main_tweet.data['id']
-
-            # Post replies
-            for i, post_data in enumerate(thread_data['posts']):
-                try:
-                    reply_tweet = self.client.create_tweet(
-                        text=post_data['text'],
-                        in_reply_to_tweet_id=previous_tweet_id
-                    )
-                    previous_tweet_id = reply_tweet.data['id']
-                    logger.info(f"Posted thread reply {i+1}")
-                    time.sleep(10)
-                except Exception as e:
-                    logger.error(f"Error posting reply {i+1}: {e}")
-                    break
-
-            self.thread_queue.task_done()
-        except queue.Empty:
-            pass
-
-    def _is_rate_limited(self):
-        return self.rate_limit_reset_time and datetime.now() < self.rate_limit_reset_time
-
+        self.queue.put(thread_data)
+        logger.info(f"Queued thread with {len(posts)} posts")
+    
     def get_queue_status(self) -> Dict:
+        """Get current queue status."""
         return {
-            'thread_queue_size': self.thread_queue.qsize(),
-            'worker_running': self.is_running and self.worker_thread and self.worker_thread.is_alive(),
-            'rate_limited': self._is_rate_limited()
+            'queue_size': self.queue.qsize(),
+            'worker_running': self.running,
+            'last_post_time': self.last_post_time.isoformat() if self.last_post_time else None,
+            'next_post_available': self._can_post_now()
         }
+    
+    def _can_post_now(self) -> bool:
+        """Check if we can post now based on rate limits."""
+        if not self.last_post_time:
+            return True
+        
+        time_since_last = datetime.now() - self.last_post_time
+        return time_since_last.total_seconds() >= self.post_interval
+    
+    def _worker(self):
+        """Worker thread that processes the queue."""
+        while self.running:
+            try:
+                if not self.queue.empty() and self._can_post_now():
+                    thread_data = self.queue.get(timeout=1)
+                    self._process_thread(thread_data)
+                    self.last_post_time = datetime.now()
+                else:
+                    time.sleep(30)  # Check every 30 seconds
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logger.error(f"Error in queue worker: {e}")
+                time.sleep(60)  # Wait before retrying
+    
+    def _process_thread(self, thread_data: Dict):
+        """Process a queued thread."""
+        try:
+            from modules.api_clients import get_x_client
+            
+            x_client = get_x_client(posting_only=True)
+            if not x_client:
+                logger.error("Could not get X client for queue processing")
+                return
+            
+            # Post main tweet
+            main_tweet = x_client.create_tweet(text=thread_data['main_post'])
+            logger.info(f"Posted main tweet from queue: {main_tweet.data['id']}")
+            
+            # Post replies
+            previous_tweet_id = main_tweet.data['id']
+            for post in thread_data['posts']:
+                time.sleep(5)  # Rate limit protection
+                reply_tweet = x_client.create_tweet(
+                    text=post['text'],
+                    in_reply_to_tweet_id=previous_tweet_id
+                )
+                previous_tweet_id = reply_tweet.data['id']
+                logger.info(f"Posted reply for {post['coin_name']}")
+                
+        except Exception as e:
+            logger.error(f"Error processing queued thread: {e}")
 
-# Global instance
-x_queue = XThreadQueue()
+# Global queue instance
+x_queue = XQueue()
 
 def start_x_queue():
     x_queue.start_worker()

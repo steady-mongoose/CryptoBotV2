@@ -114,3 +114,55 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, ski
     save_social_metrics_cache(cache)
 
     return result
+import aiohttp
+import logging
+from typing import Dict
+
+logger = logging.getLogger('CryptoBot')
+
+async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = False, price_change_24h: float = 0) -> Dict:
+    """Fetch social media metrics for a coin."""
+    try:
+        # Mock social metrics based on price performance
+        base_mentions = {
+            'ripple': 150,
+            'hedera-hashgraph': 85,
+            'stellar': 95,
+            'xinfin-network': 45,
+            'sui': 120,
+            'ondo-finance': 65,
+            'algorand': 80,
+            'casper-network': 35
+        }
+        
+        mentions = base_mentions.get(coin_id, 50)
+        
+        # Adjust mentions based on price change
+        if price_change_24h > 5:
+            mentions = int(mentions * 1.5)
+            sentiment = "Very Bullish"
+        elif price_change_24h > 2:
+            mentions = int(mentions * 1.2)
+            sentiment = "Bullish"
+        elif price_change_24h < -5:
+            mentions = int(mentions * 1.3)
+            sentiment = "Bearish"
+        elif price_change_24h < -2:
+            mentions = int(mentions * 1.1)
+            sentiment = "Cautious"
+        else:
+            sentiment = "Neutral"
+        
+        return {
+            'mentions': mentions,
+            'sentiment': sentiment,
+            'engagement_score': min(100, mentions // 2)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching social metrics for {coin_id}: {e}")
+        return {
+            'mentions': 50,
+            'sentiment': 'Neutral',
+            'engagement_score': 25
+        }

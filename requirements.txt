@@ -10,3 +10,6 @@ schedule==1.2.0
 coinbase
 google-api-python-client
 scikit-learn
+psutil
+psutil
+psutil
