@@ -38,17 +38,18 @@ class ContentVerifier:
         except Exception as e:
             logger.error(f"Error saving verification cache: {e}")
 
-    async def verify_youtube_video(self, video_data: Dict, coin_name: str) -> Tuple[bool, float, str]:
+    async def verify_video_content(self, video_data: Dict, coin_name: str) -> Tuple[bool, float, str]:
         """
-        Verify YouTube video content for accuracy and relevance.
+        Verify video content for accuracy and relevance across all platforms.
         Returns: (is_verified, accuracy_score, reason)
         """
         title = video_data.get('title', '').lower()
         url = video_data.get('url', '')
         video_id = video_data.get('video_id', '')
+        platform = video_data.get('platform', 'youtube').lower()
         
         # Cache check
-        cache_key = f"youtube_{video_id}_{coin_name}"
+        cache_key = f"video_{platform}_{video_id}_{coin_name}"
         if cache_key in self.verification_cache:
             cached = self.verification_cache[cache_key]
             cache_time = datetime.fromisoformat(cached['timestamp'])
@@ -103,11 +104,29 @@ class ContentVerifier:
         if hype_count > 2:
             issues.append("Excessive hype language")
             
-        # 6. URL validation
-        if 'youtu.be' in url or 'youtube.com' in url:
+        # 6. Platform-specific URL validation and bonuses
+        platform_domains = {
+            'youtube': ['youtu.be', 'youtube.com'],
+            'rumble': ['rumble.com'],
+            'twitch': ['twitch.tv']
+        }
+        
+        valid_domains = platform_domains.get(platform, ['youtube.com'])
+        if any(domain in url for domain in valid_domains):
             score += 10
+            # Platform diversity bonus
+            if platform == 'rumble':
+                score += 5  # Bonus for alternative platform
+            elif platform == 'twitch':
+                score += 3  # Bonus for live/interactive content
         else:
-            issues.append("Invalid YouTube URL")
+            issues.append(f"Invalid {platform} URL")
+            
+        # Content quality from platform score
+        if video_data.get('quality_score', 0) > 70:
+            score += 10
+        elif video_data.get('quality_score', 0) > 50:
+            score += 5
             
         # Final verification
         is_verified = score >= 50 and len(issues) <= 2
@@ -274,9 +293,9 @@ async def verify_all_content(coin_data: Dict) -> Dict:
     """Verify all content for a coin posting."""
     verification_results = {}
     
-    # Verify YouTube video
+    # Verify video content (multi-platform)
     if 'youtube_video' in coin_data:
-        video_verified, video_score, video_reason = await content_verifier.verify_youtube_video(
+        video_verified, video_score, video_reason = await content_verifier.verify_video_content(
             coin_data['youtube_video'], coin_data['coin_name']
         )
         verification_results.update({
