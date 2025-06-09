@@ -114,13 +114,6 @@ async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, ski
     save_social_metrics_cache(cache)
 
     return result
-import aiohttp
-import logging
-from typing import Dict
-
-logger = logging.getLogger('CryptoBot')
-
-async def fetch_social_metrics(coin_id: str, session: aiohttp.ClientSession, skip_x_api: bool = True, price_change_24h: float = 0) -> Dict:
     """Fetch social media metrics for a coin."""
     try:
         # Mock social metrics based on price performance

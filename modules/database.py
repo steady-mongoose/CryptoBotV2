@@ -7,6 +7,68 @@ from datetime import datetime
 logger = logging.getLogger('CryptoBot')
 
 class Database:
+    """Database handler for the crypto bot."""
+    
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+        self.init_database()
+    
+    def init_database(self):
+        """Initialize database tables."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Create used_videos table
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS used_videos (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        coin_name TEXT NOT NULL,
+                        video_id TEXT NOT NULL,
+                        date_used TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                
+                conn.commit()
+                logger.info("Database initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing database: {e}")
+    
+    def has_video_been_used(self, video_id: str) -> bool:
+        """Check if a video has been used recently."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT COUNT(*) FROM used_videos WHERE video_id = ? AND date_used >= date('now', '-7 days')",
+                    (video_id,)
+                )
+                count = cursor.fetchone()[0]
+                return count > 0
+        except Exception as e:
+            logger.error(f"Error checking video usage: {e}")
+            return False
+    
+    def add_used_video(self, coin_name: str, video_id: str, date_used: str):
+        """Add a video to the used videos list."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO used_videos (coin_name, video_id, date_used) VALUES (?, ?, ?)",
+                    (coin_name, video_id, date_used)
+                )
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Error adding used video: {e}")
+    
+    def close(self):
+        """Close database connection."""
+        # Connection is closed automatically with context manager
+        pass
+
+class Database:
     def __init__(self, db_file: str):
         self.db_file = db_file
         self.init_database()

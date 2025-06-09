@@ -10,6 +10,52 @@ import os
 
 logger = logging.getLogger('CryptoBot')
 
+async def verify_all_content(coin_data: Dict) -> Dict:
+    """Verify content quality and accuracy for a coin."""
+    try:
+        # Basic content verification
+        content_score = 50  # Base score
+        warnings = []
+        
+        # Price validation
+        if coin_data.get('price', 0) > 0:
+            content_score += 20
+        else:
+            warnings.append("Invalid price data")
+        
+        # Social metrics validation
+        social_metrics = coin_data.get('social_metrics', {})
+        if social_metrics.get('mentions', 0) > 0:
+            content_score += 15
+        
+        # Video content validation
+        video = coin_data.get('youtube_video', {})
+        if video.get('url') and video.get('title'):
+            content_score += 15
+        
+        # Overall quality check
+        should_post = content_score >= 60
+        
+        return {
+            'should_post': should_post,
+            'content_rating': {
+                'overall_score': content_score,
+                'warnings': warnings
+            },
+            'post_decision_reason': f"Content score: {content_score}/100"
+        }
+        
+    except Exception as e:
+        logger.error(f"Content verification error: {e}")
+        return {
+            'should_post': False,
+            'content_rating': {
+                'overall_score': 0,
+                'warnings': ['Verification system error']
+            },
+            'post_decision_reason': f"Error: {e}"
+        }
+
 class ContentVerifier:
     def __init__(self):
         self.verification_cache = self._load_verification_cache()

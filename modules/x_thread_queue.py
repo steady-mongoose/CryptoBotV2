@@ -7,6 +7,69 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger('CryptoBot')
 
+# Global queue and worker state
+_post_queue = queue.Queue()
+_worker_thread = None
+_worker_running = False
+
+def start_x_queue():
+    """Start the X posting queue worker."""
+    global _worker_thread, _worker_running
+    
+    if not _worker_running:
+        _worker_running = True
+        _worker_thread = threading.Thread(target=_queue_worker, daemon=True)
+        _worker_thread.start()
+        logger.info("X queue worker started")
+
+def stop_x_queue():
+    """Stop the X posting queue worker."""
+    global _worker_running
+    _worker_running = False
+    logger.info("X queue worker stopped")
+
+def queue_x_thread(posts: List[Dict], main_post_text: str = ""):
+    """Queue posts for X posting."""
+    try:
+        thread_data = {
+            'main_post': main_post_text,
+            'posts': posts,
+            'timestamp': datetime.now()
+        }
+        _post_queue.put(thread_data)
+        logger.info(f"Queued thread with {len(posts)} posts")
+    except Exception as e:
+        logger.error(f"Error queuing posts: {e}")
+
+def get_x_queue_status() -> Dict:
+    """Get current queue status."""
+    return {
+        'queue_size': _post_queue.qsize(),
+        'worker_running': _worker_running,
+        'last_post_time': None,  # Could track this if needed
+        'next_post_available': True
+    }
+
+def _queue_worker():
+    """Background worker to process queued posts."""
+    global _worker_running
+    
+    while _worker_running:
+        try:
+            if not _post_queue.empty():
+                thread_data = _post_queue.get(timeout=1)
+                logger.info(f"Processing queued thread with {len(thread_data['posts'])} posts")
+                # Here you would actually post to X
+                # For now, just simulate processing
+                time.sleep(2)
+            else:
+                time.sleep(1)
+        except queue.Empty:
+            continue
+        except Exception as e:
+            logger.error(f"Queue worker error: {e}")
+            time.sleep(5)
+
 class XQueue:
     def __init__(self):
         self.queue = queue.Queue()
