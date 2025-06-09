@@ -362,5 +362,17 @@
     "engagement_score": 63,
     "specificity_score": 57,
     "issues_count": 0
+  },
+  "video_youtube_fallback_youtube_2025-06-09_ripple_2025-06-09": {
+    "verified": true,
+    "score": 150.0,
+    "reason": "Verified high-quality crypto-specific content",
+    "timestamp": "2025-06-09T20:34:40.976037",
+    "crypto_specific": true,
+    "recency_verified": true,
+    "public_available": true,
+    "engagement_score": 65,
+    "specificity_score": 57,
+    "issues_count": 0
   }
 }
