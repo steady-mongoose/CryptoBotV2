@@ -15,6 +15,7 @@ from modules.api_clients import get_x_client, get_youtube_api_key
 from modules.social_media import fetch_social_metrics
 from modules.database import Database
 from modules.x_thread_queue import start_x_queue, stop_x_queue, queue_x_thread, get_x_queue_status
+from modules.content_verification import verify_all_content
 
 # Configure logging
 logging.basicConfig(
@@ -166,6 +167,15 @@ async def fetch_youtube_video(youtube, coin: str, current_date: str):
 def format_tweet(data):
     change_symbol = "📉" if data['price_change_24h'] < 0 else "📈"
     
+    # Content verification badge
+    verification_badge = ""
+    if 'verification' in data:
+        content_score = data['verification'].get('content_rating', {}).get('overall_score', 0)
+        if content_score >= 80:
+            verification_badge = "✅ VERIFIED "
+        elif content_score >= 60:
+            verification_badge = "🔍 REVIEWED "
+    
     # Enhanced monetization content
     momentum_emoji = "🔥" if data['price_change_24h'] > 5 else "⚡" if data['price_change_24h'] > 2 else "🌊"
     
@@ -194,7 +204,7 @@ def format_tweet(data):
     fundamental_note = fundamentals.get(data['coin_name'], "🔍 Emerging technology")
 
     tweet_content = (
-        f"{momentum_emoji} {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n"
+        f"{verification_badge}{momentum_emoji} {data['coin_name']} ({data['coin_symbol']}) {change_symbol}\n"
         f"{insight}\n\n"
         f"💰 Price: ${data['price']:.4f}\n"
         f"📈 24h: {data['price_change_24h']:+.2f}%\n"
@@ -247,7 +257,24 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
                 'youtube_video': youtube_video
             }
 
-            results.append(coin_data)
+            # Verify content accuracy and quality
+            verification_results = await verify_all_content(coin_data)
+            coin_data['verification'] = verification_results
+            
+            # Log verification results
+            should_post = verification_results.get('should_post', False)
+            content_score = verification_results.get('content_rating', {}).get('overall_score', 0)
+            logger.info(f"{coin['symbol']} content score: {content_score}/100 - {'APPROVED' if should_post else 'REJECTED'}")
+            
+            if verification_results.get('content_rating', {}).get('warnings'):
+                for warning in verification_results['content_rating']['warnings']:
+                    logger.warning(f"{coin['symbol']}: {warning}")
+
+            # Only include coins that pass verification (or in test mode)
+            if should_post or test_discord:  # Allow all content in Discord test mode
+                results.append(coin_data)
+            else:
+                logger.warning(f"Skipping {coin['symbol']} - {verification_results.get('post_decision_reason', 'Failed verification')}")
 
         # Create enhanced monetization main post
         total_gainers = len([r for r in results if r['price_change_24h'] > 0])
