@@ -588,7 +588,6 @@ async def main_bot_run(test_discord: bool = False, queue_only: bool = False):
             thread_posts = []
             for data in results:
                 tweet_text = format_tweet(data)
-                ```python
                 thread_posts.append({
                     'text': tweet_text,
                     'coin_name': data['coin_name']
