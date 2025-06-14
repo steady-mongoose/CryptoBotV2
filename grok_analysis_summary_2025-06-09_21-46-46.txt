@@ -1,0 +1,32 @@
+CRYPTO BOT V2 - GROK ANALYSIS DATA SUMMARY
+==================================================
+
+Generated: 2025-06-09 21:46:49
+
+PROJECT OVERVIEW:
+- Total Files: 42
+- Log Files: 13
+- Database Tables: 16
+- Workflow Configs: 4
+- Recent Exports: 0
+
+KEY FILES:
+
+API STATUS:
+- X API: Available
+- Discord: Configured
+
+RECENT ACTIVITY:
+- crypto_bot.log: Modified 2025-06-09T21:35:40.799889
+- crypto_bot_v2.log: Modified 2025-06-01T18:56:43.257595
+- bot_detailed.log: Modified 2025-06-07T23:19:23.204106
+- test_log_20250608_184759.log: Modified 2025-06-08T18:48:05.317858
+- test_log_20250608_184814.log: Modified 2025-06-08T18:48:20.043857
+- test_log_20250608_184816.log: Modified 2025-06-08T18:48:21.918857
+- test_log_20250608_185020.log: Modified 2025-06-08T18:50:25.860846
+- top_project_cache.json: Modified 2025-06-01T20:42:52.004267
+- volume_cache.json: Modified 2025-06-01T21:06:59.023217
+- social_metrics_cache.json: Modified 2025-06-09T21:07:21.810501
+- content_verification_cache.json: Modified 2025-06-09T21:29:26.255927
+- live_streams_cache.json: Modified 2025-06-09T00:52:56.171276
+- workflow_state.json: Modified 2025-06-09T20:34:51.420455
