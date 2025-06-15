@@ -16,12 +16,17 @@ import argparse
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('CryptoBot')
 
-# Load environment variables with enhanced debugging
-env_path = "C:\\CryptoBotV2\\crypto_bot\\.env"
-if not load_dotenv(env_path):
-    logger.error(f"Failed to load .env file from {env_path}. File exists: {os.path.exists(env_path)}")
-    raise Exception(f"Failed to load .env file from {env_path}")
-logger.info(f"Successfully loaded .env from {env_path}")
+# Load environment variables with Replit compatibility
+env_path = ".env"  # Default to local .env file
+if not os.path.exists(env_path):
+    logger.info("No local .env file found, using Replit Secrets (environment variables)")
+    # In Replit, secrets are automatically loaded as environment variables
+    # No need to load from file
+else:
+    if not load_dotenv(env_path):
+        logger.error(f"Failed to load .env file from {env_path}")
+        raise Exception(f"Failed to load .env file from {env_path}")
+    logger.info(f"Successfully loaded .env from {env_path}")
 for key, value in os.environ.items():
     if key.startswith('X_') or key.startswith('YOUTUBE_') or key.startswith('DISCORD_'):
         logger.debug(f"Env[{key}]: {value[:50]}{'...' if len(value) > 50 else ''}")
