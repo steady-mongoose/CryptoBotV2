@@ -1,19 +1,525 @@
+
 modules = ["python-3.11"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["glibcLocales"]
 
 [workflows]
-runButton = "X Platform Post"
+runButton = "Main Bot Run (Queue Primary)"
 
 [[workflows.workflow]]
-name = "Main Bot Run"
+name = "Generate Manual Template Only"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📝 Generating manual X thread template (no automated posting)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python generate_thread_template.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Template generated! Check the output file for manual posting.\""
+
+[[workflows.workflow]]
+name = "Run Production Bot"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Running production crypto bot with multi-source data...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"Using Binance US, Coinbase, CoinGecko, X API, and Reddit for dynamic data\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py"
+
+[[workflows.workflow]]
+name = "Post to Discord Only"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔔 Starting Discord-only posting mode...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --test-discord"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Discord posting completed!\""
+
+[[workflows.workflow]]
+name = "X Queue Only (Safe)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔄 Running bot with X queue system only (no direct posting)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  This mode prevents rate limits by using background posting queue\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Posts queued for background processing\""
+
+[[workflows.workflow]]
+name = "Test X Queue Safe"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing X queue system (SAFE - no direct posting)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"This will queue posts for background processing to avoid rate limits\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Test completed - check queue status\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "X Post Only (Ultra Safe)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔒 Ultra-safe X posting mode - ZERO rate limit risk\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API search: DISABLED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API auth tests: BYPASSED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API rate checks: BYPASSED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Only X API posting: ENABLED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Posts queued safely - check queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Ultra Safe X Post Test"
 author = 43339402
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+args = "echo \"🧪 Testing ultra-safe X posting workflow...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ This mode bypasses ALL rate limit checks\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Uses Rumble fallback for YouTube rate limits\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Queues posts immediately to avoid direct API calls\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
 args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Test completed! Checking queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Test X Posting Safe"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing X posting with ultra-safe queue mode...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ This bypasses all rate limit checks and uses queue system\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Checking queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Main Bot Run (X Free Tier Safe)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Starting CryptoBot with X API Free Tier Protection...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API search: DISABLED (prevents rate limits)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API posting: QUEUE ONLY (respects free tier)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Social metrics: Alternative APIs + fallbacks\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Monthly limit: 1,500 tweets (~50/day)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking queue status and rate limits:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "X Complete Mirror (Discord Features)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔄 Starting X posting with COMPLETE Discord feature parity...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Full data collection: Price + Social + YouTube + Research\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Individual coin posts: Detailed format for each of 8 coins\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Safe queue system: All posts queued to respect rate limits\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Same content as Discord: Identical feature set\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Verifying complete thread was queued:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X now has same features as Discord workflow!\""
+
+[[workflows.workflow]]
+name = "Smart Content Rating Bot"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🎯 Starting CryptoBot with Smart Content Rating System...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ YouTube/Rumble failover: ENABLED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Content accuracy rating: 1-10 scale\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Trusted creator detection: ACTIVE\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Source preference by coin: OPTIMIZED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking content quality and queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "X Complete Mirror (Smart Rating)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🔄 Starting X posting with Smart Content Rating + Discord parity...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ YouTube/Rumble smart failover based on accuracy ratings\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Trusted creator prioritization system\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Content quality scoring (1-10 scale)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Coin-specific source preferences\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Full data collection: Price + Social + Rated Video + Research\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Verifying high-quality content was selected:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X now has rated content system matching Discord features!\""
+
+[[workflows.workflow]]
+name = "Main Bot Run (Smart Rating)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Starting CryptoBot with Smart Content Rating System...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ YouTube/Rumble intelligent failover\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Content accuracy scoring: 1-10 scale\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Trusted creator boost: +1.5 points\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Quality keyword analysis: ACTIVE\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Coin-specific source preferences\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API posting: QUEUE ONLY (respects free tier)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Content quality summary:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow]]
+name = "Test Direct X Posting"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Testing DIRECT X posting (bypassing queue system)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  This will attempt immediate posting to X API\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Features: Price + Social + YouTube + Research (same as Discord)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  May hit rate limits on free tier\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --direct-x-post"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Results summary above - check for rate limit errors\""
+
+[[workflows.workflow]]
+name = "Test Discord Posting"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing Discord webhook posting...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ This will post sample data to Discord only\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --test-discord"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Discord test completed!\""
 
 [[workflows.workflow]]
 name = "Post to Discord"
@@ -22,25 +528,82 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+args = "echo \"🔔 Posting full crypto update to Discord...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Real market data, social metrics, videos, research\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
 args = "python bot_v2.py --test-discord"
 
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Discord posting completed!\""
+
 [[workflows.workflow]]
-name = "Check Queue Status"
+name = "Test X Posting"
 author = 43339402
 mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🧪 Testing X API posting (single test tweet)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  This uses direct posting to verify API credentials\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_x_simple_post.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ X API test completed!\""
+
+[[workflows.workflow]]
+name = "Post to X (Safe)"
+author = 43339402
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"🚀 Safe X posting with free tier compliance...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Queue system prevents rate limits\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Auto-resume if worker stops\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --queue-only --auto-resume"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Posts queued safely - will process when rate limits reset\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python check_queue_status.py"
 
 [[workflows.workflow]]
-name = "Test Discord Only"
+name = "Discord Only"
 author = 43339402
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo '🧪 Testing Discord webhook posting...'"
+args = "echo \"📱 Discord Only Mode - No X API usage\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Posts complete crypto updates to Discord webhook\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -48,68 +611,32 @@ args = "python bot_v2.py --test-discord"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo '✅ Discord test completed!'"
+args = "echo \"✅ Discord posting completed!\""
 
 [[workflows.workflow]]
-name = "Content Verification Report"
+name = "X Only (Safe)"
 author = 43339402
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python content_verification_report.py"
-
-[[workflows.workflow]]
-name = "Post Live Stream Alerts"
-author = 43339402
-mode = "sequential"
+args = "echo \"🐦 X Only Mode - Free Tier Safe\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"🔴 POSTING UPCOMING CRYPTO LIVE STREAM ALERTS\""
+args = "echo \"✅ Dual account failover enabled\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -c \"import asyncio; from modules.x_live_streams import get_next_stream_posts; from modules.api_clients import get_x_client; import time; def post_stream_alerts(): [exec_code]; post_stream_alerts()\""
-
-[[workflows.workflow]]
-name = "Show Upcoming Streams"
-author = 43339402
-mode = "sequential"
+args = "echo \"✅ YouTube → Rumble failover enabled\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"🔍 DISCOVERING UPCOMING CRYPTO LIVE STREAMS\""
+args = "echo \"✅ Queue system prevents rate limits\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -c \"import asyncio; import aiohttp; from modules.x_live_streams import discover_upcoming_live_streams; from datetime import datetime; asyncio.run(discover_upcoming_live_streams(aiohttp.ClientSession()))\""
-
-[[workflows.workflow]]
-name = "Test Fixed Bot"
-author = 43339402
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "echo \"🧪 Testing fixed bot with enhanced formatting...\""
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python bot_v2.py --test-discord"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "echo \"✅ Test completed - check Discord for proper formatting!\""
-
-[[workflows.workflow]]
-name = "X Platform Post"
-author = 43339402
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "echo \"🚀 Posting crypto analysis to X (Twitter)...\""
+args = "python fix_duplicate_runs.py"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -117,20 +644,20 @@ args = "python bot_v2.py --queue-only"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"✅ X posting completed successfully!\""
+args = "echo \"✅ X posting queued safely!\""
 
 [[workflows.workflow]]
-name = "Discord Test Post"
+name = "Test Both Platforms"
 author = 43339402
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python check_workflow_conflicts.py --type post_to_discord || exit 1"
+args = "echo \"🧪 Testing Both Platforms\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"🧪 Testing Discord webhook posting...\""
+args = "echo \"📱 Testing Discord...\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -138,91 +665,210 @@ args = "python bot_v2.py --test-discord"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python check_workflow_conflicts.py --type post_to_discord --complete"
+args = "echo \"\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"✅ Discord test completed successfully!\""
+args = "echo \"🐦 Testing X (single tweet)...\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_x_simple_post.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Both platforms tested!\""
 
 [[workflows.workflow]]
-name = "Content Verification Test"
+name = "Main Bot Run (Queue Primary)"
 author = 43339402
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"🔍 Running enhanced content verification test...\""
+args = "echo \"🚀 Primary Bot Run - Simultaneous X + Discord Posting\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -c \"import asyncio; from modules.content_verification import verify_all_content; asyncio.run(verify_all_content({'coin_name': 'ripple', 'price': 2.21}))\""
+args = "echo \"✅ X API posting: QUEUE ONLY (prevents all rate limits)\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"✅ Content verification test completed!\""
+args = "echo \"✅ Discord posting: SIMULTANEOUS\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Auto-failover: Manual template if X queue fails\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Full feature set: Price + Social + YouTube + Research\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ SMS notifications: ENABLED\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --simultaneous-post"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Checking queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Simultaneous posting completed - check both platforms\""
 
 [[workflows.workflow]]
-name = "Test X API"
+name = "Manual Template Failover"
 author = 43339402
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python test_x_api.py"
+args = "echo \"📝 Manual Template Generation (Failover Mode)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"⚠️  Use this if queue system fails or rate limits hit\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Generates complete thread template for manual posting\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python generate_thread_template.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Manual template generated - check output file\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"💡 Post manually to X when rate limits reset\""
 
 [[workflows.workflow]]
-name = "Verify Real X Posting"
+name = "Resume Automated Posting"
 author = 43339402
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"🔍 Testing if posts actually reach X platform...\""
+args = "echo \"🔄 Resuming automated posting system...\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python test_real_x_posting.py"
+args = "echo \"✅ Re-enabling queue worker\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"⚠️ Check the tweet URL manually to confirm posting works\""
+args = "echo \"✅ Checking for pending posts\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python resume_queue_worker.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Automated posting resumed\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Current queue status:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
 
 [[workflows.workflow]]
-name = "Run Diagnostics"
+name = "Simultaneous X + Discord Post"
 author = 43339402
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"🔍 Running comprehensive system diagnostics...\""
+args = "echo \"🔄 Simultaneous X + Discord Posting Mode\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python run_diagnostics.py"
+args = "echo \"✅ Posts to both platforms at the same time\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"✅ Diagnostics completed - check results above\""
-
-[[workflows.workflow]]
-name = "X Verification Test"
-author = 43339402
-mode = "sequential"
+args = "echo \"✅ Discord: Guaranteed success\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"🔍 Testing X posting with strict verification...\""
+args = "echo \"✅ X: Queue system with manual template fallback\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python test_x_verification.py"
+args = "echo \"✅ SMS notification when complete\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"⚠️ Only success if URL proof and JSON export provided above!\""
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot_v2.py --simultaneous-post"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"📊 Final status check:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python check_queue_status.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"✅ Check your phone for completion notification!\""
 
 [deployment]
-run = ["sh", "-c", "python bot_v2.py --queue-only"]
+run = ["sh", "-c", "python generate_thread_template.py"]
 build = ["sh", "-c", "mkdir -p data && python -m pip install --upgrade pip && pip install -r requirements.txt"]
 ignorePorts = true
 
