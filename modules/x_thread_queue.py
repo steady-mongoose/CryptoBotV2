@@ -19,6 +19,7 @@ async def verify_post_exists(tweet_id: str) -> dict:
     try:
         import aiohttp
         verification_url = f"https://twitter.com/user/status/{tweet_id}"
+        
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.head(verification_url, timeout=15) as response:
@@ -41,12 +42,29 @@ async def verify_post_exists(tweet_id: str) -> dict:
                                     "status_code": content_response.status,
                                     "method": "content_check_failed"
                                 }
+                            return {
+                                "exists": False,
+                                "content_verified": False,
+                                "error": f"Content fetch failed: HTTP {content_response.status}",
+                                "status_code": content_response.status,
+                                "method": "content_fetch_failed"
+                            }
+                    elif response.status == 401:  # Unauthorized
+                        logger.warning(f"401 Unauthorized for tweet {tweet_id}; skipping verification")
                         return {
                             "exists": False,
                             "content_verified": False,
-                            "error": f"Content fetch failed: HTTP {content_response.status}",
-                            "status_code": content_response.status,
-                            "method": "content_fetch_failed"
+                            "error": "401 Unauthorized",
+                            "status_code": response.status,
+                            "method": "auth_failed"
+                        }
+                    else:
+                        return {
+                            "exists": False,
+                            "content_verified": False,
+                            "error": f"URL not accessible: HTTP {response.status}",
+                            "status_code": response.status,
+                            "method": "url_check_failed"
                         }
             except asyncio.TimeoutError:
                 return {
@@ -67,12 +85,12 @@ async def verify_post_exists(tweet_id: str) -> dict:
 
 async def _queue_worker_async():
     """Asynchronous worker to process queued posts."""
-    logger.info("X queue worker thread started successfully")  # Line 40
+    logger.info("X queue worker thread started successfully")
 
-    while _worker_running:  # Line 42
-        try:  # Line 43
+    while _worker_running:
+        try:
             thread_data = await asyncio.to_thread(_post_queue.get, timeout=1.0)
-        except queue.Empty:  # Line 45
+        except queue.Empty:
             await asyncio.sleep(0.1)
             continue
 
@@ -80,9 +98,9 @@ async def _queue_worker_async():
         posts = thread_data.get('posts', [])
         timestamp = thread_data.get('timestamp', datetime.now())
 
-        logger.info(f"Processing queued thread with {len(posts)} posts from {timestamp}")  # Line 51
+        logger.info(f"Processing queued thread with {len(posts)} posts from {timestamp}")
 
-        try:  # Line 53
+        try:
             from modules.api_clients import get_x_client_with_failover, get_notification_webhook_url
             import aiohttp
 
@@ -183,7 +201,7 @@ async def _queue_worker_async():
                 logger.error(f"❌ X POSTING FAILED VERIFICATION: {verification_status.get('error', 'Unknown error')}")
                 print(f"❌ WORKFLOW RESULT: VERIFICATION FAILED")
 
-        except Exception as api_error:  # Line 249
+        except Exception as api_error:
             logger.error(f"❌ REAL X API ERROR: {api_error}")
             logger.error(f"Failed to post thread with {len(posts)} posts")
 
@@ -246,7 +264,9 @@ async def _queue_worker_async():
 
             _post_queue.task_done()
 
-        await asyncio.sleep(0)  # Yield to event loop
+        except Exception as e:
+            logger.error(f"Error in queue worker: {e}")
+            await asyncio.sleep(5)
 
 def start_x_queue():
     """Start the X posting queue worker."""

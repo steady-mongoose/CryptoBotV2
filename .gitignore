@@ -1,5 +1,6 @@
 # Python virtual environment
 venv/
+crypto_bot/venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -8,12 +9,12 @@ __pycache__/
 
 # Environment and sensitive files
 .env
+crypto_bot/.env
 data/crypto_bot.db
 data/crypto_bot_backup*.db
 crypto_bot.db
 crypto_bot_old*.db
 crypto.db
-crypto_bot/.env
 crypto_bot/crypto_bot.db
 crypto_bot/crypto_bot.db.sql
 crypto_bot/crypto_bot.sqbpro
@@ -23,6 +24,7 @@ crypto_bot/crypto_bot.sqbpro
 crypto_bot.log
 crypto_bot_v2.log
 crypto_bot/log.txt
+data/*.log
 
 # Cache files
 *.cache
@@ -32,6 +34,10 @@ volume_cache.json
 crypto_bot/social_metrics_cache.json
 crypto_bot/top_project_cache.json
 crypto_bot/volume_cache.json
+data/content_verification_cache.json
+data/live_streams_cache.json
+data/workflow_state.json
+data/coin_mapping.json
 
 # IDE and editor configurations
 .idea/
@@ -47,16 +53,18 @@ crypto_bot/*.bak
 max_title_length
 max_url_length
 0
+last_post_timestamp.txt
 
 # Machine learning models
 crypto_bot/data/*.joblib
+data/*.joblib
 
-# Obsolete directories
-crypto_bot/
+# Replit configuration
+.replit
+replit.nix
 
 # macOS
 .DS_Store
 
 # Windows
 Thumbs.db
-last_post_timestamp.txt
